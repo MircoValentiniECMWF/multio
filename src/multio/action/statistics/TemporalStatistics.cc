@@ -14,7 +14,7 @@ namespace action {
 namespace {
 
 auto reset_statistics(const std::vector<std::string>& opNames, message::Message msg, const std::string& partialPath,
-                     const StatisticsOptions& options, bool restart) {
+                      const StatisticsOptions& options, bool restart) {
     return multio::util::dispatchPrecisionTag(msg.precision(), [&](auto pt) {
         using Precision = typename decltype(pt)::type;
         std::vector<OperationVar> stats;
@@ -32,11 +32,11 @@ eckit::DateTime currentDateTime(const message::Message& msg, const StatisticsOpt
     auto minute = (startTime % 10000) / 100;
     eckit::DateTime startDateTime{startDate, eckit::Time{hour, minute, 0}};
 
-    return startDateTime + static_cast<eckit::Second>(options.step()*options.timeStep());
+    return startDateTime + static_cast<eckit::Second>(options.step() * options.timeStep());
 }
 
 eckit::DateTime nextDateTime(const message::Message& msg, const StatisticsOptions& options) {
-    return currentDateTime(msg, options) + static_cast<eckit::Second>(options.stepFreq()*options.timeStep());
+    return currentDateTime(msg, options) + static_cast<eckit::Second>(options.stepFreq() * options.timeStep());
 }
 
 
@@ -49,15 +49,15 @@ std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::string&
                                                               const StatisticsOptions& options) {
 
     if (unit == "month") {
-        return std::make_unique<MonthlyStatistics>(operations, span, msg, partialPath, options );
+        return std::make_unique<MonthlyStatistics>(operations, span, msg, partialPath, options);
     }
 
     if (unit == "day") {
-        return std::make_unique<DailyStatistics>(operations, span, msg, partialPath, options );
+        return std::make_unique<DailyStatistics>(operations, span, msg, partialPath, options);
     }
 
     if (unit == "hour") {
-        return std::make_unique<HourlyStatistics>(operations, span, msg, partialPath, options );
+        return std::make_unique<HourlyStatistics>(operations, span, msg, partialPath, options);
     }
 
     throw eckit::SeriousBug{"Temporal statistics for base period " + unit + " is not defined"};
@@ -65,7 +65,8 @@ std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::string&
 
 
 TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
-                                       const message::Message& msg, const std::string& partialPath, const StatisticsOptions& options, long span ) :
+                                       const message::Message& msg, const std::string& partialPath,
+                                       const StatisticsOptions& options, long span) :
     name_{msg.name()},
     partialPath_{partialPath},
     current_{period},
@@ -76,13 +77,14 @@ TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operation
     span_{span} {}
 
 
-
 void TemporalStatistics::dump(bool noThrow) const {
-    current_.dump(partialPath_,noThrow);
+    current_.dump(partialPath_, noThrow);
     for (auto const& stat : statistics_) {
-        std::visit(Overloaded{[&](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(this->partialPath_,noThrow); },
-                              [&](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(this->partialPath_,noThrow); }},
-                   stat);
+        std::visit(
+            Overloaded{
+                [&](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(this->partialPath_, noThrow); },
+                [&](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(this->partialPath_, noThrow); }},
+            stat);
     }
     return;
 }
@@ -236,14 +238,21 @@ DateTimePeriod setHourlyPeriod(long span, const message::Message& msg, const Sta
     eckit::DateTime endPoint{computeHourEnd(startPoint, span)};
     // First window is shorter, for this reason we need to pass the dimensions of a timestep in order to catch
     // the correct time span in hours
-    return options.solver_send_initial_condition() ? DateTimePeriod{startPoint, endPoint}
-                                   : DateTimePeriod{startPoint, endPoint, options.stepFreq() * options.timeStep()};
+    return options.solver_send_initial_condition()
+             ? DateTimePeriod{startPoint, endPoint}
+             : DateTimePeriod{startPoint, endPoint, options.stepFreq() * options.timeStep()};
 }
 }  // namespace
 
 HourlyStatistics::HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
                                    const std::string& partialPath, const StatisticsOptions& options) :
-    TemporalStatistics{operations, options.restart()?DateTimePeriod{partialPath+"-hourly"}:DateTimePeriod{setHourlyPeriod(span, msg, options)}, msg, partialPath+"-hourly", options, span} {
+    TemporalStatistics{operations,
+                       options.restart() ? DateTimePeriod{partialPath + "-hourly"}
+                                         : DateTimePeriod{setHourlyPeriod(span, msg, options)},
+                       msg,
+                       partialPath + "-hourly",
+                       options,
+                       span} {
     // Restart constructor
 }
 
@@ -257,16 +266,22 @@ namespace {
 DateTimePeriod setDailyPeriod(long span, const message::Message& msg, const StatisticsOptions& options) {
     eckit::DateTime startPoint{computeDayStart(currentDateTime(msg, options))};
     eckit::DateTime endPoint{computeDayEnd(startPoint, span)};
-    return options.solver_send_initial_condition()  ? DateTimePeriod{startPoint, endPoint}
-                                                    : DateTimePeriod{startPoint, endPoint, options.stepFreq() * options.timeStep()};
+    return options.solver_send_initial_condition()
+             ? DateTimePeriod{startPoint, endPoint}
+             : DateTimePeriod{startPoint, endPoint, options.stepFreq() * options.timeStep()};
 }
 }  // namespace
 
 DailyStatistics::DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
                                  const std::string& partialPath, const StatisticsOptions& options) :
-    TemporalStatistics{operations, options.restart()?DateTimePeriod{partialPath+"-daily"}:DateTimePeriod{setDailyPeriod(span, msg, options)}, msg, partialPath+"-daily", options, span} {
+    TemporalStatistics{
+        operations,
+        options.restart() ? DateTimePeriod{partialPath + "-daily"} : DateTimePeriod{setDailyPeriod(span, msg, options)},
+        msg,
+        partialPath + "-daily",
+        options,
+        span} {
     // Restart constructor
-
 }
 
 void DailyStatistics::print(std::ostream& os) const {
@@ -279,14 +294,18 @@ namespace {
 DateTimePeriod setMonthlyPeriod(long span, const message::Message& msg, const StatisticsOptions& options) {
     eckit::DateTime startPoint{computeMonthStart(currentDateTime(msg, options))};
     eckit::DateTime endPoint{computeMonthEnd(startPoint, span)};
-    return options.solver_send_initial_condition()  ? DateTimePeriod{startPoint, endPoint}
-                                                    : DateTimePeriod{startPoint, endPoint, options.stepFreq() * options.timeStep()};
+    return options.solver_send_initial_condition()
+             ? DateTimePeriod{startPoint, endPoint}
+             : DateTimePeriod{startPoint, endPoint, options.stepFreq() * options.timeStep()};
 }
 }  // namespace
 
 MonthlyStatistics::MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
                                      const std::string& partialPath, const StatisticsOptions& options) :
-    TemporalStatistics{operations, options.restart()?DateTimePeriod{partialPath+"-monthly"}:setMonthlyPeriod(span, msg, options), msg, partialPath+"-monthly", options, span} {}
+    TemporalStatistics{
+        operations, options.restart() ? DateTimePeriod{partialPath + "-monthly"} : setMonthlyPeriod(span, msg, options),
+        msg,        partialPath + "-monthly",
+        options,    span} {}
 
 void MonthlyStatistics::print(std::ostream& os) const {
     os << "Monthly Statistics(" << current_ << ")";

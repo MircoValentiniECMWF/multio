@@ -17,13 +17,13 @@ class TemporalStatistics {
 public:
     static std::unique_ptr<TemporalStatistics> build(const std::string& unit, long span,
                                                      const std::vector<std::string>& operations,
-                                                     const message::Message& msg,
-                                                     const std::string& partialPath,
+                                                     const message::Message& msg, const std::string& partialPath,
                                                      const StatisticsOptions& options);
 
     // Restart constructor
     TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
-                       const message::Message& msg, const std::string& partialPath, const StatisticsOptions& options, long span);
+                       const message::Message& msg, const std::string& partialPath, const StatisticsOptions& options,
+                       long span);
 
     virtual ~TemporalStatistics() = default;
 
@@ -34,7 +34,7 @@ public:
     void reset(const message::Message& msg);
     long startStep() const { return prevStep_; };
     virtual void print(std::ostream& os) const = 0;
-    void dump( bool noThrow ) const;
+    void dump(bool noThrow) const;
 
 protected:
     long span_;
@@ -66,8 +66,8 @@ private:
 
 class HourlyStatistics : public TemporalStatistics {
 public:
-    HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg, const std::string& partialPath,
-                     const StatisticsOptions& options);
+    HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
+                     const std::string& partialPath, const StatisticsOptions& options);
     void resetPeriod(const message::Message& msg) override;
     void print(std::ostream& os) const override;
 };
@@ -76,8 +76,8 @@ public:
 
 class DailyStatistics : public TemporalStatistics {
 public:
-    DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg, const std::string& partialPath,
-                    const StatisticsOptions& options);
+    DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
+                    const std::string& partialPath, const StatisticsOptions& options);
     void resetPeriod(const message::Message& msg) override;
     void print(std::ostream& os) const override;
 };

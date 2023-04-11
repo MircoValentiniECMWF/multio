@@ -93,16 +93,16 @@ eckit::DateTime DateTimePeriod::endPoint() const {
     return endPoint_;
 }
 
-void DateTimePeriod::dump(const std::string& partialPath, bool noThrow ) const {
+void DateTimePeriod::dump(const std::string& partialPath, bool noThrow) const {
     std::ostringstream os;
     os << partialPath << "-period.bin";
     std::string fname = os.str();
     std::ofstream wf(fname, std::ios::binary);
     if (!wf) {
-        if (noThrow){
+        if (noThrow) {
             LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
         }
-        else{
+        else {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
     }
@@ -119,7 +119,7 @@ void DateTimePeriod::dump(const std::string& partialPath, bool noThrow ) const {
     wf.write((char*)&offset_, sizeof(long));
     wf.close();
     if (!wf.good()) {
-        if (noThrow){
+        if (noThrow) {
             LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
         }
         else {

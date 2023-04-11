@@ -51,11 +51,11 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
     options_{confCtx.config()} {}
 
 
-Statistics::~Statistics(){
+Statistics::~Statistics() {
     // Dump restart for all non emitted statistics
-    if (options_.restart()){
+    if (options_.restart()) {
         for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
-            it->second->dump( true );
+            it->second->dump(true);
         }
     }
 }
@@ -112,7 +112,7 @@ bool Statistics::restartExist(const std::string& key, const StatisticsOptions& o
 void Statistics::executeImpl(message::Message msg) {
 
     // Pass through -- no statistics for messages other than fields
-    if (msg.tag() != message::Message::Tag::Field ) {
+    if (msg.tag() != message::Message::Tag::Field) {
         executeNext(msg);
         return;
     }
@@ -131,9 +131,10 @@ void Statistics::executeImpl(message::Message msg) {
                                          << std::endl;
         if (fieldStats_.find(key) == end(fieldStats_)) {
             // Create a new statistics
-            fieldStats_[key] = TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg, getRestartPartialPath(msg,opt), opt);
+            fieldStats_[key] = TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg,
+                                                         getRestartPartialPath(msg, opt), opt);
             // Initial conditions don't need to be used in computation
-            if ( opt.solver_send_initial_condition()){
+            if (opt.solver_send_initial_condition()) {
                 return;
             }
         }
