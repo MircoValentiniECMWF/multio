@@ -7,6 +7,7 @@ plans:
         operations: [ average ]
         options:
           initial-condition-present: true
+          restart-prefix: "NamesAreNotGuaranteedToBeUniqueAcrossPlans"
           restart: true
           step-frequency: 1
           time-step: 3600
@@ -21,4 +22,4 @@ plans:
           - type: file
             append: false
             per-server: false # Will give you one file per server
-            path: Result_standard_144_average_1m_grib2.grib
+            path: Result_standard_144-288_average_1m_grib2.grib

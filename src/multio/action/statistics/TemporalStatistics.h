@@ -18,20 +18,12 @@ public:
     static std::unique_ptr<TemporalStatistics> build(const std::string& unit, long span,
                                                      const std::vector<std::string>& operations,
                                                      const message::Message& msg,
+                                                     const std::string& partialPath,
                                                      const StatisticsOptions& options);
 
-    static std::unique_ptr<TemporalStatistics> load(const std::string& unit, long span,
-                                                    const std::vector<std::string>& operations,
-                                                    const message::Message& msg, const std::string& key,
-                                                    const StatisticsOptions& options);
-
-    // Standard constructor
-    TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
-                       const message::Message& msg, const StatisticsOptions& options, long span, long step);
     // Restart constructor
     TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
-                       const message::Message& msg, const std::string& key, const StatisticsOptions& options, long span,
-                       long step);
+                       const message::Message& msg, const std::string& partialPath, const StatisticsOptions& options, long span);
 
     virtual ~TemporalStatistics() = default;
 
@@ -42,11 +34,12 @@ public:
     void reset(const message::Message& msg);
     long startStep() const { return prevStep_; };
     virtual void print(std::ostream& os) const = 0;
-    virtual void dump(const std::string& key) const = 0;
+    void dump( bool noThrow ) const;
 
 protected:
     long span_;
     std::string name_;
+    std::string partialPath_;
     DateTimePeriod current_;
     const StatisticsOptions& options_;
 
@@ -73,26 +66,20 @@ private:
 
 class HourlyStatistics : public TemporalStatistics {
 public:
-    HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                     const StatisticsOptions& options, long step);
-    HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg, const std::string& key,
-                     const StatisticsOptions& options, long step);
+    HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg, const std::string& partialPath,
+                     const StatisticsOptions& options);
     void resetPeriod(const message::Message& msg) override;
     void print(std::ostream& os) const override;
-    void dump(const std::string& key) const;
 };
 
 //-------------------------------------------------------------------------------------------------
 
 class DailyStatistics : public TemporalStatistics {
 public:
-    DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                    const StatisticsOptions& options, long step);
-    DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg, const std::string& key,
-                    const StatisticsOptions& options, long step);
+    DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg, const std::string& partialPath,
+                    const StatisticsOptions& options);
     void resetPeriod(const message::Message& msg) override;
     void print(std::ostream& os) const override;
-    void dump(const std::string& key) const;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -100,12 +87,9 @@ public:
 class MonthlyStatistics : public TemporalStatistics {
 public:
     MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                      const StatisticsOptions& options, long step);
-    MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                      const std::string& key, const StatisticsOptions& options, long step);
+                      const std::string& partialPath, const StatisticsOptions& options);
     void resetPeriod(const message::Message& msg) override;
     void print(std::ostream& os) const override;
-    void dump(const std::string& key) const;
 };
 
 //-------------------------------------------------------------------------------------------------

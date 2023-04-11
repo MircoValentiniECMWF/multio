@@ -32,7 +32,7 @@ public:
     virtual void update(const void* val, long sz) = 0;
 
     virtual ~Operation() = default;
-    virtual void dump(const std::string& key) const = 0;
+    virtual void dump(const std::string& partialPath, bool noThrow) const = 0;
 
 protected:
     virtual void print(std::ostream& os) const = 0;
@@ -61,12 +61,13 @@ public:
 
     Instant(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "instant", sz, options} {}
-    Instant(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+
+    Instant(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "instant", sz, options} {
         std::ostringstream os;
-        os << key << "-instant-data.bin";
+        os << partialPath << "-instant-data.bin";
         std::string fname = os.str();
-        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
@@ -86,13 +87,18 @@ public:
         return;
     };
 
-    void dump(const std::string& key) const {
+    void dump(const std::string& partialPath, bool noThrow) const {
         std::ostringstream os;
-        os << key << "-insatant-data.bin";
+        os << partialPath << "-insatant-data.bin";
         std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        std::ofstream wf(fname, std::ios::binary);
         if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
+            }
+            else{
+                throw eckit::SeriousBug("Cannot open file!", Here());
+            }
         }
         long sz = values_.size();
         // wf.write((char *) &count_, sizeof(long));
@@ -103,7 +109,12 @@ public:
         }
         wf.close();
         if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
+            }
+            else {
+                throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            }
         }
     }
 
@@ -135,19 +146,20 @@ public:
 
     Average(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {}
-    Average(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+
+    Average(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {
         std::ostringstream os;
-        os << key << "-average-data.bin";
+        os << partialPath << "-average-data.bin";
         std::string fname = os.str();
-        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
         long dim;
         wf.read((char*)&count_, sizeof(long));
         wf.read((char*)&dim, sizeof(long));
-        std::cout << "Il contatore del cazzo è :: " << count_ << std::endl;
+        LOG_DEBUG_LIB(LibMultio) << "The counter is :: " << count_ << std::endl;
         values_.resize(dim);
         for (int i = 0; i < dim; ++i) {
             double tmp;
@@ -161,13 +173,18 @@ public:
         return;
     };
 
-    void dump(const std::string& key) const {
+    void dump(const std::string& partialPath, bool noThrow) const {
         std::ostringstream os;
-        os << key << "-average-data.bin";
+        os << partialPath << "-average-data.bin";
         std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        std::ofstream wf(fname, std::ios::binary);
         if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
+            }
+            else{
+                throw eckit::SeriousBug("Cannot open file!", Here());
+            }
         }
         long sz = values_.size();
         wf.write((char*)&count_, sizeof(long));
@@ -178,7 +195,12 @@ public:
         }
         wf.close();
         if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
+            }
+            else {
+                throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            }
         }
     }
 
@@ -239,12 +261,13 @@ public:
 
     FluxAverage(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {}
-    FluxAverage(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+
+    FluxAverage(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {
         std::ostringstream os;
-        os << key << "-flux-average-data.bin";
+        os << partialPath << "-flux-average-data.bin";
         std::string fname = os.str();
-        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
@@ -264,14 +287,19 @@ public:
         return;
     };
 
-    void dump(const std::string& key) const {
+    void dump(const std::string& partialPath, bool noThrow) const {
         // TODO: Improve name
         std::ostringstream os;
-        os << key << "-flux-average-data.bin";
+        os << partialPath << "-flux-average-data.bin";
         std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        std::ofstream wf(fname, std::ios::binary);
         if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
+            }
+            else{
+                throw eckit::SeriousBug("Cannot open file!", Here());
+            }
         }
         long sz = values_.size();
         wf.write((char*)&count_, sizeof(long));
@@ -282,7 +310,12 @@ public:
         }
         wf.close();
         if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
+            }
+            else {
+                throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            }
         }
     }
 
@@ -322,12 +355,13 @@ public:
 
     Minimum(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "minimum", sz, options} {}
-    Minimum(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+
+    Minimum(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "minimum", sz, options} {
         std::ostringstream os;
-        os << key << "-minimum-data.bin";
+        os << partialPath << "-minimum-data.bin";
         std::string fname = os.str();
-        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
@@ -347,13 +381,18 @@ public:
         return;
     };
 
-    void dump(const std::string& key) const {
+    void dump(const std::string& partialPath, bool noThrow) const {
         std::ostringstream os;
-        os << key << "-minimum-data.bin";
+        os << partialPath << "-minimum-data.bin";
         std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        std::ofstream wf(fname, std::ios::binary);
         if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
+            }
+            else{
+                throw eckit::SeriousBug("Cannot open file!", Here());
+            }
         }
         long sz = values_.size();
         // wf.write((char *) &count_, sizeof(long));
@@ -364,7 +403,12 @@ public:
         }
         wf.close();
         if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
+            }
+            else {
+                throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            }
         }
     }
 
@@ -396,12 +440,13 @@ public:
 
     Maximum(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "maximum", sz, options} {}
-    Maximum(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+
+    Maximum(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "maximum", sz, options} {
         std::ostringstream os;
-        os << key << "-maximum-data.bin";
+        os << partialPath << "-maximum-data.bin";
         std::string fname = os.str();
-        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
@@ -421,14 +466,19 @@ public:
         return;
     };
 
-    void dump(const std::string& key) const {
+    void dump(const std::string& partialPath, bool noThrow) const {
         // TODO: Improve name
         std::ostringstream os;
-        os << key << "-maximum-data.bin";
+        os << partialPath << "-maximum-data.bin";
         std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        std::ofstream wf(fname, std::ios::binary);
         if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
+            }
+            else{
+                throw eckit::SeriousBug("Cannot open file!", Here());
+            }
         }
         long sz = values_.size();
         // wf.write((char *) &count_, sizeof(long));
@@ -439,7 +489,12 @@ public:
         }
         wf.close();
         if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
+            }
+            else {
+                throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            }
         }
     }
 
@@ -471,12 +526,13 @@ public:
 
     Accumulate(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "accumulate", sz, options} {};
-    Accumulate(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+
+    Accumulate(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "accumulate", sz, options} {
         std::ostringstream os;
-        os << key << "-accumulate-data.bin";
+        os << partialPath << "-accumulate-data.bin";
         std::string fname = os.str();
-        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
@@ -496,13 +552,18 @@ public:
         return;
     };
 
-    void dump(const std::string& key) const {
+    void dump(const std::string& partialPath, bool noThrow) const {
         std::ostringstream os;
-        os << key << "-accumulate-data.bin";
+        os << partialPath << "-accumulate-data.bin";
         std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        std::ofstream wf(fname, std::ios::binary);
         if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
+            }
+            else{
+                throw eckit::SeriousBug("Cannot open file!", Here());
+            }
         }
         long sz = values_.size();
         // wf.write((char *) &count_, sizeof(long));
@@ -513,7 +574,12 @@ public:
         }
         wf.close();
         if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            if (noThrow){
+                LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
+            }
+            else {
+                throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            }
         }
     }
 
@@ -537,59 +603,30 @@ private:
 
 //==== Factory function ============================
 template <typename T>
-std::unique_ptr<Operation<T>> make_operation(const std::string& opname, long sz, const StatisticsOptions& options) {
+std::unique_ptr<Operation<T>> make_operation(const std::string& opname, long sz, const std::string& partialPath, const StatisticsOptions& options, bool restart) {
 
     if (opname == "instant") {
-        return std::make_unique<Instant<T>>(opname, sz, options);
+        return restart ? std::make_unique<Instant<T>>(opname, sz, partialPath, options) : std::make_unique<Instant<T>>(opname, sz, options);
     }
     if (opname == "average") {
-        return std::make_unique<Average<T>>(opname, sz, options);
+        return restart ? std::make_unique<Average<T>>(opname, sz, partialPath, options) : std::make_unique<Average<T>>(opname, sz, options);
     }
     if (opname == "flux-average") {
-        return std::make_unique<FluxAverage<T>>(opname, sz, options);
+        return restart ? std::make_unique<FluxAverage<T>>(opname, sz, partialPath, options) : std::make_unique<FluxAverage<T>>(opname, sz, options);
     }
     if (opname == "minimum") {
-        return std::make_unique<Minimum<T>>(opname, sz, options);
+        return restart ? std::make_unique<Minimum<T>>(opname, sz, partialPath, options) : std::make_unique<Minimum<T>>(opname, sz, options);
     }
     if (opname == "maximum") {
-        return std::make_unique<Maximum<T>>(opname, sz, options);
+        return restart ? std::make_unique<Maximum<T>>(opname, sz, partialPath, options) : std::make_unique<Maximum<T>>(opname, sz, options);
     }
     if (opname != "accumulate") {
         std::ostringstream os;
         os << "Invalid opname in statistics operation :: " << opname << std::endl;
         throw eckit::UserError(os.str(), Here());
     }
-    return std::make_unique<Accumulate<T>>(opname, sz, options);
+    return restart ? std::make_unique<Accumulate<T>>(opname, sz, partialPath, options) : std::make_unique<Accumulate<T>>(opname, sz, options);
 }
-
-
-template <typename T>
-std::unique_ptr<Operation<T>> load_operation(const std::string& opname, long sz, const std::string& key,
-                                             const StatisticsOptions& options) {
-
-    if (opname == "instant") {
-        return std::make_unique<Instant<T>>(opname, sz, key, options);
-    }
-    if (opname == "average") {
-        return std::make_unique<Average<T>>(opname, sz, key, options);
-    }
-    if (opname == "flux-average") {
-        return std::make_unique<FluxAverage<T>>(opname, sz, key, options);
-    }
-    if (opname == "minimum") {
-        return std::make_unique<Minimum<T>>(opname, sz, key, options);
-    }
-    if (opname == "maximum") {
-        return std::make_unique<Maximum<T>>(opname, sz, key, options);
-    }
-    if (opname != "accumulate") {
-        std::ostringstream os;
-        os << "Invalid opname in statistics operation :: " << opname << std::endl;
-        throw eckit::UserError(os.str(), Here());
-    }
-    return std::make_unique<Accumulate<T>>(opname, sz, key, options);
-}
-
 
 }  // namespace action
 }  // namespace multio

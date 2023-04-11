@@ -19,7 +19,10 @@ private:
     long startTime_;
     bool restart_;
     long step_;
-    bool solveSendInitStep_;
+    bool solverSendInitStep_;
+
+    std::string restartPath_;
+    std::string restartPrefix_;
 
 public:
     StatisticsOptions(const eckit::LocalConfiguration& confCtx);
@@ -34,6 +37,8 @@ public:
     bool restart() const;
     long step() const;
     bool solver_send_initial_condition() const;
+    const std::string& restartPath() const;
+    const std::string& restartPrefix() const;
 };
 
 }  // namespace action

@@ -12,24 +12,14 @@ namespace multio {
 namespace action {
 
 namespace {
-auto reset_statistics(const std::vector<std::string>& opNames, message::Message msg, const StatisticsOptions& options) {
-    return multio::util::dispatchPrecisionTag(msg.precision(), [&](auto pt) {
-        using Precision = typename decltype(pt)::type;
-        std::vector<OperationVar> stats;
-        for (const auto& op : opNames) {
-            stats.push_back(make_operation<Precision>(op, msg.size(), options));
-        }
-        return stats;
-    });
-}
 
-auto load_statistics(const std::vector<std::string>& opNames, message::Message msg, const std::string& key,
-                     const StatisticsOptions& options) {
+auto reset_statistics(const std::vector<std::string>& opNames, message::Message msg, const std::string& partialPath,
+                     const StatisticsOptions& options, bool restart) {
     return multio::util::dispatchPrecisionTag(msg.precision(), [&](auto pt) {
         using Precision = typename decltype(pt)::type;
         std::vector<OperationVar> stats;
         for (const auto& op : opNames) {
-            stats.push_back(load_operation<Precision>(op, msg.size(), key, options));
+            stats.push_back(make_operation<Precision>(op, msg.size(), partialPath, options, restart));
         }
         return stats;
     });
@@ -42,11 +32,11 @@ eckit::DateTime currentDateTime(const message::Message& msg, const StatisticsOpt
     auto minute = (startTime % 10000) / 100;
     eckit::DateTime startDateTime{startDate, eckit::Time{hour, minute, 0}};
 
-    return startDateTime + static_cast<eckit::Second>(msg.metadata().getLong("step") * options.timeStep());
+    return startDateTime + static_cast<eckit::Second>(options.step()*options.timeStep());
 }
 
 eckit::DateTime nextDateTime(const message::Message& msg, const StatisticsOptions& options) {
-    return currentDateTime(msg, options) + static_cast<eckit::Second>(options.stepFreq() * options.timeStep());
+    return currentDateTime(msg, options) + static_cast<eckit::Second>(options.stepFreq()*options.timeStep());
 }
 
 
@@ -55,43 +45,19 @@ eckit::DateTime nextDateTime(const message::Message& msg, const StatisticsOption
 std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::string& unit, long span,
                                                               const std::vector<std::string>& operations,
                                                               const message::Message& msg,
+                                                              const std::string& partialPath,
                                                               const StatisticsOptions& options) {
-    long step = msg.metadata().getLong("step");
 
     if (unit == "month") {
-        return std::make_unique<MonthlyStatistics>(operations, span, msg, options, step);
+        return std::make_unique<MonthlyStatistics>(operations, span, msg, partialPath, options );
     }
 
     if (unit == "day") {
-        return std::make_unique<DailyStatistics>(operations, span, msg, options, step);
+        return std::make_unique<DailyStatistics>(operations, span, msg, partialPath, options );
     }
 
     if (unit == "hour") {
-        return std::make_unique<HourlyStatistics>(operations, span, msg, options, step);
-    }
-
-    throw eckit::SeriousBug{"Temporal statistics for base period " + unit + " is not defined"};
-}
-
-
-std::unique_ptr<TemporalStatistics> TemporalStatistics::load(const std::string& unit, long span,
-                                                             const std::vector<std::string>& operations,
-                                                             const message::Message& msg, const std::string& key,
-                                                             const StatisticsOptions& options) {
-
-    // TODO: make some coherency checks
-    long step = msg.metadata().getLong("step");
-    std::cout << "Load a restart file" << std::endl;
-    if (unit == "month") {
-        return std::make_unique<MonthlyStatistics>(operations, span, msg, key, options, step);
-    }
-
-    if (unit == "day") {
-        return std::make_unique<DailyStatistics>(operations, span, msg, key, options, step);
-    }
-
-    if (unit == "hour") {
-        return std::make_unique<HourlyStatistics>(operations, span, msg, key, options, step);
+        return std::make_unique<HourlyStatistics>(operations, span, msg, partialPath, options );
     }
 
     throw eckit::SeriousBug{"Temporal statistics for base period " + unit + " is not defined"};
@@ -99,27 +65,27 @@ std::unique_ptr<TemporalStatistics> TemporalStatistics::load(const std::string& 
 
 
 TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
-                                       const message::Message& msg, const StatisticsOptions& options, long span,
-                                       long step) :
+                                       const message::Message& msg, const std::string& partialPath, const StatisticsOptions& options, long span ) :
     name_{msg.name()},
+    partialPath_{partialPath},
     current_{period},
     options_{options},
     opNames_{operations},
-    statistics_{reset_statistics(operations, msg, options)},
-    prevStep_{step},
+    statistics_{reset_statistics(operations, msg, partialPath, options, options.restart())},
+    prevStep_{options.step()},
     span_{span} {}
 
 
-TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
-                                       const message::Message& msg, const std::string& key,
-                                       const StatisticsOptions& options, long span, long step) :
-    name_{msg.name()},
-    current_{period},
-    options_{options},
-    opNames_{operations},
-    statistics_{load_statistics(operations, msg, key, options)},
-    prevStep_{step},
-    span_{span} {}
+
+void TemporalStatistics::dump(bool noThrow) const {
+    current_.dump(partialPath_,noThrow);
+    for (auto const& stat : statistics_) {
+        std::visit(Overloaded{[&](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(this->partialPath_,noThrow); },
+                              [&](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(this->partialPath_,noThrow); }},
+                   stat);
+    }
+    return;
+}
 
 
 bool TemporalStatistics::process(message::Message& msg) {
@@ -179,11 +145,6 @@ eckit::DateTime updateMonthEnd(const eckit::DateTime& startPoint, long span) {
     return eckit::DateTime{eckit::Date{endYear, endMonth, 1}, eckit::Time{0}};
 };
 
-bool isMonthStart(const eckit::DateTime& startPoint) {
-    return (startPoint.date().day() == 1 && startPoint.time().hours() == 0 && startPoint.time().minutes() == 0
-            && startPoint.time().seconds() == 0);
-}
-
 eckit::DateTime computeMonthEnd(const eckit::DateTime& startPoint, long span) {
     return eckit::DateTime{updateMonthEnd(startPoint, span)};
 };
@@ -205,10 +166,6 @@ eckit::DateTime updateDayEnd(const eckit::DateTime& startPoint, long span) {
     return eckit::DateTime{tmp.date(), eckit::Time{0}};
 };
 
-bool isDayStart(const eckit::DateTime& startPoint) {
-    return (startPoint.time().hours() == 0 && startPoint.time().minutes() == 0 && startPoint.time().seconds() == 0);
-}
-
 eckit::DateTime computeDayEnd(const eckit::DateTime& startPoint, long span) {
     return eckit::DateTime{updateDayEnd(startPoint, span)};
 };
@@ -229,10 +186,6 @@ eckit::DateTime updateHourEnd(const eckit::DateTime& startPoint, long span) {
     eckit::DateTime tmp = startPoint + eckit::Second{3600 * span};
     return eckit::DateTime{tmp.date(), eckit::Time{tmp.time().hours(), 0, 0}};
 };
-
-bool isHourStart(const eckit::DateTime& startPoint) {
-    return (startPoint.time().minutes() == 0 && startPoint.time().seconds() == 0);
-}
 
 eckit::DateTime computeHourEnd(const eckit::DateTime& startPoint, long span) {
     return eckit::DateTime{updateHourEnd(startPoint, span)};
@@ -270,7 +223,7 @@ const DateTimePeriod& TemporalStatistics::current() const {
 }
 
 void TemporalStatistics::reset(const message::Message& msg) {
-    statistics_ = reset_statistics(opNames_, msg, options_);
+    statistics_ = reset_statistics(opNames_, msg, partialPath_, options_, false);
     resetPeriod(msg);
     LOG_DEBUG_LIB(::multio::LibMultio) << " ------ Resetting statistics for temporal type " << *this << std::endl;
 }
@@ -289,27 +242,9 @@ DateTimePeriod setHourlyPeriod(long span, const message::Message& msg, const Sta
 }  // namespace
 
 HourlyStatistics::HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                   const StatisticsOptions& options, long step) :
-    TemporalStatistics{operations, DateTimePeriod{setHourlyPeriod(span, msg, options)}, msg, options, span, step} {}
-
-HourlyStatistics::HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                   const std::string& key, const StatisticsOptions& options, long step) :
-    TemporalStatistics{operations, DateTimePeriod{"hourly"+key}, msg, "hourly-"+key, options, span, step} {
+                                   const std::string& partialPath, const StatisticsOptions& options) :
+    TemporalStatistics{operations, options.restart()?DateTimePeriod{partialPath+"-hourly"}:DateTimePeriod{setHourlyPeriod(span, msg, options)}, msg, partialPath+"-hourly", options, span} {
     // Restart constructor
-}
-
-void HourlyStatistics::dump(const std::string& name) const {
-    std::ofstream dumpFile;
-    std::ostringstream os;
-    os << "hourly-" << name;
-    std::string fname = os.str();
-    current_.dump(fname);
-    for (auto const& stat : statistics_) {
-        std::visit(Overloaded{[&fname](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(fname); },
-                              [&fname](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(fname); }},
-                   stat);
-    }
-    return;
 }
 
 void HourlyStatistics::print(std::ostream& os) const {
@@ -327,30 +262,11 @@ DateTimePeriod setDailyPeriod(long span, const message::Message& msg, const Stat
 }
 }  // namespace
 
-
 DailyStatistics::DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                 const StatisticsOptions& options, long step) :
-    TemporalStatistics{operations, DateTimePeriod{setDailyPeriod(span, msg, options)}, msg, options, span, step} {}
-
-DailyStatistics::DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                 const std::string& key, const StatisticsOptions& options, long step) :
-    TemporalStatistics{operations, DateTimePeriod{"daily-"+key}, msg, "daily-"+key, options, span, step} {
+                                 const std::string& partialPath, const StatisticsOptions& options) :
+    TemporalStatistics{operations, options.restart()?DateTimePeriod{partialPath+"-daily"}:DateTimePeriod{setDailyPeriod(span, msg, options)}, msg, partialPath+"-daily", options, span} {
     // Restart constructor
 
-}
-
-void DailyStatistics::dump(const std::string& name) const {
-    std::ofstream dumpFile;
-    std::ostringstream os;
-    os << "daily-" << name;
-    std::string fname = os.str();
-    current_.dump(fname);
-    for (auto const& stat : statistics_) {
-        std::visit(Overloaded{[&fname](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(fname); },
-                              [&fname](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(fname); }},
-                   stat);
-    }
-    return;
 }
 
 void DailyStatistics::print(std::ostream& os) const {
@@ -368,37 +284,9 @@ DateTimePeriod setMonthlyPeriod(long span, const message::Message& msg, const St
 }
 }  // namespace
 
-#if 0
 MonthlyStatistics::MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                     const std::string& key, const StatisticsOptions& options, bool restart) :
-    TemporalStatistics{operations, restart?DateTimePeriod{"monthly-"+key}:setMonthlyPeriod(span, msg, options), msg, "monthly-"+key, options, span, options.step(), restart} {}
-#endif
-
-
-MonthlyStatistics::MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                     const StatisticsOptions& options, long step) :
-    TemporalStatistics{operations, setMonthlyPeriod(span, msg, options), msg, options, span, step} {}
-
-
-MonthlyStatistics::MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                     const std::string& key, const StatisticsOptions& options, long step) :
-    TemporalStatistics{operations, DateTimePeriod{"monthly-"+key}, msg, "monthly-"+key, options, span, step} {}
-
-
-void MonthlyStatistics::dump(const std::string& name) const {
-    std::ofstream dumpFile;
-    std::ostringstream os;
-    os << "monthly-" << name;
-    std::string fname = os.str();
-    current_.dump(fname);
-    for (auto const& stat : statistics_) {
-        std::visit(Overloaded{[&fname](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(fname); },
-                              [&fname](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(fname); }},
-                   stat);
-    }
-    return;
-}
-
+                                     const std::string& partialPath, const StatisticsOptions& options) :
+    TemporalStatistics{operations, options.restart()?DateTimePeriod{partialPath+"-monthly"}:setMonthlyPeriod(span, msg, options), msg, partialPath+"-monthly", options, span} {}
 
 void MonthlyStatistics::print(std::ostream& os) const {
     os << "Monthly Statistics(" << current_ << ")";

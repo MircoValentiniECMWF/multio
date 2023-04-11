@@ -52,19 +52,27 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
 
 
 Statistics::~Statistics(){
-    // for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
-    //     // TODO: is key the correct value to use as prfix for file names.
-    //     // is key constant across different software runs.
-    //     it->second->dump(key);
-    // }
+    // Dump restart for all non emitted statistics
+    if (options_.restart()){
+        for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
+            it->second->dump( true );
+        }
+    }
 }
 
-std::string Statistics::getKey(const message::Message& msg) {
+std::string Statistics::getKey(const message::Message& msg) const {
     std::ostringstream os;
     // TODO: "param" and "level" are needed. check and throw
     os << std::to_string(std::hash<std::string>{}(msg.metadata().getString("param", "unknown")))
        << std::to_string(std::hash<long>{}(msg.metadata().getLong("level", 999999999L)))
        << std::to_string(std::hash<std::string>{}(msg.source()));
+    return os.str();
+}
+
+std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const {
+    // Easy way to change (if needed in future) the name of the restart file
+    std::ostringstream os;
+    os << opt.restartPath() << "/" << opt.restartPrefix() << "-" << getKey(msg);
     return os.str();
 }
 
@@ -81,18 +89,18 @@ message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetad
     md.set("currentDate", fieldStats_.at(key)->current().endPoint().date().yyyymmdd());
     md.set("currentTime", fieldStats_.at(key)->current().endPoint().time().hhmmss());
     auto stepInSeconds = md.getLong("step") * opt.timeStep();
-    std::cout << "The step is :: " << md.getLong("step") << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << "The step is :: " << md.getLong("step") << std::endl;
     if (stepInSeconds % 3600 != 0L) {
         std::ostringstream os;
         os << "Step in seconds needs to be a multiple of 3600 :: " << stepInSeconds << std::endl;
         throw eckit::SeriousBug(os.str(), Here());
     }
     auto stepInHours = stepInSeconds / 3600;
-    std::cout << "The step (in hours) is :: " << stepInHours << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << "The step (in hours) is :: " << stepInHours << std::endl;
     md.set("stepInHours", stepInHours);
     auto prevStep = std::max(stepInHours - timeSpanInHours, 0L);
     auto stepRangeInHours = std::to_string(prevStep) + "-" + std::to_string(stepInHours);
-    std::cout << "The step range (in hours) is :: " << stepRangeInHours << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << "The step range (in hours) is :: " << stepRangeInHours << std::endl;
     md.set("stepRangeInHours", stepRangeInHours);
     return md;
 }
@@ -115,10 +123,6 @@ void Statistics::executeImpl(message::Message msg) {
     long timeSpanInSeconds;
     StatisticsOptions opt{options_, msg};
 
-    if (!msg.metadata().has("step")) {
-        throw eckit::UserError("Missing metadata \"step\"", Here());
-    }
-
     {
         util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
 
@@ -127,8 +131,8 @@ void Statistics::executeImpl(message::Message msg) {
                                          << std::endl;
         if (fieldStats_.find(key) == end(fieldStats_)) {
             // Create a new statistics
-            fieldStats_[key] = opt.restart() ? TemporalStatistics::load(timeUnit_, timeSpan_, operations_, msg, key, opt) : TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg, opt);
-            // Initial conditions don't need to be used in computation (for the moment)
+            fieldStats_[key] = TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg, getRestartPartialPath(msg,opt), opt);
+            // Initial conditions don't need to be used in computation
             if ( opt.solver_send_initial_condition()){
                 return;
             }
@@ -149,12 +153,12 @@ void Statistics::executeImpl(message::Message msg) {
             message::Message newMsg{message::Message::Header{message::Message::Tag::Field, msg.source(),
                                                              msg.destination(), message::Metadata{md}},
                                     std::move(stat.second)};
-            std::cout << "Exit span in seconds :: " << timeSpanInSeconds << std::endl;
+            LOG_DEBUG_LIB(LibMultio) << "Exit span in seconds :: " << timeSpanInSeconds << std::endl;
             if (timeSpanInSeconds > 0) {
                 executeNext(newMsg);
             }
             else {
-                std::cout << "Rejected stats" << std::endl;
+                LOG_DEBUG_LIB(LibMultio) << "Rejected stats" << std::endl;
             }
         }
     }

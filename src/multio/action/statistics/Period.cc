@@ -8,7 +8,7 @@
 
 namespace multio {
 namespace action {
-DateTimePeriod::DateTimePeriod(const std::string& name) :
+DateTimePeriod::DateTimePeriod(const std::string& partialPath) :
     startPoint_{eckit::Date{0}, eckit::Time{0}}, endPoint_{eckit::Date{0}, eckit::Time{0}}, offset_{0} {
     long sd;
     long st;
@@ -16,9 +16,9 @@ DateTimePeriod::DateTimePeriod(const std::string& name) :
     long et;
     long of;
     std::ostringstream os;
-    os << name << "-period.bin";
+    os << partialPath << "-period.bin";
     std::string fname = os.str();
-    std::ifstream wf(fname, std::ios::in | std::ios::binary);
+    std::ifstream wf(fname, std::ios::binary);
     if (!wf) {
         std::ostringstream err;
         err << "Cannot open file :: " << fname;
@@ -93,13 +93,18 @@ eckit::DateTime DateTimePeriod::endPoint() const {
     return endPoint_;
 }
 
-void DateTimePeriod::dump(const std::string& name) const {
+void DateTimePeriod::dump(const std::string& partialPath, bool noThrow ) const {
     std::ostringstream os;
-    os << name << "-period.bin";
+    os << partialPath << "-period.bin";
     std::string fname = os.str();
-    std::ofstream wf(fname, std::ios::out | std::ios::binary);
+    std::ofstream wf(fname, std::ios::binary);
     if (!wf) {
-        throw eckit::SeriousBug("Cannot open file!", Here());
+        if (noThrow){
+            LOG_DEBUG_LIB(LibMultio) << "Cannot open dump file: fname" << std::endl;
+        }
+        else{
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
     }
     long dim;
     // wf.read((char*)&count_, sizeof(long));
@@ -114,7 +119,12 @@ void DateTimePeriod::dump(const std::string& name) const {
     wf.write((char*)&offset_, sizeof(long));
     wf.close();
     if (!wf.good()) {
-        throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        if (noThrow){
+            LOG_DEBUG_LIB(LibMultio) << "Error occurred at writing time: fname" << std::endl;
+        }
+        else {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
     }
     return;
 }
