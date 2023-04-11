@@ -64,6 +64,7 @@ public:
 
     Instant(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "instant", sz, options} {
+#if 0
         std::ostringstream os;
         os << partialPath << "-instant-data.bin";
         std::string fname = os.str();
@@ -84,10 +85,12 @@ public:
         if (!wf.good()) {
             throw eckit::SeriousBug("Error occurred at writing time!", Here());
         }
+#endif
         return;
     };
 
     void dump(const std::string& partialPath, bool noThrow) const {
+#if 0
         std::ostringstream os;
         os << partialPath << "-insatant-data.bin";
         std::string fname = os.str();
@@ -116,6 +119,7 @@ public:
                 throw eckit::SeriousBug("Error occurred at writing time!", Here());
             }
         }
+#endif
     }
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
@@ -159,6 +163,11 @@ public:
         long dim;
         wf.read((char*)&count_, sizeof(long));
         wf.read((char*)&dim, sizeof(long));
+        if (dim != sz / sizeof(T)) {
+            std::ostringstream err;
+            err << "Wrong size during restart of average-statistics :: " << dim << ", " << sz;
+            throw eckit::SeriousBug(err.str(), Here());
+        }
         LOG_DEBUG_LIB(LibMultio) << "The counter is :: " << count_ << std::endl;
         values_.resize(dim);
         for (int i = 0; i < dim; ++i) {
@@ -274,6 +283,9 @@ public:
         long dim;
         wf.read((char*)&count_, sizeof(long));
         wf.read((char*)&dim, sizeof(long));
+        if (dim != sz / sizeof(T)) {
+            throw eckit::SeriousBug("Wrong size during restart of flux-average-statistics", Here());
+        }
         values_.resize(dim);
         for (int i = 0; i < dim; ++i) {
             double tmp;
@@ -288,7 +300,6 @@ public:
     };
 
     void dump(const std::string& partialPath, bool noThrow) const {
-        // TODO: Improve name
         std::ostringstream os;
         os << partialPath << "-flux-average-data.bin";
         std::string fname = os.str();
@@ -358,6 +369,7 @@ public:
 
     Minimum(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "minimum", sz, options} {
+#if 0
         std::ostringstream os;
         os << partialPath << "-minimum-data.bin";
         std::string fname = os.str();
@@ -378,10 +390,12 @@ public:
         if (!wf.good()) {
             throw eckit::SeriousBug("Error occurred at writing time!", Here());
         }
+#endif
         return;
     };
 
     void dump(const std::string& partialPath, bool noThrow) const {
+#if 0
         std::ostringstream os;
         os << partialPath << "-minimum-data.bin";
         std::string fname = os.str();
@@ -410,6 +424,7 @@ public:
                 throw eckit::SeriousBug("Error occurred at writing time!", Here());
             }
         }
+#endif
     }
 
 
@@ -443,6 +458,7 @@ public:
 
     Maximum(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "maximum", sz, options} {
+#if 0
         std::ostringstream os;
         os << partialPath << "-maximum-data.bin";
         std::string fname = os.str();
@@ -451,7 +467,6 @@ public:
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
         long dim;
-        // wf.write((char *) &count_, sizeof(long));
         wf.read((char*)&dim, sizeof(long));
         values_.resize(dim);
         for (int i = 0; i < dim; ++i) {
@@ -463,11 +478,12 @@ public:
         if (!wf.good()) {
             throw eckit::SeriousBug("Error occurred at writing time!", Here());
         }
+#endif
         return;
     };
 
     void dump(const std::string& partialPath, bool noThrow) const {
-        // TODO: Improve name
+#if 0
         std::ostringstream os;
         os << partialPath << "-maximum-data.bin";
         std::string fname = os.str();
@@ -481,7 +497,6 @@ public:
             }
         }
         long sz = values_.size();
-        // wf.write((char *) &count_, sizeof(long));
         wf.write((char*)&sz, sizeof(long));
         for (int i = 0; i < sz; ++i) {
             double tmp = double(values_[i]);
@@ -496,6 +511,7 @@ public:
                 throw eckit::SeriousBug("Error occurred at writing time!", Here());
             }
         }
+#endif
     }
 
 
@@ -537,8 +553,10 @@ public:
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
         long dim;
-        // wf.read((char*)&count_, sizeof(long));
         wf.read((char*)&dim, sizeof(long));
+        if (dim != sz / sizeof(T)) {
+            throw eckit::SeriousBug("Wrong size during restart of accumulate-statistics", Here());
+        }
         values_.resize(dim);
         for (int i = 0; i < dim; ++i) {
             double tmp;
@@ -566,7 +584,6 @@ public:
             }
         }
         long sz = values_.size();
-        // wf.write((char *) &count_, sizeof(long));
         wf.write((char*)&sz, sizeof(long));
         for (int i = 0; i < sz; ++i) {
             double tmp = double(values_[i]);
