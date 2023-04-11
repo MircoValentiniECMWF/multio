@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "eckit/config/LocalConfiguration.h"
 #include "multio/message/Message.h"
 
@@ -15,16 +17,23 @@ private:
     long timeStep_;
     long startDate_;
     long startTime_;
+    bool restart_;
+    long step_;
+    bool solveSendInitStep_;
 
 public:
     StatisticsOptions(const eckit::LocalConfiguration& confCtx);
     StatisticsOptions(const StatisticsOptions& confCtx, const message::Message& msg);
+
 
     bool useDateTime() const;
     long stepFreq() const;
     long timeStep() const;
     long startDate() const;
     long startTime() const;
+    bool restart() const;
+    long step() const;
+    bool solver_send_initial_condition() const;
 };
 
 }  // namespace action

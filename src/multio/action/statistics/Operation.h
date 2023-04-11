@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <variant>
@@ -30,6 +32,7 @@ public:
     virtual void update(const void* val, long sz) = 0;
 
     virtual ~Operation() = default;
+    virtual void dump(const std::string& key) const = 0;
 
 protected:
     virtual void print(std::ostream& os) const = 0;
@@ -58,6 +61,51 @@ public:
 
     Instant(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "instant", sz, options} {}
+    Instant(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+        Operation<T>{name, "instant", sz, options} {
+        std::ostringstream os;
+        os << key << "-instant-data.bin";
+        std::string fname = os.str();
+        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long dim;
+        // wf.write((char *) &count_, sizeof(long));
+        wf.read((char*)&dim, sizeof(long));
+        values_.resize(dim);
+        for (int i = 0; i < dim; ++i) {
+            double tmp;
+            wf.read((char*)&tmp, sizeof(double));
+            values_[i] = static_cast<T>(tmp);
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+        return;
+    };
+
+    void dump(const std::string& key) const {
+        std::ostringstream os;
+        os << key << "-insatant-data.bin";
+        std::string fname = os.str();
+        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long sz = values_.size();
+        // wf.write((char *) &count_, sizeof(long));
+        wf.write((char*)&sz, sizeof(long));
+        for (int i = 0; i < sz; ++i) {
+            double tmp = double(values_[i]);
+            wf.write((char*)&tmp, sizeof(double));
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+    }
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
 
@@ -81,13 +129,64 @@ class Average final : public Operation<T> {
     long count_ = 0;
 
 public:
+    using Operation<T>::name_;
     using Operation<T>::values_;
     using Operation<T>::options_;
 
     Average(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {}
+    Average(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+        Operation<T>{name, "average", sz, options} {
+        std::ostringstream os;
+        os << key << "-average-data.bin";
+        std::string fname = os.str();
+        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long dim;
+        wf.read((char*)&count_, sizeof(long));
+        wf.read((char*)&dim, sizeof(long));
+        std::cout << "Il contatore del cazzo è :: " << count_ << std::endl;
+        values_.resize(dim);
+        for (int i = 0; i < dim; ++i) {
+            double tmp;
+            wf.read((char*)&tmp, sizeof(double));
+            values_[i] = static_cast<T>(tmp);
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+        return;
+    };
 
-    eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
+    void dump(const std::string& key) const {
+        std::ostringstream os;
+        os << key << "-average-data.bin";
+        std::string fname = os.str();
+        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long sz = values_.size();
+        wf.write((char*)&count_, sizeof(long));
+        wf.write((char*)&sz, sizeof(long));
+        for (int i = 0; i < sz; ++i) {
+            double tmp = double(values_[i]);
+            wf.write((char*)&tmp, sizeof(double));
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+    }
+
+
+    eckit::Buffer compute() override {
+        LOG_DEBUG_LIB(LibMultio) << "statistics (" << name_ << ") compute :: count=" << count_ << std::endl;
+        return eckit::Buffer{values_.data(), values_.size() * sizeof(T)};
+    }
 
     void update(const void* data, long sz) override {
         auto val = static_cast<const T*>(data);
@@ -102,10 +201,10 @@ public:
             // Compute the running average in order to avoid precison problems
             // TODO: the scale factor can be computed using eckit::fraction
             // TODO: Handling missing values
-            T cntpp = static_cast<T>(count_ + 1);
-            T sc = static_cast<T>(count_) / cntpp;
+            double icntpp = double(1.0) / double(count_ + 1);
+            double sc = double(count_) * icntpp;
             for (auto& v : values_) {
-                v = v * sc + (*val++) / cntpp;
+                v = v * sc + (*val++) * icntpp;
             }
             ++count_;
         }
@@ -121,7 +220,7 @@ public:
                 LOG_DEBUG_LIB(LibMultio) << val++ << ", ";
             }
             LOG_DEBUG_LIB(LibMultio) << std::endl;
-            throw eckit::SeriousBug("numerical error dureing average update", Here());
+            throw eckit::SeriousBug("numerical error during average update", Here());
         }
     }
 
@@ -134,11 +233,59 @@ class FluxAverage final : public Operation<T> {
     long count_ = 0;
 
 public:
+    using Operation<T>::name_;
     using Operation<T>::values_;
     using Operation<T>::options_;
 
     FluxAverage(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {}
+    FluxAverage(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+        Operation<T>{name, "average", sz, options} {
+        std::ostringstream os;
+        os << key << "-flux-average-data.bin";
+        std::string fname = os.str();
+        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long dim;
+        wf.read((char*)&count_, sizeof(long));
+        wf.read((char*)&dim, sizeof(long));
+        values_.resize(dim);
+        for (int i = 0; i < dim; ++i) {
+            double tmp;
+            wf.read((char*)&tmp, sizeof(double));
+            values_[i] = static_cast<T>(tmp);
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+        return;
+    };
+
+    void dump(const std::string& key) const {
+        // TODO: Improve name
+        std::ostringstream os;
+        os << key << "-flux-average-data.bin";
+        std::string fname = os.str();
+        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long sz = values_.size();
+        wf.write((char*)&count_, sizeof(long));
+        wf.write((char*)&sz, sizeof(long));
+        for (int i = 0; i < sz; ++i) {
+            double tmp = double(values_[i]);
+            wf.write((char*)&tmp, sizeof(double));
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+    }
+
 
     eckit::Buffer compute() override {
 
@@ -146,7 +293,7 @@ public:
         for (auto& val : values_) {
             val /= static_cast<T>(count_ * options_.stepFreq() * options_.timeStep());
         }
-
+        LOG_DEBUG_LIB(LibMultio) << "statistics (" << name_ << ") compute :: count=" << count_ << std::endl;
         return eckit::Buffer{values_.data(), values_.size() * sizeof(T)};
     }
 
@@ -175,6 +322,52 @@ public:
 
     Minimum(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "minimum", sz, options} {}
+    Minimum(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+        Operation<T>{name, "minimum", sz, options} {
+        std::ostringstream os;
+        os << key << "-minimum-data.bin";
+        std::string fname = os.str();
+        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long dim;
+        // wf.write((char *) &count_, sizeof(long));
+        wf.read((char*)&dim, sizeof(long));
+        values_.resize(dim);
+        for (int i = 0; i < dim; ++i) {
+            double tmp;
+            wf.read((char*)&tmp, sizeof(double));
+            values_[i] = static_cast<T>(tmp);
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+        return;
+    };
+
+    void dump(const std::string& key) const {
+        std::ostringstream os;
+        os << key << "-minimum-data.bin";
+        std::string fname = os.str();
+        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long sz = values_.size();
+        // wf.write((char *) &count_, sizeof(long));
+        wf.write((char*)&sz, sizeof(long));
+        for (int i = 0; i < sz; ++i) {
+            double tmp = double(values_[i]);
+            wf.write((char*)&tmp, sizeof(double));
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+    }
+
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
 
@@ -203,6 +396,53 @@ public:
 
     Maximum(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "maximum", sz, options} {}
+    Maximum(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+        Operation<T>{name, "maximum", sz, options} {
+        std::ostringstream os;
+        os << key << "-maximum-data.bin";
+        std::string fname = os.str();
+        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long dim;
+        // wf.write((char *) &count_, sizeof(long));
+        wf.read((char*)&dim, sizeof(long));
+        values_.resize(dim);
+        for (int i = 0; i < dim; ++i) {
+            double tmp;
+            wf.read((char*)&tmp, sizeof(double));
+            values_[i] = static_cast<T>(tmp);
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+        return;
+    };
+
+    void dump(const std::string& key) const {
+        // TODO: Improve name
+        std::ostringstream os;
+        os << key << "-maximum-data.bin";
+        std::string fname = os.str();
+        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long sz = values_.size();
+        // wf.write((char *) &count_, sizeof(long));
+        wf.write((char*)&sz, sizeof(long));
+        for (int i = 0; i < sz; ++i) {
+            double tmp = double(values_[i]);
+            wf.write((char*)&tmp, sizeof(double));
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+    }
+
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
 
@@ -231,6 +471,52 @@ public:
 
     Accumulate(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "accumulate", sz, options} {};
+    Accumulate(const std::string& name, long sz, const std::string& key, const StatisticsOptions& options) :
+        Operation<T>{name, "accumulate", sz, options} {
+        std::ostringstream os;
+        os << key << "-accumulate-data.bin";
+        std::string fname = os.str();
+        std::ifstream wf(fname, std::ios::in | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long dim;
+        // wf.read((char*)&count_, sizeof(long));
+        wf.read((char*)&dim, sizeof(long));
+        values_.resize(dim);
+        for (int i = 0; i < dim; ++i) {
+            double tmp;
+            wf.read((char*)&tmp, sizeof(double));
+            values_[i] = static_cast<T>(tmp);
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+        return;
+    };
+
+    void dump(const std::string& key) const {
+        std::ostringstream os;
+        os << key << "-accumulate-data.bin";
+        std::string fname = os.str();
+        std::ofstream wf(fname, std::ios::out | std::ios::binary);
+        if (!wf) {
+            throw eckit::SeriousBug("Cannot open file!", Here());
+        }
+        long sz = values_.size();
+        // wf.write((char *) &count_, sizeof(long));
+        wf.write((char*)&sz, sizeof(long));
+        for (int i = 0; i < sz; ++i) {
+            double tmp = double(values_[i]);
+            wf.write((char*)&tmp, sizeof(double));
+        }
+        wf.close();
+        if (!wf.good()) {
+            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        }
+    }
+
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
 
@@ -268,13 +554,42 @@ std::unique_ptr<Operation<T>> make_operation(const std::string& opname, long sz,
     if (opname == "maximum") {
         return std::make_unique<Maximum<T>>(opname, sz, options);
     }
-    if ( opname != "accumulate" ) {
+    if (opname != "accumulate") {
         std::ostringstream os;
         os << "Invalid opname in statistics operation :: " << opname << std::endl;
         throw eckit::UserError(os.str(), Here());
     }
     return std::make_unique<Accumulate<T>>(opname, sz, options);
 }
+
+
+template <typename T>
+std::unique_ptr<Operation<T>> load_operation(const std::string& opname, long sz, const std::string& key,
+                                             const StatisticsOptions& options) {
+
+    if (opname == "instant") {
+        return std::make_unique<Instant<T>>(opname, sz, key, options);
+    }
+    if (opname == "average") {
+        return std::make_unique<Average<T>>(opname, sz, key, options);
+    }
+    if (opname == "flux-average") {
+        return std::make_unique<FluxAverage<T>>(opname, sz, key, options);
+    }
+    if (opname == "minimum") {
+        return std::make_unique<Minimum<T>>(opname, sz, key, options);
+    }
+    if (opname == "maximum") {
+        return std::make_unique<Maximum<T>>(opname, sz, key, options);
+    }
+    if (opname != "accumulate") {
+        std::ostringstream os;
+        os << "Invalid opname in statistics operation :: " << opname << std::endl;
+        throw eckit::UserError(os.str(), Here());
+    }
+    return std::make_unique<Accumulate<T>>(opname, sz, key, options);
+}
+
 
 }  // namespace action
 }  // namespace multio

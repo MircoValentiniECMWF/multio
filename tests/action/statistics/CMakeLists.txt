@@ -14,6 +14,10 @@ list( APPEND _statistics_tests_kinds
 )
 
 
+# "standard_0_statistics_test_data.grib"
+# "standard_1_statistics_test_data.grib"
+# "restart_0_statistics_test_data.grib"
+# "restart_1_statistics_test_data.grib"
 list( APPEND _statistics_test_data
     "reduced_gg_pl_80_avg_grib2.tmpl"
     "standard_statistics_test_data.grib"
@@ -49,39 +53,42 @@ ecbuild_get_test_multidata(
 foreach(_test ${_statistics_tests_names} )
     foreach(_kind ${_statistics_tests_kinds} )
 
-        set(_result    Result_${_kind}_${_test}.grib)
-        set(_reference Reference_${_kind}_${_test}.grib)
+        set(_result    Reference_${_kind}_${_test}.grib)
 
-        set(_feed ${_kind}_statistics_test_data.grib)
+        foreach(_start "0" "1" )
 
-        ecbuild_add_test(
-            TARGET       ${PREFIX}_run_${_kind}_${_test}
-            TEST_DEPENDS ${PREFIX}_get_data
-            COMMAND      multio-feed
-            ARGS          --decode --plans=${CMAKE_CURRENT_SOURCE_DIR}/${_kind}_${_test}.yaml ${_feed}
-        )
+            set(_reference Result_${_kind}_${_start}_${_test}.grib)
+            set(_feed ${_kind}_${_start}_statistics_test_data.grib)
 
-        ecbuild_add_test(
-            TARGET       ${PREFIX}_check_metadata_${_kind}_${_test}
-            TEST_DEPENDS ${PREFIX}_run_${_kind}_${_test}
-            COMMAND      grib_compare
-            ARGS         -H ${_reference} ${_result}
-        )
-
-        if( HAVE_MIR AND (_test MATCHES "^.*regrid.*$") )
             ecbuild_add_test(
-                TARGET       ${PREFIX}_check_values_${_kind}_${_test}
-                TEST_DEPENDS ${PREFIX}_check_metadata_${_kind}_${_test}
-                COMMAND      mir-compare
-                ARGS         ${_reference} ${_result} --ignore-above-latitude=89.9 --ignore-below-latitude=-89.9
+                TARGET       ${PREFIX}_run_${_kind}_${_start}_${_test}
+                TEST_DEPENDS ${PREFIX}_get_data
+                COMMAND      multio-feed
+                ARGS          --decode --plans=${CMAKE_CURRENT_SOURCE_DIR}/${_kind}_${_start}_${_test}.yaml ${_feed}
             )
-        else()
+
             ecbuild_add_test(
-                TARGET       ${PREFIX}_check_values_${_kind}_${_test}
-                TEST_DEPENDS ${PREFIX}_check_metadata_${_kind}_${_test}
+                TARGET       ${PREFIX}_check_metadata_${_kind}_${_start}_${_test}
+                TEST_DEPENDS ${PREFIX}_run_${_kind}_${_test}
+                ARGS         -H ${_reference} ${_result}
                 COMMAND      grib_compare
-                ARGS         -P -T10 ${_reference} ${_result}
             )
-        endif()
+
+            if( HAVE_MIR AND (_test MATCHES "^.*regrid.*$") )
+                ecbuild_add_test(
+                    TARGET       ${PREFIX}_check_values_${_kind}_${_start}_${_test}
+                    TEST_DEPENDS ${PREFIX}_check_metadata_${_kind}_${_test}
+                    COMMAND      mir-compare
+                    ARGS         ${_reference} ${_result} --ignore-above-latitude=89.9 --ignore-below-latitude=-89.9
+                )
+            else()
+                ecbuild_add_test(
+                    TARGET       ${PREFIX}_check_values_${_kind}_${_start}_${_test}
+                    TEST_DEPENDS ${PREFIX}_check_metadata_${_kind}_${_test}
+                    COMMAND      grib_compare
+                    ARGS         -P -T10 ${_reference} ${_result}
+                )
+            endif()
+        endforeach()
     endforeach()
 endforeach()

@@ -33,11 +33,13 @@ class TemporalStatistics;
 class Statistics : public ChainedAction {
 public:
     explicit Statistics(const ConfigurationContext& confCtx);
-
+    ~Statistics();
+    std::string getKey(const message::Message& msg);
     void executeImpl(message::Message msg) override;
-
+    message::Metadata outputMetadata( const message::Metadata& inputMetadata, const StatisticsOptions& opt, const std::string& key, long timeSpanInSeconds ) const;
 private:
     void print(std::ostream& os) const override;
+    bool restartExist( const std::string& key, const StatisticsOptions& opt ) const;
     const std::string timeUnit_;
     const long timeSpan_;
     const std::vector<std::string> operations_;
