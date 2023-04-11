@@ -6,7 +6,6 @@ plans:
         output-frequency: 1m
         operations: [ average ]
         options:
-          restart: true
           initial-condition-present: true
           step-frequency: 1
           time-step: 3600

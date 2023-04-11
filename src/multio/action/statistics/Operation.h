@@ -89,7 +89,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath, bool noThrow) const {
+    void dump(const std::string& partialPath, bool noThrow) const override {
 #if 0
         std::ostringstream os;
         os << partialPath << "-insatant-data.bin";
@@ -182,7 +182,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath, bool noThrow) const {
+    void dump(const std::string& partialPath, bool noThrow) const override  {
         std::ostringstream os;
         os << partialPath << "-average-data.bin";
         std::string fname = os.str();
@@ -299,7 +299,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath, bool noThrow) const {
+    void dump(const std::string& partialPath, bool noThrow) const override  {
         std::ostringstream os;
         os << partialPath << "-flux-average-data.bin";
         std::string fname = os.str();
@@ -394,7 +394,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath, bool noThrow) const {
+    void dump(const std::string& partialPath, bool noThrow) const override  {
 #if 0
         std::ostringstream os;
         os << partialPath << "-minimum-data.bin";
@@ -482,7 +482,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath, bool noThrow) const {
+    void dump(const std::string& partialPath, bool noThrow) const override  {
 #if 0
         std::ostringstream os;
         os << partialPath << "-maximum-data.bin";
@@ -570,7 +570,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath, bool noThrow) const {
+    void dump(const std::string& partialPath, bool noThrow) const override  {
         std::ostringstream os;
         os << partialPath << "-accumulate-data.bin";
         std::string fname = os.str();

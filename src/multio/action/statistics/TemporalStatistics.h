@@ -40,12 +40,13 @@ protected:
     long span_;
     std::string name_;
     std::string partialPath_;
+    long prevStep_;
     DateTimePeriod current_;
     const StatisticsOptions& options_;
-
-    void updateStatistics(const message::Message& msg);
     std::vector<std::string> opNames_;
     std::vector<OperationVar> statistics_;
+
+    void updateStatistics(const message::Message& msg);
 
 private:
     virtual bool process_next(message::Message& msg);
@@ -59,7 +60,7 @@ private:
     }
 
 
-    long prevStep_ = 0;
+
 };
 
 //-------------------------------------------------------------------------------------------------

@@ -3,7 +3,7 @@
 #include "eckit/exception/Exceptions.h"
 #include "eckit/filesystem/PathName.h"
 
-#include "util/Substitution.h"
+#include "multio/util/Substitution.h"
 
 namespace multio {
 namespace action {

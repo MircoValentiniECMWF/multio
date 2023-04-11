@@ -67,14 +67,15 @@ std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::string&
 TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
                                        const message::Message& msg, const std::string& partialPath,
                                        const StatisticsOptions& options, long span) :
+    span_{span},
     name_{msg.name()},
     partialPath_{partialPath},
+    prevStep_{options.step()},
     current_{period},
     options_{options},
     opNames_{operations},
-    statistics_{reset_statistics(operations, msg, partialPath, options, options.restart())},
-    prevStep_{options.step()},
-    span_{span} {}
+    statistics_{reset_statistics(operations, msg, partialPath, options, options.restart())}
+     {}
 
 
 void TemporalStatistics::dump(bool noThrow) const {
@@ -164,7 +165,7 @@ eckit::DateTime computeDayStart(const eckit::DateTime& currentTime) {
 };
 
 eckit::DateTime updateDayEnd(const eckit::DateTime& startPoint, long span) {
-    eckit::DateTime tmp = startPoint + eckit::Second{3600 * 24 * span};
+    eckit::DateTime tmp = startPoint + static_cast<eckit::Second>(3600 * 24 * span);
     return eckit::DateTime{tmp.date(), eckit::Time{0}};
 };
 
@@ -185,7 +186,7 @@ eckit::DateTime computeHourStart(const eckit::DateTime& currentTime) {
 };
 
 eckit::DateTime updateHourEnd(const eckit::DateTime& startPoint, long span) {
-    eckit::DateTime tmp = startPoint + eckit::Second{3600 * span};
+    eckit::DateTime tmp = startPoint + static_cast<eckit::Second>(3600 * span);
     return eckit::DateTime{tmp.date(), eckit::Time{tmp.time().hours(), 0, 0}};
 };
 
