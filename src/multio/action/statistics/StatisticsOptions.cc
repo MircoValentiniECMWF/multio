@@ -1,5 +1,10 @@
 #include "StatisticsOptions.h"
 
+#include <limits.h>
+#include <unistd.h>
+#include <iomanip>
+
+
 #include "eckit/exception/Exceptions.h"
 #include "eckit/filesystem/PathName.h"
 
@@ -19,7 +24,11 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     step_{-1},
     solverSendInitStep_{false},
     restartPath_{"."},
-    restartPrefix_{"StatisticsRestartFile"} {
+    restartPrefix_{"StatisticsRestartFile"},
+    logPrefix_{"Plan"},
+    missingValue_{9999.0},
+    missingValueTolerance_{1.0E-12},
+    haveMissingValue_{false} {
 
     if (!confCtx.has("options")) {
         return;
@@ -60,7 +69,9 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
             throw eckit::UserError{"restart path not exist", Here()};
         }
     }
+    missingValueTolerance_ = opt.getDouble("missing-value-tolerance", 1.0E-12);
     restartPrefix_ = util::replaceCurly(opt.getString("restart-prefix", "StatisticsDump"), env);
+    logPrefix_ = util::replaceCurly(opt.getString("log-prefix", "Plan"), env);
 
     return;
 };
@@ -75,7 +86,11 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     step_{-1},
     solverSendInitStep_{opt.solver_send_initial_condition()},
     restartPath_{opt.restartPath()},
-    restartPrefix_{opt.restartPrefix()} {
+    restartPrefix_{opt.restartPrefix()},
+    logPrefix_{""},
+    missingValue_{9999.0},
+    missingValueTolerance_{1.0E-12},
+    haveMissingValue_{false} {
 
     if (useDateTime() && msg.metadata().has("time")) {
         startTime_ = msg.metadata().getLong("time");
@@ -103,8 +118,52 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     }
     step_ = msg.metadata().getLong("step");
 
+    // step and frequency
     timeStep_ = msg.metadata().getLong("timeStep", timeStep_);
     stepFreq_ = msg.metadata().getLong("step-frequency", stepFreq_);
+
+    // Logging prefix
+    // TODO: can be skipped if MULTIO_DEBUG is 0
+    std::ostringstream os;
+    if (opt.logPrefix() != "Plan") {
+        os << "(prefix=" << opt.logPrefix();
+    }
+    else if (opt.restartPrefix() != "StatisticsRestartFile") {
+        os << "(prefix=" << opt.restartPrefix();
+    }
+    os << ", step=" << std::left << std::setw(6) << step_;
+    if (msg.metadata().has("param")) {
+        os << ", param=" << std::left << std::setw(10) << msg.metadata().getString("param");
+    }
+    else if (msg.metadata().has("paramId")) {
+        os << ", param=" << std::left << std::setw(10) << msg.metadata().getString("paramId");
+    }
+    else {
+        throw eckit::SeriousBug{"param/paramId metadata not present", Here()};
+    }
+    if (msg.metadata().has("level")) {
+        os << ", level=" << std::left << std::setw(4) << msg.metadata().getLong("level");
+    }
+    else if (msg.metadata().has("levelist")) {
+        os << ", level=" << std::left << std::setw(4) << msg.metadata().getLong("levelist");
+    }
+    if (msg.metadata().has("levtype")) {
+        os << ", level-type=" << std::left << std::setw(5) << msg.metadata().getString("levtype");
+    }
+    os << ", pid=" << std::left << std::setw(10) << ::getpid();
+
+    {
+        char hostname[HOST_NAME_MAX];
+        gethostname(hostname, HOST_NAME_MAX);
+        os << ", hostname=" << std::string{hostname} << ") ";
+    }
+    logPrefix_ = os.str();
+
+    // Handle missing values
+    if (msg.metadata().has("missingValue")) {
+        haveMissingValue_ = true;
+        missingValue_ = msg.metadata().getDouble("missingValue");
+    }
 
     return;
 };
@@ -119,6 +178,10 @@ const std::string& StatisticsOptions::restartPath() const {
 
 const std::string& StatisticsOptions::restartPrefix() const {
     return restartPrefix_;
+};
+
+const std::string& StatisticsOptions::logPrefix() const {
+    return logPrefix_;
 };
 
 bool StatisticsOptions::useDateTime() const {
@@ -147,6 +210,20 @@ long StatisticsOptions::step() const {
 bool StatisticsOptions::solver_send_initial_condition() const {
     return solverSendInitStep_;
 }
+
+bool StatisticsOptions::haveMissingValue() const {
+    return haveMissingValue_;
+};
+
+
+double StatisticsOptions::missingValue() const {
+    return missingValue_;
+};
+
+
+double StatisticsOptions::missingValueTolerance() const {
+    return missingValueTolerance_;
+};
 
 }  // namespace action
 }  // namespace multio

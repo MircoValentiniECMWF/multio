@@ -75,17 +75,15 @@ TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operation
     current_{period},
     options_{options},
     opNames_{operations},
-    statistics_{reset_statistics(operations, msg, partialPath, options, options.restart())}
-     {}
+    statistics_{reset_statistics(operations, msg, partialPath, options, options.restart())} {}
 
 
-void TemporalStatistics::dump( ) const {
+void TemporalStatistics::dump() const {
     current_.dump(partialPath_);
     for (auto const& stat : statistics_) {
         std::visit(
-            Overloaded{
-                [this](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(this->partialPath_); },
-                [this](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(this->partialPath_); }},
+            Overloaded{[this](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(this->partialPath_); },
+                       [this](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(this->partialPath_); }},
             stat);
     }
     return;
@@ -117,18 +115,18 @@ bool TemporalStatistics::process_next(message::Message& msg) {
     }
 
     LOG_DEBUG_LIB(multio::LibMultio) << *this << std::endl;
-    LOG_DEBUG_LIB(multio::LibMultio) << " *** Current ";
+    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " *** Curr ";
 
     auto dateTime = currentDateTime(msg, options_);
     if (!current_.isWithin(dateTime)) {
         std::ostringstream os;
-        os << dateTime << " is outside of current period " << current_ << std::endl;
+        os << options_.logPrefix() << dateTime << " is outside of current period " << current_ << std::endl;
         throw eckit::UserError(os.str(), Here());
     }
 
     updateStatistics(msg);
 
-    LOG_DEBUG_LIB(multio::LibMultio) << " *** Next    ";
+    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " *** Next ";
     return current_.isWithin(nextDateTime(msg, options_));
 }
 
@@ -218,7 +216,7 @@ std::map<std::string, eckit::Buffer> TemporalStatistics::compute(const message::
 std::string TemporalStatistics::stepRange(long step) {
     auto ret = std::to_string(prevStep_) + "-" + std::to_string(step);
     prevStep_ = step;
-    LOG_DEBUG_LIB(multio::LibMultio) << " *** Setting step range: " << ret << std::endl;
+    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " *** Setting step range: " << ret << std::endl;
     return ret;
 }
 
@@ -229,7 +227,8 @@ const DateTimePeriod& TemporalStatistics::current() const {
 void TemporalStatistics::reset(const message::Message& msg) {
     statistics_ = reset_statistics(opNames_, msg, partialPath_, options_, false);
     resetPeriod(msg);
-    LOG_DEBUG_LIB(::multio::LibMultio) << " ------ Resetting statistics for temporal type " << *this << std::endl;
+    LOG_DEBUG_LIB(::multio::LibMultio) << options_.logPrefix() << " ------ Resetting statistics for temporal type "
+                                       << *this << std::endl;
 }
 
 //-------------------------------------------------------------------------------------------------
