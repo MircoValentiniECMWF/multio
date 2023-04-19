@@ -23,12 +23,12 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     restart_{false},
     step_{-1},
     solverSendInitStep_{false},
-    restartPath_{"."},
-    restartPrefix_{"StatisticsRestartFile"},
-    logPrefix_{"Plan"},
     missingValue_{9999.0},
     missingValueTolerance_{1.0E-12},
-    haveMissingValue_{false} {
+    haveMissingValue_{false},
+    restartPath_{"."},
+    restartPrefix_{"StatisticsRestartFile"},
+    logPrefix_{"Plan"} {
 
     if (!confCtx.has("options")) {
         return;
@@ -85,12 +85,12 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     restart_{opt.restart()},
     step_{-1},
     solverSendInitStep_{opt.solver_send_initial_condition()},
-    restartPath_{opt.restartPath()},
-    restartPrefix_{opt.restartPrefix()},
-    logPrefix_{""},
     missingValue_{9999.0},
     missingValueTolerance_{1.0E-12},
-    haveMissingValue_{false} {
+    haveMissingValue_{false},
+    restartPath_{opt.restartPath()},
+    restartPrefix_{opt.restartPrefix()},
+    logPrefix_{""} {
 
     if (useDateTime() && msg.metadata().has("time")) {
         startTime_ = msg.metadata().getLong("time");
@@ -153,8 +153,8 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     os << ", pid=" << std::left << std::setw(10) << ::getpid();
 
     {
-        char hostname[HOST_NAME_MAX];
-        gethostname(hostname, HOST_NAME_MAX);
+        char hostname[255];
+        gethostname(hostname, 255);
         os << ", hostname=" << std::string{hostname} << ") ";
     }
     logPrefix_ = os.str();

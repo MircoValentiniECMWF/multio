@@ -21,11 +21,10 @@ private:
     long step_;
     bool solverSendInitStep_;
 
-    bool haveMissingValue_;
     double missingValue_;
     double missingValueTolerance_;
+    bool haveMissingValue_;
 
-    std::string logPath_;
     std::string restartPath_;
     std::string restartPrefix_;
     std::string logPrefix_;
