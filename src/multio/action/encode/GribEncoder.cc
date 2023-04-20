@@ -38,6 +38,8 @@ using util::LookUpBool;
 using util::lookUpBool;
 using util::LookUpDouble;
 using util::lookUpDouble;
+using util::LookUpFloat;
+using util::lookUpFloat;
 using util::LookUpLong;
 using util::lookUpLong;
 using util::LookUpString;
@@ -218,7 +220,11 @@ void setEncodingSpecificFields(GribEncoder& g, const eckit::Configuration& md) {
     withFirstOf(valueSetter(g, "numberOfDataPoints"), gls);
     withFirstOf(valueSetter(g, "numberOfValues"), gls);
 
-    withFirstOf(valueSetter(g, "missingValue"), LookUpDouble(md, "missingValue"));
+    if ( util::decodePrecisionTag(md.getString("precision")) == util::PrecisionTag::Float ) {
+        withFirstOf(valueSetter(g, "missingValue"), LookUpFloat(md, "missingValue"));
+    } else {
+        withFirstOf(valueSetter(g, "missingValue"), LookUpDouble(md, "missingValue"));
+    }
     withFirstOf(valueSetter(g, "bitmapPresent"), LookUpBool(md, "bitmapPresent"));
     withFirstOf(valueSetter(g, "bitsPerValue"), LookUpLong(md, "bitsPerValue"));
 }
