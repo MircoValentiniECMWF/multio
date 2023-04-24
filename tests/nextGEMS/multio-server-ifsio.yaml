@@ -1,0 +1,18 @@
+plans:
+- name: '[4.1.1] ifsio - Wave model output'
+  enable: '{MULTIO_RAPS_ENABLE_PLAN_4_1_1}'
+  actions:
+  - type: print
+    only-fields: true
+    prefix: '[4.1.1] ifsio - Wave model output'
+  - type: sink
+    sinks: []
+    #- type: file
+    #  enable: '{MULTIO_RAPS_ENABLE_FILE_4_1_1}'
+    #  append: false
+    #  per-server: true
+    #  path: '{MULTIO_RAPS_OUTPUT_PATH}/04-WaveModel/WaveModel.grib'
+    #- type: fdb5
+    #  enable: '{MULTIO_RAPS_ENABLE_FDB5_4_1_1}'
+    #  config: {}
+
