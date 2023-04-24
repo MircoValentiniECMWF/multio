@@ -21,9 +21,11 @@ private:
     long step_;
     bool solverSendInitStep_;
 
-    double missingValue_;
+    int restartFrequency_;
+    double missingValueFloat_;
+    float missingValueDouble_;
     double missingValueTolerance_;
-    bool haveMissingValue_;
+    int haveMissingValue_;
 
     std::string restartPath_;
     std::string restartPrefix_;
@@ -45,8 +47,10 @@ public:
     const std::string& restartPrefix() const;
     const std::string& logPrefix() const;
 
+    bool needRestart() const;
     bool haveMissingValue() const;
-    double missingValue() const;
+    void missingValue(double& val) const;
+    void missingValue(float& val) const;
     double missingValueTolerance() const;
 };
 

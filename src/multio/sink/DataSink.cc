@@ -78,18 +78,15 @@ DataSinkBuilderBase::DataSinkBuilderBase(const std::string& name) : name_(name) 
 }
 
 DataSinkBuilderBase::~DataSinkBuilderBase() {
-    DataSinkFactory::instance().remove(name_);
+    // DataSinkFactory::instance().remove(name_);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 
 DataSink::DataSink(const util::ConfigurationContext& confCtx) :
-    failOnError_(confCtx.config().getBool("failOnError", true)),
-    confCtx_(confCtx),
-    id_(-1) {}
+    failOnError_(confCtx.config().getBool("failOnError", true)), confCtx_(confCtx), id_(-1) {}
 
-DataSink::~DataSink() {
-}
+DataSink::~DataSink() {}
 
 bool DataSink::ready() const {
     return true;  // default for synchronous sinks

@@ -1,11 +1,28 @@
 #include "Substitution.h"
 
+
 #include "eckit/utils/Translator.h"
 #include "eckit/value/Value.h"
 
 namespace multio {
 namespace util {
 
+eckit::Optional<long long> parseNumber(const eckit::LocalConfiguration& cfg, const std::string& key,
+                                       long long defaultValue) {
+
+    eckit::Value input = cfg.has(key)
+                           ? cfg.getSubConfiguration(key).get().isString()
+                               ? eckit::Value{eckit::Translator<std::string, long long>{}(util::replaceCurly(
+                                   cfg.getString(key),
+                                   [](std::string_view replace) {
+                                       std::string lookUpKey{replace};
+                                       char* env = ::getenv(lookUpKey.c_str());
+                                       return env ? eckit::Optional<std::string>{env} : eckit::Optional<std::string>{};
+                                   }))}
+                               : cfg.getSubConfiguration(key).get()
+                           : eckit::Value{defaultValue};
+    return input.isNumber() ? eckit::Optional<long long>{input.as<long long>()} : eckit::Optional<long long>{};
+}
 
 eckit::Optional<bool> parseBool(const eckit::LocalConfiguration& cfg, const std::string& key, bool defaultValue) {
 

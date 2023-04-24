@@ -78,7 +78,9 @@ TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operation
     statistics_{reset_statistics(operations, msg, partialPath, options, options.restart())} {}
 
 
-void TemporalStatistics::dump() const {
+void TemporalStatistics::dump(const std::string& key, const StatisticsOptions& options) const {
+    LOG_DEBUG_LIB(LibMultio) << " [" << partialPath_ << "] [" << key << " - " << options.logPrefix() << "] DUMP FILE"
+                             << std::endl;
     current_.dump(partialPath_);
     for (auto const& stat : statistics_) {
         std::visit(
@@ -90,7 +92,8 @@ void TemporalStatistics::dump() const {
 }
 
 
-bool TemporalStatistics::process(message::Message& msg) {
+bool TemporalStatistics::process(message::Message& msg, const StatisticsOptions& options) {
+    options_ = options;
     return process_next(msg);
 }
 
@@ -115,7 +118,7 @@ bool TemporalStatistics::process_next(message::Message& msg) {
     }
 
     LOG_DEBUG_LIB(multio::LibMultio) << *this << std::endl;
-    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " *** Curr ";
+    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " [" << partialPath_ << "] *** Curr ";
 
     auto dateTime = currentDateTime(msg, options_);
     if (!current_.isWithin(dateTime)) {
@@ -126,7 +129,7 @@ bool TemporalStatistics::process_next(message::Message& msg) {
 
     updateStatistics(msg);
 
-    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " *** Next ";
+    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " [" << partialPath_ << "] *** Next ";
     return current_.isWithin(nextDateTime(msg, options_));
 }
 
@@ -227,8 +230,8 @@ const DateTimePeriod& TemporalStatistics::current() const {
 void TemporalStatistics::reset(const message::Message& msg) {
     statistics_ = reset_statistics(opNames_, msg, partialPath_, options_, false);
     resetPeriod(msg);
-    LOG_DEBUG_LIB(::multio::LibMultio) << options_.logPrefix() << " ------ Resetting statistics for temporal type "
-                                       << *this << std::endl;
+    LOG_DEBUG_LIB(::multio::LibMultio) << options_.logPrefix() << " [" << partialPath_
+                                       << "] ------ Resetting statistics for temporal type " << *this << std::endl;
 }
 
 //-------------------------------------------------------------------------------------------------

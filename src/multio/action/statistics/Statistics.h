@@ -39,6 +39,8 @@ public:
                                      const std::string& key, long timeSpanInSeconds) const;
 
 private:
+    void DumpRestart(const std::string& key, const StatisticsOptions& opt) const;
+    void DumpRestart() const;
     std::string getKey(const message::Message& msg) const;
     std::string getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const;
     void print(std::ostream& os) const override;

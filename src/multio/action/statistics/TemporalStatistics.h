@@ -26,15 +26,14 @@ public:
                        long span);
 
     virtual ~TemporalStatistics() = default;
-
-    bool process(message::Message& msg);
+    bool process(message::Message& msg, const StatisticsOptions& options);
     std::map<std::string, eckit::Buffer> compute(const message::Message& msg);
     std::string stepRange(long step);
     const DateTimePeriod& current() const;
     void reset(const message::Message& msg);
     long startStep() const { return prevStep_; };
     virtual void print(std::ostream& os) const = 0;
-    void dump() const;
+    void dump(const std::string& key, const StatisticsOptions& options) const;
 
 protected:
     long span_;
@@ -42,7 +41,7 @@ protected:
     std::string partialPath_;
     long prevStep_;
     DateTimePeriod current_;
-    const StatisticsOptions& options_;
+    StatisticsOptions options_;
     std::vector<std::string> opNames_;
     std::vector<OperationVar> statistics_;
 
@@ -58,9 +57,6 @@ private:
         a.print(os);
         return os;
     }
-
-
-
 };
 
 //-------------------------------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "eckit/filesystem/PathName.h"
 #include "multio/LibMultio.h"
 
 namespace multio {
@@ -16,9 +17,13 @@ DateTimePeriod::DateTimePeriod(const std::string& partialPath) :
     long et;
     long of;
     long cs;
-    std::ostringstream os;
-    os << partialPath << "-period.bin";
-    std::string fname = os.str();
+    // std::ostringstream tmpOs;
+    std::ostringstream defOs;
+    // tmpOs << partialPath << "-period.tmp.bin";
+    defOs << partialPath << "-period.bin";
+    // eckit::PathName tmpFile(tmpOs.str());
+    // eckit::PathName defFile(defOs.str());
+    std::string fname = defOs.str();
     std::ifstream wf(fname, std::ios::binary);
     if (!wf) {
         std::ostringstream err;
@@ -32,7 +37,7 @@ DateTimePeriod::DateTimePeriod(const std::string& partialPath) :
     wf.read((char*)&of, sizeof(long));
     wf.read((char*)&cs, sizeof(long));
     wf.close();
-    long checksum=0;
+    long checksum = 0;
     checksum ^= sd;
     checksum ^= st;
     checksum ^= ed;
@@ -43,7 +48,7 @@ DateTimePeriod::DateTimePeriod(const std::string& partialPath) :
         err << "Error occurred at writing time :: " << fname;
         throw eckit::SeriousBug(err.str(), Here());
     }
-    if (cs != checksum ) {
+    if (cs != checksum) {
         std::ostringstream err;
         err << "Error checksum not correct :: " << cs << ", " << checksum;
         throw eckit::SeriousBug(err.str(), Here());
@@ -107,19 +112,23 @@ eckit::DateTime DateTimePeriod::endPoint() const {
 }
 
 void DateTimePeriod::dump(const std::string& partialPath) const {
-    std::ostringstream os;
-    os << partialPath << "-period.bin";
-    std::string fname = os.str();
+    std::ostringstream tmpOs;
+    std::ostringstream defOs;
+    tmpOs << partialPath << "-period.tmp.bin";
+    defOs << partialPath << "-period.bin";
+    eckit::PathName tmpFile(tmpOs.str());
+    eckit::PathName defFile(defOs.str());
+    std::string fname = tmpOs.str();
     std::ofstream wf(fname, std::ios::binary);
     if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+        throw eckit::SeriousBug("Cannot open file!", Here());
     }
     long dim;
     long sd = startPoint_.date().yyyymmdd();
     long st = startPoint_.time().hhmmss();
     long ed = endPoint_.date().yyyymmdd();
     long et = endPoint_.time().hhmmss();
-    long checksum=0;
+    long checksum = 0;
     checksum ^= sd;
     checksum ^= st;
     checksum ^= ed;
@@ -133,8 +142,9 @@ void DateTimePeriod::dump(const std::string& partialPath) const {
     wf.write((char*)&checksum, sizeof(long));
     wf.close();
     if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+        throw eckit::SeriousBug("Error occurred at writing time!", Here());
     }
+    eckit::PathName::rename(tmpFile, defFile);
     return;
 }
 

@@ -51,26 +51,64 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
     options_{confCtx.config()} {}
 
 
-Statistics::~Statistics() {
-    // Dump restart for all non emitted statistics
+void Statistics::DumpRestart(const std::string& key, const StatisticsOptions& opt) const {
+    fieldStats_.at(key)->dump(key, opt);
+    return;
+}
+
+
+void Statistics::DumpRestart() const {
     try {
+        LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
         if (options_.restart()) {
+            int cnt = 0;
             for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
-                it->second->dump();
+                it->second->dump(it->first, options_);
+                cnt++;
             }
         }
     }
     catch (...) {
-        std::cout << "ERROR UNABLE TO WRITE RESTART FILE" << std::endl;
+        std::ostringstream os;
+        os << "Failed to write restart :: " << std::endl;
+        throw eckit::SeriousBug(os.str(), Here());
     }
+}
+
+Statistics::~Statistics() {
+    // // Dump restart for all non emitted statistics
+    // try {
+    //     if (options_.restart()) {
+    //         int cnt = 0;
+    //         for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
+    //             it->second->dump(it->first, options_);
+    //             cnt++;
+    //         }
+    //     }
+    // }
+    // catch (...) {
+    //     std::cout << "ERROR UNABLE TO WRITE RESTART FILE" << std::endl;
+    // }
 }
 
 std::string Statistics::getKey(const message::Message& msg) const {
     std::ostringstream os;
-    os << std::to_string(
-        std::hash<std::string>{}(msg.metadata().getString("param", "") + msg.metadata().getString("paramId", "")))
-       << std::to_string(std::hash<long>{}(msg.metadata().getLong("level", 0) | msg.metadata().getLong("levelist", 0)))
-       << std::to_string(std::hash<std::string>{}(msg.metadata().getString("levtype", "unknown")))
+    // os << std::to_string(
+    //     std::hash<std::string>{}(msg.metadata().getString("param", "") + msg.metadata().getString("paramId", "")))
+    //    << std::to_string(std::hash<long>{}(msg.metadata().getLong("level", 0) | msg.metadata().getLong("levelist",
+    //    0)))
+    //    << std::to_string(std::hash<std::string>{}(msg.metadata().getString("levtype", "unknown")))
+    //    << std::to_string(std::hash<std::string>{}(msg.metadata().getString("gridtype", "unknown")))
+    //    << std::to_string(std::hash<std::string>{}(msg.source()));
+    // os << options_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
+    //    << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
+    //    << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
+    //    << msg.metadata().getString("gridType", "unknown") << msg.source();
+    // //
+    os << options_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
+       << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
+       << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
+       << msg.metadata().getString("gridType", "unknown") << "-"
        << std::to_string(std::hash<std::string>{}(msg.source()));
     return os.str();
 }
@@ -78,7 +116,11 @@ std::string Statistics::getKey(const message::Message& msg) const {
 std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const {
     // Easy way to change (if needed in future) the name of the restart file
     std::ostringstream os;
-    os << opt.restartPath() << "/" << opt.restartPrefix() << "-" << getKey(msg);
+    // os << opt.restartPath() << "/" << opt.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
+    //    << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
+    //    << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
+    //    << msg.metadata().getString("gridType", "unknown");
+    os << opt.restartPath() << "/" << getKey(msg);
     return os.str();
 }
 
@@ -119,6 +161,9 @@ void Statistics::executeImpl(message::Message msg) {
 
     // Pass through -- no statistics for messages other than fields
     if (msg.tag() != message::Message::Tag::Field) {
+        if (msg.tag() == message::Message::Tag::Flush) {
+            DumpRestart();
+        }
         executeNext(msg);
         return;
     }
@@ -141,13 +186,15 @@ void Statistics::executeImpl(message::Message msg) {
                                                          getRestartPartialPath(msg, opt), opt);
             // Initial conditions don't need to be used in computation
             if (opt.solver_send_initial_condition()) {
+                // DumpRestart(key, opt);
                 return;
             }
         }
 
         // Time span needs to be computed here because otherwise it will be the timespan of the next window
         timeSpanInSeconds = fieldStats_.at(key)->current().timeSpanInSeconds();
-        if (fieldStats_.at(key)->process(msg)) {
+        if (fieldStats_.at(key)->process(msg, opt)) {
+            // DumpRestart(key, opt);
             return;
         }
 
@@ -170,6 +217,7 @@ void Statistics::executeImpl(message::Message msg) {
     util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
 
     fieldStats_.at(key)->reset(msg);
+    // DumpRestart(key, opt);
 }
 
 void Statistics::print(std::ostream& os) const {

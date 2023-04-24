@@ -8,6 +8,7 @@
 #include "eckit/exception/Exceptions.h"
 #include "eckit/filesystem/PathName.h"
 
+#include "multio/util/PrecisionTag.h"
 #include "multio/util/Substitution.h"
 
 namespace multio {
@@ -23,9 +24,11 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     restart_{false},
     step_{-1},
     solverSendInitStep_{false},
-    missingValue_{9999.0},
+    missingValueFloat_{9999.0},
+    missingValueDouble_{9999.0},
     missingValueTolerance_{1.0E-12},
-    haveMissingValue_{false},
+    restartFrequency_{-1},
+    haveMissingValue_{0},
     restartPath_{"."},
     restartPrefix_{"StatisticsRestartFile"},
     logPrefix_{"Plan"} {
@@ -52,13 +55,22 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     useDateTime_ = opt.getBool("use-current-time", false);
     stepFreq_ = opt.getLong("step-frequency", 1L);
     timeStep_ = opt.getLong("time-step", 3600L);
+    restartFrequency_ = opt.getInt("restart-frequency", -1);
     solverSendInitStep_ = opt.getBool("initial-condition-present", false);
     eckit::Optional<bool> r = util::parseBool(opt, "restart", false);
     if (r) {
         restart_ = *r;
     }
     else {
-        throw eckit::SeriousBug{"Unable to restart value", Here()};
+        throw eckit::SeriousBug{"Unable to read restart", Here()};
+    }
+    long long tmp = -1;
+    eckit::Optional<long long> f = util::parseNumber(opt, "restart-frequency", tmp);
+    if (f) {
+        restart_ = int(*f);
+    }
+    else {
+        throw eckit::SeriousBug{"Unable to read restart-frequency", Here()};
     }
     // TODO: Add functionality to automatically create restart path if it not exists
     // (same improvement can be done in sink). Feature already present in eckit::PathName
@@ -72,6 +84,15 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     missingValueTolerance_ = opt.getDouble("missing-value-tolerance", 1.0E-12);
     restartPrefix_ = util::replaceCurly(opt.getString("restart-prefix", "StatisticsDump"), env);
     logPrefix_ = util::replaceCurly(opt.getString("log-prefix", "Plan"), env);
+    std::ostringstream os;
+
+    os << ", pid=" << std::left << std::setw(10) << ::getpid();
+    {
+        char hostname[255];
+        gethostname(hostname, 255);
+        os << ", hostname=" << std::string{hostname} << ") ";
+    }
+    logPrefix_ = os.str();
 
     return;
 };
@@ -85,7 +106,9 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     restart_{opt.restart()},
     step_{-1},
     solverSendInitStep_{opt.solver_send_initial_condition()},
-    missingValue_{9999.0},
+    restartFrequency_{opt.restartFrequency_},
+    missingValueFloat_{9999.0},
+    missingValueDouble_{9999.0},
     missingValueTolerance_{1.0E-12},
     haveMissingValue_{false},
     restartPath_{opt.restartPath()},
@@ -161,8 +184,14 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
 
     // Handle missing values
     if (msg.metadata().has("missingValue")) {
-        haveMissingValue_ = true;
-        missingValue_ = msg.metadata().getDouble("missingValue");
+        if (util::decodePrecisionTag(msg.metadata().getString("precision")) == util::PrecisionTag::Float) {
+            haveMissingValue_ = 1;
+            missingValueFloat_ = msg.metadata().getFloat("missingValue");
+        }
+        else {
+            haveMissingValue_ = 2;
+            missingValueDouble_ = msg.metadata().getDouble("missingValue");
+        }
     }
 
     return;
@@ -212,17 +241,28 @@ bool StatisticsOptions::solver_send_initial_condition() const {
 }
 
 bool StatisticsOptions::haveMissingValue() const {
-    return haveMissingValue_;
+    return haveMissingValue_ != 0;
 };
 
 
-double StatisticsOptions::missingValue() const {
-    return missingValue_;
+void StatisticsOptions::missingValue(double& val) const {
+    val = missingValueDouble_;
+    return;
+};
+
+
+void StatisticsOptions::missingValue(float& val) const {
+    val = missingValueFloat_;
+    return;
 };
 
 
 double StatisticsOptions::missingValueTolerance() const {
     return missingValueTolerance_;
+};
+
+bool StatisticsOptions::needRestart() const {
+    return restartFrequency_ < 1 ? false : (step_ % restartFrequency_) == 0;
 };
 
 }  // namespace action

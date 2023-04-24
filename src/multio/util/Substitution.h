@@ -24,7 +24,6 @@
 #include "eckit/config/LocalConfiguration.h"
 #include "eckit/utils/Optional.h"
 
-
 namespace multio {
 namespace util {
 
@@ -73,7 +72,10 @@ std::string replaceCurly(std::string_view s, Func&& lookup) {
 }
 
 
+eckit::Optional<long long> parseNumber(const eckit::LocalConfiguration& cfg, const std::string& key,
+                                       long long defaultValue);
 eckit::Optional<bool> parseBool(const eckit::LocalConfiguration& cfg, const std::string& key, bool defaultValue);
+
 eckit::Optional<bool> parseEnabled(const eckit::LocalConfiguration& cfg, bool defaultValue);
 
 }  // namespace util
