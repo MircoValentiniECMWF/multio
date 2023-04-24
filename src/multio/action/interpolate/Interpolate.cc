@@ -125,6 +125,7 @@ void fill_out_metadata(const message::Metadata& in_md, message::Metadata& out_md
             forwardMetadata<message::Metadata>(in_md, out_md, key, in_md.getSubConfiguration(key).get());
         }
     }
+    out_md.set("precision", "double");
     return;
 };
 
