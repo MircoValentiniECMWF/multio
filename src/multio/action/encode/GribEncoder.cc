@@ -220,11 +220,7 @@ void setEncodingSpecificFields(GribEncoder& g, const eckit::Configuration& md) {
     withFirstOf(valueSetter(g, "numberOfDataPoints"), gls);
     withFirstOf(valueSetter(g, "numberOfValues"), gls);
 
-    if ( util::decodePrecisionTag(md.getString("precision")) == util::PrecisionTag::Float ) {
-        withFirstOf(valueSetter(g, "missingValue"), LookUpFloat(md, "missingValue"));
-    } else {
-        withFirstOf(valueSetter(g, "missingValue"), LookUpDouble(md, "missingValue"));
-    }
+    withFirstOf(valueSetter(g, "missingValue"), LookUpDouble(md, "missingValue"));
     withFirstOf(valueSetter(g, "bitmapPresent"), LookUpBool(md, "bitmapPresent"));
     withFirstOf(valueSetter(g, "bitsPerValue"), LookUpLong(md, "bitsPerValue"));
 }
