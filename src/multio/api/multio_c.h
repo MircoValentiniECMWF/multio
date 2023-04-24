@@ -233,6 +233,24 @@ int multio_write_domain(multio_handle_t* mio, multio_metadata_t* md, int* data, 
  */
 int multio_write_mask_float(multio_handle_t* mio, multio_metadata_t* md, const float* data, int size);
 
+/** Writes masking information (e.g. land-sea mask) to the server
+ * \param mio Handle to the multio (client) instance
+ * \param md Metadata information about the mask
+ * \param data Pointer to the (int) data containing the masking values
+ * \param size Size of the data containing the masking values
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_write_mask_int(multio_handle_t* mio, multio_metadata_t* md, const int* data, int size);
+
+/** Writes masking information (e.g. land-sea mask) to the server
+ * \param mio Handle to the multio (client) instance
+ * \param md Metadata information about the mask
+ * \param data Pointer to the (long) data containing the masking values
+ * \param size Size of the data containing the masking values
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_write_mask_long(multio_handle_t* mio, multio_metadata_t* md, const long* data, int size);
+
 
 /** Writes masking information (e.g. land-sea mask) to the server
  * \param mio Handle to the multio (client) instance

@@ -1,4 +1,5 @@
 add_subdirectory(metadata-mapping)
+add_subdirectory(apply-bitmask)
 add_subdirectory(statistics)
 add_subdirectory(aggregate)
 add_subdirectory(transport)

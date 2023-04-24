@@ -48,6 +48,9 @@ void Sink::executeImpl(Message msg) {
             trigger(msg);
             return;
 
+        case Message::Tag::Mask:
+            return;
+
         default:
             throw eckit::SeriousBug("Cannot handle message <" + Message::tag2str(msg.tag()) + ">");
     }

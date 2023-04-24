@@ -13,6 +13,7 @@
 #include "multio/util/ConfigurationPath.h"
 #include "multio/util/FailureHandling.h"
 
+#include <unistd.h>
 #include <functional>
 
 using multio::message::Message;
@@ -107,7 +108,8 @@ int wrapApiFunction(FN f) {
         MultioErrorValues error = getNestedErrorValue(e);
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, error);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << oss.str() << std::endl;
             std::cout << oss.str() << std::endl;
@@ -120,7 +122,8 @@ int wrapApiFunction(FN f) {
         g_current_error_str = oss.str();
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, MULTIO_ERROR_ECKIT_EXCEPTION);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << oss.str() << std::endl;
             std::cout << oss.str() << std::endl;
@@ -133,7 +136,8 @@ int wrapApiFunction(FN f) {
         g_current_error_str = oss.str();
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, MULTIO_ERROR_GENERAL_EXCEPTION);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << oss.str() << std::endl;
             std::cout << oss.str() << std::endl;
@@ -144,7 +148,8 @@ int wrapApiFunction(FN f) {
         g_current_error_str = "Caugth unkown exception on C-C++ API boundary";
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, MULTIO_ERROR_UNKNOWN_EXCEPTION);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << g_current_error_str << std::endl;
             std::cout << g_current_error_str << std::endl;
@@ -295,7 +300,6 @@ int multio_new_handle(multio_handle_t** mio, multio_configuration_t* cc) {
 int multio_delete_handle(multio_handle_t* mio) {
     return wrapApiFunction([mio]() {
         ASSERT(mio);
-        // std::cout << "multio_delete_handle" << std::endl;
         delete mio;
     });
 }
@@ -318,7 +322,6 @@ int multio_open_connections(multio_handle_t* mio) {
 int multio_close_connections(multio_handle_t* mio) {
     return wrapApiFunction([mio]() {
         ASSERT(mio);
-
         mio->closeConnections();
     });
 }
@@ -353,11 +356,47 @@ int multio_write_domain(multio_handle_t* mio, multio_metadata_t* md, int* data, 
     });
 }
 
+int multio_write_mask_int(multio_handle_t* mio, multio_metadata_t* md, const int* data, int size) {
+    return wrapApiFunction([mio, md, data, size]() {
+        ASSERT(mio);
+        ASSERT(md);
+        // TODO: integer masks need precision because Message need precision!
+        md->set("precision", "single");
+        std::vector<int> mask_data{data, data + size};
+        eckit::Buffer mask_vals{size * sizeof(uint8_t)};
+        auto bit = static_cast<uint8_t*>(mask_vals.data());
+        for (const auto& mval : mask_data) {
+            *bit = static_cast<uint8_t>(mval);
+            ++bit;
+        }
+
+        mio->dispatch(*md, std::move(mask_vals), Message::Tag::Mask);
+    });
+}
+
+int multio_write_mask_long(multio_handle_t* mio, multio_metadata_t* md, const long* data, int size) {
+    return wrapApiFunction([mio, md, data, size]() {
+        ASSERT(mio);
+        ASSERT(md);
+        md->set("precision", "double");
+        // TODO: integer masks need precision because Message need precision!
+        std::vector<long> mask_data{data, data + size};
+        eckit::Buffer mask_vals{size * sizeof(uint8_t)};
+        auto bit = static_cast<uint8_t*>(mask_vals.data());
+        for (const auto& mval : mask_data) {
+            *bit = static_cast<uint8_t>(mval);
+            ++bit;
+        }
+
+        mio->dispatch(*md, std::move(mask_vals), Message::Tag::Mask);
+    });
+}
+
 int multio_write_mask_float(multio_handle_t* mio, multio_metadata_t* md, const float* data, int size) {
     return wrapApiFunction([mio, md, data, size]() {
         ASSERT(mio);
         ASSERT(md);
-
+        md->set("precision", "single");
         std::vector<float> mask_data{data, data + size};
         eckit::Buffer mask_vals{size * sizeof(uint8_t)};
         auto bit = static_cast<uint8_t*>(mask_vals.data());
@@ -374,7 +413,7 @@ int multio_write_mask_double(multio_handle_t* mio, multio_metadata_t* md, const 
     return wrapApiFunction([mio, md, data, size]() {
         ASSERT(mio);
         ASSERT(md);
-
+        md->set("precision", "double");
         std::vector<double> mask_data{data, data + size};
         eckit::Buffer mask_vals{size * sizeof(uint8_t)};
         auto bit = static_cast<uint8_t*>(mask_vals.data());
