@@ -22,6 +22,8 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     startDate_{0},
     startTime_{0},
     restart_{false},
+    readRestart_{false},
+    writeRestart_{false},
     step_{-1},
     solverSendInitStep_{false},
     missingValueFloat_{9999.0},
@@ -55,12 +57,31 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     stepFreq_ = opt.getLong("step-frequency", 1L);
     timeStep_ = opt.getLong("time-step", 3600L);
     solverSendInitStep_ = opt.getBool("initial-condition-present", false);
-    eckit::Optional<bool> r = util::parseBool(opt, "restart", false);
+    eckit::Optional<bool> r;
+    r = util::parseBool(opt, "restart", false);
     if (r) {
         restart_ = *r;
+        readRestart_ = *r;
+        writeRestart_ = *r;
     }
     else {
         throw eckit::SeriousBug{"Unable to read restart", Here()};
+    }
+
+    r = util::parseBool(opt, "read-restart", false);
+    if (r) {
+        readRestart_ = *r;
+    }
+    else {
+        throw eckit::SeriousBug{"Unable to read read-restart", Here()};
+    }
+
+    r = util::parseBool(opt, "write-restart", false);
+    if (r) {
+        writeRestart_ = *r;
+    }
+    else {
+        throw eckit::SeriousBug{"Unable to read write-restart", Here()};
     }
     // TODO: Add functionality to automatically create restart path if it not exists
     // (same improvement can be done in sink). Feature already present in eckit::PathName
@@ -188,8 +209,19 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
 };
 
 bool StatisticsOptions::restart() const {
-    std::cout << "Restart Condition :: " << step_ << ", " << solverSendInitStep_ << ", " << restart_ << std::endl;
+    std::cout << "Restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << restart_ << std::endl;
     return ((step_ == 0 && solverSendInitStep_) || (step_ == 1 && solverSendInitStep_)) ? false : restart_;
+};
+
+bool StatisticsOptions::readRestart() const {
+    std::cout << "Read restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << readRestart_
+              << std::endl;
+    return ((step_ == 0 && solverSendInitStep_) || (step_ == 1 && solverSendInitStep_)) ? false : readRestart_;
+};
+
+bool StatisticsOptions::writeRestart() const {
+    std::cout << "Write restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << restart_ << std::endl;
+    return writeRestart_;
 };
 
 const std::string& StatisticsOptions::restartPath() const {

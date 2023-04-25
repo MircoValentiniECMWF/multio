@@ -59,8 +59,8 @@ void Statistics::DumpRestart(const std::string& key, const StatisticsOptions& op
 
 void Statistics::DumpRestart() const {
     try {
-        LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
-        if (options_.restart()) {
+        if (options_.writeRestart()) {
+            LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
             int cnt = 0;
             for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
                 LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << std::endl;
@@ -92,7 +92,8 @@ std::string Statistics::getKey(const message::Message& msg) const {
 std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const {
     // Easy way to change (if needed in future) the name of the restart file
     std::ostringstream os;
-    os << opt.restartPath() << "/" << getKey(msg);
+    os << opt.restartPath() << "/" << getKey(msg) << "-" << msg.metadata().getString("step", "unknown") << "-"
+       << msg.metadata().getString("stepRange", "unknown");
     LOG_DEBUG_LIB(LibMultio) << "Generating partial path for the field :: " << os.str() << std::endl;
     return os.str();
 }
@@ -134,7 +135,7 @@ void Statistics::executeImpl(message::Message msg) {
 
     // Pass through -- no statistics for messages other than fields
     if (msg.tag() != message::Message::Tag::Field) {
-        if (msg.tag() == message::Message::Tag::Flush && options_.restart()) {
+        if (msg.tag() == message::Message::Tag::Flush) {
             DumpRestart();
         }
         executeNext(msg);

@@ -18,6 +18,8 @@ private:
     long startDate_;
     long startTime_;
     bool restart_;
+    bool readRestart_;
+    bool writeRestart_;
     long step_;
     bool solverSendInitStep_;
 
@@ -40,6 +42,8 @@ public:
     long startDate() const;
     long startTime() const;
     bool restart() const;
+    bool writeRestart() const;
+    bool readRestart() const;
     long step() const;
     bool solver_send_initial_condition() const;
     const std::string& restartPath() const;
