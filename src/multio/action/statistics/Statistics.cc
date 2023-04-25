@@ -161,7 +161,7 @@ void Statistics::executeImpl(message::Message msg) {
 
     // Pass through -- no statistics for messages other than fields
     if (msg.tag() != message::Message::Tag::Field) {
-        if (msg.tag() == message::Message::Tag::Flush) {
+        if (msg.tag() == message::Message::Tag::Flush && options_.restart()) {
             DumpRestart();
         }
         executeNext(msg);
