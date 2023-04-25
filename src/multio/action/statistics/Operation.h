@@ -44,12 +44,7 @@ protected:
     std::vector<T> values_;
     const StatisticsOptions& options_;
 
-    bool isInsideTolerance(T val) const {
-        T refVal;
-        options_.missingValue(refVal);
-        T tmp = val - refVal;
-        return (std::fabs(tmp) < static_cast<T>(options_.missingValueTolerance()));
-    };
+    bool isInsideTolerance(T val) const { return (static_cast<double>(val) == options_.missingValue()); };
 
     friend std::ostream& operator<<(std::ostream& os, const Operation& a) {
         a.print(os);
@@ -235,11 +230,10 @@ public:
             // TODO: Handling missing values
             double icntpp = double(1.0) / double(count_ + 1);
             double sc = double(count_) * icntpp;
-            T missingValue;
-            options_.missingValue(missingValue);
             if (options_.haveMissingValue()) {
                 for (int i = 0; i < sz; ++i) {
-                    values_[i] = isInsideTolerance(val[i]) ? missingValue : values_[i] * sc + (val[i]) * icntpp;
+                    values_[i] = isInsideTolerance(val[i]) ? static_cast<T>(options_.missingValue())
+                                                           : values_[i] * sc + (val[i]) * icntpp;
                 }
             }
             else {
@@ -356,15 +350,14 @@ public:
     eckit::Buffer compute() override {
 
         if (options_.haveMissingValue()) {
-            T missingValue;
-            options_.missingValue(missingValue);
             long sec = count_ * options_.stepFreq() * options_.timeStep();
             if (sec == 0) {
                 throw eckit::SeriousBug{"Divide by zero", Here()};
             }
             for (int i = 0; i < values_.size(); ++i) {
                 // TODO: Need to understand if this case is possible
-                values_[i] = isInsideTolerance(values_[i]) ? missingValue : values_[i] / static_cast<T>(sec);
+                values_[i] = isInsideTolerance(values_[i]) ? static_cast<T>(options_.missingValue())
+                                                           : values_[i] / static_cast<T>(sec);
             }
         }
         else {
@@ -560,10 +553,8 @@ public:
         ASSERT(values_.size() == static_cast<size_t>(sz));
 
         if (options_.haveMissingValue()) {
-            T missingValue;
-            options_.missingValue(missingValue);
             for (int i = 0; i < sz; ++i) {
-                values_[i] = isInsideTolerance(val[i]) ? missingValue : values_[i] + val[i];
+                values_[i] = isInsideTolerance(val[i]) ? static_cast<T>(options_.missingValue()) : values_[i] + val[i];
             }
         }
         else {

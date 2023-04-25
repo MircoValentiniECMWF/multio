@@ -26,10 +26,8 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     writeRestart_{false},
     step_{-1},
     solverSendInitStep_{false},
-    missingValueFloat_{9999.0},
-    missingValueDouble_{9999.0},
-    missingValueTolerance_{1.0E-12},
-    haveMissingValue_{0},
+    haveMissingValue_{false},
+    missingValue_{9999.0},
     restartPath_{"."},
     restartPrefix_{"StatisticsRestartFile"},
     logPrefix_{"Plan"} {
@@ -92,7 +90,6 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
             throw eckit::UserError{"restart path not exist", Here()};
         }
     }
-    missingValueTolerance_ = opt.getDouble("missing-value-tolerance", 1.0E-12);
     restartPrefix_ = util::replaceCurly(opt.getString("restart-prefix", "StatisticsDump"), env);
     logPrefix_ = util::replaceCurly(opt.getString("log-prefix", "Plan"), env);
     std::ostringstream os;
@@ -114,13 +111,12 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     timeStep_{opt.timeStep()},
     startDate_{0},
     startTime_{0},
-    restart_{opt.restart()},
+    readRestart_{opt.readRestart()},
+    writeRestart_{opt.writeRestart()},
     step_{-1},
     solverSendInitStep_{opt.solver_send_initial_condition()},
-    missingValueFloat_{9999.0},
-    missingValueDouble_{9999.0},
-    missingValueTolerance_{1.0E-12},
     haveMissingValue_{false},
+    missingValue_{9999.0},
     restartPath_{opt.restartPath()},
     restartPrefix_{opt.restartPrefix()},
     logPrefix_{""} {
@@ -192,26 +188,17 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     }
     logPrefix_ = os.str();
 
+
     // Handle missing values
     if (msg.metadata().has("missingValue") && msg.metadata().has("bitmapPresent")
         && msg.metadata().getBool("bitmapPresent")) {
-        if (util::decodePrecisionTag(msg.metadata().getString("precision")) == util::PrecisionTag::Float) {
-            haveMissingValue_ = 1;
-            missingValueFloat_ = msg.metadata().getFloat("missingValue");
-        }
-        else {
-            haveMissingValue_ = 2;
-            missingValueDouble_ = msg.metadata().getDouble("missingValue");
-        }
+        haveMissingValue_ = true;
+        missingValue_ = msg.metadata().getDouble("missingValue");
     }
 
     return;
 };
 
-bool StatisticsOptions::restart() const {
-    std::cout << "Restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << restart_ << std::endl;
-    return ((step_ == 0 && solverSendInitStep_) || (step_ == 1 && solverSendInitStep_)) ? false : restart_;
-};
 
 bool StatisticsOptions::readRestart() const {
     std::cout << "Read restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << readRestart_
@@ -268,20 +255,8 @@ bool StatisticsOptions::haveMissingValue() const {
 };
 
 
-void StatisticsOptions::missingValue(double& val) const {
-    val = missingValueDouble_;
-    return;
-};
-
-
-void StatisticsOptions::missingValue(float& val) const {
-    val = missingValueFloat_;
-    return;
-};
-
-
-double StatisticsOptions::missingValueTolerance() const {
-    return missingValueTolerance_;
+double StatisticsOptions::missingValue() const {
+    return missingValue_;
 };
 
 }  // namespace action

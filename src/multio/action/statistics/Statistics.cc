@@ -59,7 +59,7 @@ void Statistics::DumpRestart(const std::string& key, const StatisticsOptions& op
 
 void Statistics::DumpRestart() const {
     try {
-        if (options_.writeRestart()) {
+        if (options_.writeRestart() && ) {
             LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
             int cnt = 0;
             for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
@@ -92,8 +92,7 @@ std::string Statistics::getKey(const message::Message& msg) const {
 std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const {
     // Easy way to change (if needed in future) the name of the restart file
     std::ostringstream os;
-    os << opt.restartPath() << "/" << getKey(msg) << "-" << msg.metadata().getString("step", "unknown") << "-"
-       << msg.metadata().getString("stepRange", "unknown");
+    os << opt.restartPath() << "/" << getKey(msg);
     LOG_DEBUG_LIB(LibMultio) << "Generating partial path for the field :: " << os.str() << std::endl;
     return os.str();
 }

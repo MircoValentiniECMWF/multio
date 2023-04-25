@@ -23,10 +23,8 @@ private:
     long step_;
     bool solverSendInitStep_;
 
-    double missingValueFloat_;
-    float missingValueDouble_;
-    double missingValueTolerance_;
     int haveMissingValue_;
+    double missingValue_;
 
     std::string restartPath_;
     std::string restartPrefix_;
@@ -41,7 +39,6 @@ public:
     long timeStep() const;
     long startDate() const;
     long startTime() const;
-    bool restart() const;
     bool writeRestart() const;
     bool readRestart() const;
     long step() const;
@@ -51,9 +48,7 @@ public:
     const std::string& logPrefix() const;
 
     bool haveMissingValue() const;
-    void missingValue(double& val) const;
-    void missingValue(float& val) const;
-    double missingValueTolerance() const;
+    double missingValue() const;
 };
 
 }  // namespace action
