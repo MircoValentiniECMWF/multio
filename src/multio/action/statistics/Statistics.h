@@ -28,6 +28,7 @@ class Configuration;
 namespace multio {
 namespace action {
 
+
 class TemporalStatistics;
 
 class Statistics : public ChainedAction {
@@ -39,14 +40,13 @@ public:
                                      const std::string& key, long timeSpanInSeconds) const;
 
 private:
-    void DumpRestart(const std::string& key, const StatisticsOptions& opt) const;
-    void DumpRestart() const;
+    void DumpRestart(long step) const;
     std::string getKey(const message::Message& msg) const;
     std::string getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const;
     void print(std::ostream& os) const override;
     const std::string timeUnit_;
     const long timeSpan_;
-    long step_;
+    mutable long step_;
     const std::vector<std::string> operations_;
     const StatisticsOptions options_;
 

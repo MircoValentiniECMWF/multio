@@ -61,11 +61,12 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
         restart_ = *r;
         readRestart_ = *r;
         writeRestart_ = *r;
+        std::cout << "restart :: " << *r << std::endl;
     }
     else {
         throw eckit::SeriousBug{"Unable to read restart", Here()};
     }
-
+#if 0
     r = util::parseBool(opt, "read-restart", false);
     if (r) {
         readRestart_ = *r;
@@ -81,6 +82,7 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     else {
         throw eckit::SeriousBug{"Unable to read write-restart", Here()};
     }
+#endif
     // TODO: Add functionality to automatically create restart path if it not exists
     // (same improvement can be done in sink). Feature already present in eckit::PathName
     if (opt.has("restart-path")) {
@@ -207,7 +209,8 @@ bool StatisticsOptions::readRestart() const {
 };
 
 bool StatisticsOptions::writeRestart() const {
-    std::cout << "Write restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << restart_ << std::endl;
+    std::cout << "Write restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << writeRestart_
+              << std::endl;
     return writeRestart_;
 };
 

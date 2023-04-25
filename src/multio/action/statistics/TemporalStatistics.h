@@ -33,7 +33,7 @@ public:
     void reset(const message::Message& msg);
     long startStep() const { return prevStep_; };
     virtual void print(std::ostream& os) const = 0;
-    void dump(const std::string& key, const StatisticsOptions& options) const;
+    void dump(long step, const StatisticsOptions& options) const;
 
 protected:
     long span_;

@@ -78,15 +78,15 @@ TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operation
     statistics_{reset_statistics(operations, msg, partialPath, options, options.readRestart())} {}
 
 
-void TemporalStatistics::dump(const std::string& key, const StatisticsOptions& options) const {
-    LOG_DEBUG_LIB(LibMultio) << " [" << partialPath_ << "] [" << key << " - " << options.logPrefix() << "] DUMP FILE"
+void TemporalStatistics::dump(const long step, const StatisticsOptions& options) const {
+    LOG_DEBUG_LIB(LibMultio) << " [" << partialPath_ << "-" << step << " - " << options.logPrefix() << "] DUMP FILE"
                              << std::endl;
-    current_.dump(partialPath_);
+    std::string fname = partialPath_ + "-" + std::to_string(step);
+    current_.dump(fname);
     for (auto const& stat : statistics_) {
-        std::visit(
-            Overloaded{[this](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(this->partialPath_); },
-                       [this](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(this->partialPath_); }},
-            stat);
+        std::visit(Overloaded{[fname](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(fname); },
+                              [fname](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(fname); }},
+                   stat);
     }
     return;
 }

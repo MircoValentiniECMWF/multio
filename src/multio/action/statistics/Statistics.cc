@@ -52,20 +52,14 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
     options_{confCtx.config()} {}
 
 
-void Statistics::DumpRestart(const std::string& key, const StatisticsOptions& opt) const {
-    fieldStats_.at(key)->dump(key, opt);
-    return;
-}
-
-
-void Statistics::DumpRestart() const {
+void Statistics::DumpRestart(long step) const {
     try {
         if (options_.writeRestart()) {
             LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
             int cnt = 0;
             for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
                 LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << std::endl;
-                it->second->dump(it->first, options_);
+                it->second->dump(step, options_);
                 cnt++;
             }
         }
@@ -77,10 +71,21 @@ void Statistics::DumpRestart() const {
     }
 }
 
-Statistics::~Statistics() {}
+Statistics::~Statistics() {
+    try {
+        LOG_DEBUG_LIB(multio::LibMultio) << "Saving restart files in the destructor" << std::endl;
+        DumpRestart(999999);
+    }
+    catch (...) {
+        std::ostringstream os;
+        os << "Failed to write restart from destructor :: " << std::endl;
+        LOG_DEBUG_LIB(multio::LibMultio) << os.str() << std::endl;
+    }
+}
 
 std::string Statistics::getKey(const message::Message& msg) const {
     std::ostringstream os;
+    step_ = msg.metadata().getLong("step", 0);
     os << options_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
        << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
        << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
@@ -133,7 +138,8 @@ void Statistics::executeImpl(message::Message msg) {
     // Pass through -- no statistics for messages other than fields
     if (msg.tag() != message::Message::Tag::Field) {
         if (msg.tag() == message::Message::Tag::Flush) {
-            DumpRestart();
+            LOG_DEBUG_LIB(multio::LibMultio) << "statistics  :: Flux received" << std::endl;
+            DumpRestart(step_);
         }
         executeNext(msg);
         return;
