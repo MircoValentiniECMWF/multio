@@ -63,6 +63,7 @@ void Statistics::DumpRestart() const {
         if (options_.restart()) {
             int cnt = 0;
             for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
+                LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << std::endl;
                 it->second->dump(it->first, options_);
                 cnt++;
             }
@@ -75,52 +76,24 @@ void Statistics::DumpRestart() const {
     }
 }
 
-Statistics::~Statistics() {
-    // // Dump restart for all non emitted statistics
-    // try {
-    //     if (options_.restart()) {
-    //         int cnt = 0;
-    //         for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
-    //             it->second->dump(it->first, options_);
-    //             cnt++;
-    //         }
-    //     }
-    // }
-    // catch (...) {
-    //     std::cout << "ERROR UNABLE TO WRITE RESTART FILE" << std::endl;
-    // }
-}
+Statistics::~Statistics() {}
 
 std::string Statistics::getKey(const message::Message& msg) const {
     std::ostringstream os;
-    // os << std::to_string(
-    //     std::hash<std::string>{}(msg.metadata().getString("param", "") + msg.metadata().getString("paramId", "")))
-    //    << std::to_string(std::hash<long>{}(msg.metadata().getLong("level", 0) | msg.metadata().getLong("levelist",
-    //    0)))
-    //    << std::to_string(std::hash<std::string>{}(msg.metadata().getString("levtype", "unknown")))
-    //    << std::to_string(std::hash<std::string>{}(msg.metadata().getString("gridtype", "unknown")))
-    //    << std::to_string(std::hash<std::string>{}(msg.source()));
-    // os << options_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
-    //    << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
-    //    << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
-    //    << msg.metadata().getString("gridType", "unknown") << msg.source();
-    // //
     os << options_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
        << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
        << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
        << msg.metadata().getString("gridType", "unknown") << "-"
        << std::to_string(std::hash<std::string>{}(msg.source()));
+    LOG_DEBUG_LIB(LibMultio) << "Generating key for the field :: " << os.str() << std::endl;
     return os.str();
 }
 
 std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const {
     // Easy way to change (if needed in future) the name of the restart file
     std::ostringstream os;
-    // os << opt.restartPath() << "/" << opt.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
-    //    << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
-    //    << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
-    //    << msg.metadata().getString("gridType", "unknown");
     os << opt.restartPath() << "/" << getKey(msg);
+    LOG_DEBUG_LIB(LibMultio) << "Generating partial path for the field :: " << os.str() << std::endl;
     return os.str();
 }
 
@@ -180,13 +153,13 @@ void Statistics::executeImpl(message::Message msg) {
         // Push new statistics
         LOG_DEBUG_LIB(multio::LibMultio) << "*** " << msg.destination() << " -- metadata: " << msg.metadata()
                                          << std::endl;
-        if (fieldStats_.find(key) == end(fieldStats_)) {
+        if (fieldStats_.find(key) == fieldStats_.end()) {
             // Create a new statistics
             fieldStats_[key] = TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg,
                                                          getRestartPartialPath(msg, opt), opt);
             // Initial conditions don't need to be used in computation
             if (opt.solver_send_initial_condition()) {
-                // DumpRestart(key, opt);
+                LOG_DEBUG_LIB(LibMultio) << "Exiting because of initial condition :: " << key << std::endl;
                 return;
             }
         }
@@ -194,7 +167,6 @@ void Statistics::executeImpl(message::Message msg) {
         // Time span needs to be computed here because otherwise it will be the timespan of the next window
         timeSpanInSeconds = fieldStats_.at(key)->current().timeSpanInSeconds();
         if (fieldStats_.at(key)->process(msg, opt)) {
-            // DumpRestart(key, opt);
             return;
         }
 
@@ -217,7 +189,6 @@ void Statistics::executeImpl(message::Message msg) {
     util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
 
     fieldStats_.at(key)->reset(msg);
-    // DumpRestart(key, opt);
 }
 
 void Statistics::print(std::ostream& os) const {

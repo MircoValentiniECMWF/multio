@@ -27,7 +27,6 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     missingValueFloat_{9999.0},
     missingValueDouble_{9999.0},
     missingValueTolerance_{1.0E-12},
-    restartFrequency_{-1},
     haveMissingValue_{0},
     restartPath_{"."},
     restartPrefix_{"StatisticsRestartFile"},
@@ -55,7 +54,6 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     useDateTime_ = opt.getBool("use-current-time", false);
     stepFreq_ = opt.getLong("step-frequency", 1L);
     timeStep_ = opt.getLong("time-step", 3600L);
-    restartFrequency_ = opt.getInt("restart-frequency", -1);
     solverSendInitStep_ = opt.getBool("initial-condition-present", false);
     eckit::Optional<bool> r = util::parseBool(opt, "restart", false);
     if (r) {
@@ -63,14 +61,6 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     }
     else {
         throw eckit::SeriousBug{"Unable to read restart", Here()};
-    }
-    long long tmp = -1;
-    eckit::Optional<long long> f = util::parseNumber(opt, "restart-frequency", tmp);
-    if (f) {
-        restart_ = int(*f);
-    }
-    else {
-        throw eckit::SeriousBug{"Unable to read restart-frequency", Here()};
     }
     // TODO: Add functionality to automatically create restart path if it not exists
     // (same improvement can be done in sink). Feature already present in eckit::PathName
@@ -106,7 +96,6 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     restart_{opt.restart()},
     step_{-1},
     solverSendInitStep_{opt.solver_send_initial_condition()},
-    restartFrequency_{opt.restartFrequency_},
     missingValueFloat_{9999.0},
     missingValueDouble_{9999.0},
     missingValueTolerance_{1.0E-12},
@@ -183,7 +172,8 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     logPrefix_ = os.str();
 
     // Handle missing values
-    if (msg.metadata().has("missingValue")) {
+    if (msg.metadata().has("missingValue") && msg.metadata().has("bitmapPresent")
+        && msg.metadata().getBool("bitmapPresent")) {
         if (util::decodePrecisionTag(msg.metadata().getString("precision")) == util::PrecisionTag::Float) {
             haveMissingValue_ = 1;
             missingValueFloat_ = msg.metadata().getFloat("missingValue");
@@ -198,6 +188,7 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
 };
 
 bool StatisticsOptions::restart() const {
+    std::cout << "Restart Condition :: " << step_ << ", " << solverSendInitStep_ << ", " << restart_ << std::endl;
     return ((step_ == 0 && solverSendInitStep_) || (step_ == 1 && solverSendInitStep_)) ? false : restart_;
 };
 
@@ -259,10 +250,6 @@ void StatisticsOptions::missingValue(float& val) const {
 
 double StatisticsOptions::missingValueTolerance() const {
     return missingValueTolerance_;
-};
-
-bool StatisticsOptions::needRestart() const {
-    return restartFrequency_ < 1 ? false : (step_ % restartFrequency_) == 0;
 };
 
 }  // namespace action
