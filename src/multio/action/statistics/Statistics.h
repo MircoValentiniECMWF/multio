@@ -44,9 +44,9 @@ private:
     std::string getKey(const message::Message& msg) const;
     std::string getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const;
     void print(std::ostream& os) const override;
-    bool restartExist(const std::string& key, const StatisticsOptions& opt) const;
     const std::string timeUnit_;
     const long timeSpan_;
+    long step_;
     const std::vector<std::string> operations_;
     const StatisticsOptions options_;
 

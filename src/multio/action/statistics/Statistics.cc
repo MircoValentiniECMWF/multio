@@ -47,6 +47,7 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
     ChainedAction{confCtx},
     timeUnit_{set_unit(confCtx.config().getString("output-frequency"))},
     timeSpan_{set_frequency(confCtx.config().getString("output-frequency"))},
+    step_{0},
     operations_{confCtx.config().getStringVector("operations")},
     options_{confCtx.config()} {}
 
@@ -59,7 +60,7 @@ void Statistics::DumpRestart(const std::string& key, const StatisticsOptions& op
 
 void Statistics::DumpRestart() const {
     try {
-        if (options_.writeRestart() && ) {
+        if (options_.writeRestart()) {
             LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
             int cnt = 0;
             for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
@@ -126,9 +127,6 @@ message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetad
     return md;
 }
 
-bool Statistics::restartExist(const std::string& key, const StatisticsOptions& opt) const {
-    return true;
-}
 
 void Statistics::executeImpl(message::Message msg) {
 
