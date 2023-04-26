@@ -25,6 +25,7 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     readRestart_{false},
     writeRestart_{false},
     step_{-1},
+    restartStep_{-1},
     solverSendInitStep_{false},
     haveMissingValue_{false},
     missingValue_{9999.0},
@@ -116,6 +117,7 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     readRestart_{opt.readRestart()},
     writeRestart_{opt.writeRestart()},
     step_{-1},
+    restartStep_{-1},
     solverSendInitStep_{opt.solver_send_initial_condition()},
     haveMissingValue_{false},
     missingValue_{9999.0},
@@ -148,6 +150,8 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
         throw eckit::SeriousBug{"Step metadata not present", Here()};
     }
     step_ = msg.metadata().getLong("step");
+    restartStep_ = msg.metadata().getLong("restart-stepstep", step_);
+
 
     // step and frequency
     timeStep_ = msg.metadata().getLong("timeStep", timeStep_);
@@ -247,6 +251,10 @@ long StatisticsOptions::startTime() const {
 
 long StatisticsOptions::step() const {
     return step_;
+}
+
+long StatisticsOptions::restartStep() const {
+    return restartStep_;
 }
 
 bool StatisticsOptions::solver_send_initial_condition() const {

@@ -9,7 +9,7 @@
 
 namespace multio {
 namespace action {
-DateTimePeriod::DateTimePeriod(const std::string& partialPath) :
+DateTimePeriod::DateTimePeriod(const std::string& partialPath, const StatisticsOptions& options) :
     startPoint_{eckit::Date{0}, eckit::Time{0}}, endPoint_{eckit::Date{0}, eckit::Time{0}}, offset_{0} {
     long sd;
     long st;
@@ -19,8 +19,7 @@ DateTimePeriod::DateTimePeriod(const std::string& partialPath) :
     long cs;
     // std::ostringstream tmpOs;
     std::ostringstream defOs;
-    // tmpOs << partialPath << "-period.tmp.bin";
-    defOs << partialPath << "-period.bin";
+    defOs << partialPath << "-" << std::to_string(options.restartStep()) << "-period.bin";
     // eckit::PathName tmpFile(tmpOs.str());
     // eckit::PathName defFile(defOs.str());
     std::string fname = defOs.str();
@@ -111,11 +110,16 @@ eckit::DateTime DateTimePeriod::endPoint() const {
     return endPoint_;
 }
 
-void DateTimePeriod::dump(const std::string& partialPath) const {
+void DateTimePeriod::dump(const std::string& partialPath, const long step) const {
     std::ostringstream tmpOs;
     std::ostringstream defOs;
-    tmpOs << partialPath << "-period.tmp.bin";
-    defOs << partialPath << "-period.bin";
+    std::ostringstream oldOs;
+    tmpOs << partialPath << "-" << std::to_string(step) << "-period.tmp.bin";
+    defOs << partialPath << "-" << std::to_string(step) << "-period.bin";
+    oldOs << partialPath << "-" << std::to_string(step - 2) << "-period.bin";
+    if (eckit::PathName oldFile(oldOs.str()); oldFile.exists()) {
+        oldFile.unlink();
+    }
     eckit::PathName tmpFile(tmpOs.str());
     eckit::PathName defFile(defOs.str());
     std::string fname = tmpOs.str();

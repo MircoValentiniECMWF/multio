@@ -1,12 +1,13 @@
 #pragma once
 
 #include "eckit/types/DateTime.h"
+#include "multio/action/statistics/StatisticsOptions.h"
 
 namespace multio {
 namespace action {
 class DateTimePeriod {
 public:
-    DateTimePeriod(const std::string& name);
+    DateTimePeriod(const std::string& partialPath, const StatisticsOptions& options);
     DateTimePeriod(const eckit::DateTime& startPoint, eckit::Second duration, long offset);
     DateTimePeriod(const eckit::DateTime& startPoint, const eckit::DateTime& endPoint, long offset);
     DateTimePeriod(const eckit::DateTime& startPoint, eckit::Second duration);
@@ -21,7 +22,7 @@ public:
     long timeSpanInSeconds() const;
     eckit::DateTime endPoint() const;
     eckit::DateTime startPoint() const;
-    void dump(const std::string& name) const;
+    void dump(const std::string& name, long step) const;
 
 private:
     eckit::DateTime startPoint_;

@@ -34,7 +34,7 @@ public:
     virtual void update(const void* val, long sz) = 0;
 
     virtual ~Operation() = default;
-    virtual void dump(const std::string& partialPath) const = 0;
+    virtual void dump(const std::string& partialPath, const long step) const = 0;
 
 protected:
     virtual void print(std::ostream& os) const = 0;
@@ -72,7 +72,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override {}
+    void dump(const std::string& partialPath, const long step) const override {}
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
 
@@ -109,7 +109,7 @@ public:
         // std::ostringstream tmpOs;
         std::ostringstream defOs;
         // tmpOs << partialPath << "-average.tmp.bin";
-        defOs << partialPath << "-average.bin";
+        defOs << partialPath << "-" << options.restartStep() << "-average.bin";
         // eckit::PathName tmpFile(tmpOs.str());
         // eckit::PathName defFile(defOs.str());
         std::string fname = defOs.str();
@@ -152,11 +152,16 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override {
+    void dump(const std::string& partialPath, const long step) const override {
         std::ostringstream tmpOs;
         std::ostringstream defOs;
-        tmpOs << partialPath << "-average.tmp.bin";
-        defOs << partialPath << "-average.bin";
+        std::ostringstream oldOs;
+        tmpOs << partialPath << "-" << std::to_string(step) << "-average.tmp.bin";
+        defOs << partialPath << "-" << std::to_string(step) << "-average.bin";
+        oldOs << partialPath << "-" << std::to_string(step - 2) << "-average.bin";
+        if (eckit::PathName oldFile(oldOs.str()); oldFile.exists()) {
+            oldFile.unlink();
+        }
         eckit::PathName tmpFile(tmpOs.str());
         eckit::PathName defFile(defOs.str());
         std::string fname = tmpOs.str();
@@ -279,7 +284,7 @@ public:
     FluxAverage(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {
         std::ostringstream os;
-        os << partialPath << "-flux-average-data.bin";
+        os << partialPath << "-" << options.restartStep() << "-flux-average.bin";
         std::string fname = os.str();
         std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
@@ -320,11 +325,20 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override {
-        std::ostringstream os;
-        os << partialPath << "-flux-average-data.bin";
-        std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::binary);
+    void dump(const std::string& partialPath, const long step) const override {
+        std::ostringstream tmpOs;
+        std::ostringstream defOs;
+        std::ostringstream oldOs;
+        tmpOs << partialPath << "-" << std::to_string(step) << "-flux-average.tmp.bin";
+        defOs << partialPath << "-" << std::to_string(step) << "-flux-average.bin";
+        oldOs << partialPath << "-" << std::to_string(step - 2) << "-flux-average.bin";
+        if (eckit::PathName oldFile(oldOs.str()); oldFile.exists()) {
+            oldFile.unlink();
+        }
+        eckit::PathName tmpFile(tmpOs.str());
+        eckit::PathName defFile(defOs.str());
+        std::string fname = tmpOs.str();
+        std::ofstream wf(fname, std::ios::binary | std::ofstream::trunc);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
@@ -344,6 +358,7 @@ public:
         if (!wf.good()) {
             throw eckit::SeriousBug("Error occurred at writing time!", Here());
         }
+        eckit::PathName::rename(tmpFile, defFile);
     }
 
 
@@ -400,7 +415,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override {}
+    void dump(const std::string& partialPath, const long step) const override {}
 
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
@@ -436,7 +451,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override {}
+    void dump(const std::string& partialPath, const long step) const override {}
 
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
@@ -472,7 +487,7 @@ public:
         Operation<T>{name, "accumulate", sz, options} {
         std::ostringstream defOs;
         // tmpOs << partialPath << "-average.tmp.bin";
-        defOs << partialPath << "-accumulate-data.bin";
+        defOs << partialPath << "-" << options.restartStep() << "-accumulate.bin";
         // eckit::PathName tmpFile(tmpOs.str());
         // eckit::PathName defFile(defOs.str());
         std::string fname = defOs.str();
@@ -512,11 +527,16 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override {
+    void dump(const std::string& partialPath, const long step) const override {
         std::ostringstream tmpOs;
         std::ostringstream defOs;
-        tmpOs << partialPath << "-accumulate-data.tmp.bin";
-        defOs << partialPath << "-accumulate-data.bin";
+        std::ostringstream oldOs;
+        tmpOs << partialPath << "-" << std::to_string(step) << "-accumulate.tmp.bin";
+        defOs << partialPath << "-" << std::to_string(step) << "-accumulate.bin";
+        oldOs << partialPath << "-" << std::to_string(step - 2) << "-accumulate.bin";
+        if (eckit::PathName oldFile(oldOs.str()); oldFile.exists()) {
+            oldFile.unlink();
+        }
         eckit::PathName tmpFile(tmpOs.str());
         eckit::PathName defFile(defOs.str());
         std::string fname = tmpOs.str();

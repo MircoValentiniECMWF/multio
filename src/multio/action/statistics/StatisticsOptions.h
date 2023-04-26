@@ -21,6 +21,7 @@ private:
     bool readRestart_;
     bool writeRestart_;
     long step_;
+    long restartStep_;
     bool solverSendInitStep_;
 
     int haveMissingValue_;
@@ -42,6 +43,7 @@ public:
     bool writeRestart() const;
     bool readRestart() const;
     long step() const;
+    long restartStep() const;
     bool solver_send_initial_condition() const;
     const std::string& restartPath() const;
     const std::string& restartPrefix() const;

@@ -82,10 +82,14 @@ void TemporalStatistics::dump(const long step, const StatisticsOptions& options)
     LOG_DEBUG_LIB(LibMultio) << " [" << partialPath_ << "-" << step << " - " << options.logPrefix() << "] DUMP FILE"
                              << std::endl;
     std::string fname = partialPath_ + "-" + std::to_string(step);
-    current_.dump(fname);
+    current_.dump(partialPath_, step);
     for (auto const& stat : statistics_) {
-        std::visit(Overloaded{[fname](const std::unique_ptr<Operation<double>>& arg) { return arg->dump(fname); },
-                              [fname](const std::unique_ptr<Operation<float>>& arg) { return arg->dump(fname); }},
+        std::visit(Overloaded{[this, step](const std::unique_ptr<Operation<double>>& arg) {
+                                  return arg->dump(this->partialPath_, step);
+                              },
+                              [this, step](const std::unique_ptr<Operation<float>>& arg) {
+                                  return arg->dump(this->partialPath_, step);
+                              }},
                    stat);
     }
     return;
@@ -251,7 +255,7 @@ DateTimePeriod setHourlyPeriod(long span, const message::Message& msg, const Sta
 HourlyStatistics::HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
                                    const std::string& partialPath, const StatisticsOptions& options) :
     TemporalStatistics{operations,
-                       options.readRestart() ? DateTimePeriod{partialPath + "-hourly"}
+                       options.readRestart() ? DateTimePeriod{partialPath + "-hourly", options}
                                              : DateTimePeriod{setHourlyPeriod(span, msg, options)},
                        msg,
                        partialPath + "-hourly",
@@ -279,7 +283,7 @@ DateTimePeriod setDailyPeriod(long span, const message::Message& msg, const Stat
 DailyStatistics::DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
                                  const std::string& partialPath, const StatisticsOptions& options) :
     TemporalStatistics{operations,
-                       options.readRestart() ? DateTimePeriod{partialPath + "-daily"}
+                       options.readRestart() ? DateTimePeriod{partialPath + "-daily", options}
                                              : DateTimePeriod{setDailyPeriod(span, msg, options)},
                        msg,
                        partialPath + "-daily",
@@ -306,13 +310,13 @@ DateTimePeriod setMonthlyPeriod(long span, const message::Message& msg, const St
 
 MonthlyStatistics::MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
                                      const std::string& partialPath, const StatisticsOptions& options) :
-    TemporalStatistics{
-        operations,
-        options.readRestart() ? DateTimePeriod{partialPath + "-monthly"} : setMonthlyPeriod(span, msg, options),
-        msg,
-        partialPath + "-monthly",
-        options,
-        span} {}
+    TemporalStatistics{operations,
+                       options.readRestart() ? DateTimePeriod{partialPath + "-monthly", options}
+                                             : setMonthlyPeriod(span, msg, options),
+                       msg,
+                       partialPath + "-monthly",
+                       options,
+                       span} {}
 
 void MonthlyStatistics::print(std::ostream& os) const {
     os << "Monthly Statistics(" << current_ << ")";
