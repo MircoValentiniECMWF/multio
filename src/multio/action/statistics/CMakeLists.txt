@@ -10,6 +10,12 @@ ecbuild_add_library(
         Period.cc
         Period.h
         Operation.h
+        HourlyStatistics.cc
+        HourlyStatistics.h
+        DailyStatistics.cc
+        DailyStatistics.h
+        MonthlyStatistics.cc
+        MonthlyStatistics.h
         TemporalStatistics.cc
         TemporalStatistics.h
 

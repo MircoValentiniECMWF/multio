@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -8,6 +9,7 @@
 #include <vector>
 
 #include "eckit/exception/Exceptions.h"
+#include "eckit/filesystem/PathName.h"
 #include "eckit/io/Buffer.h"
 #include "eckit/log/Log.h"
 
@@ -32,7 +34,7 @@ public:
     virtual void update(const void* val, long sz) = 0;
 
     virtual ~Operation() = default;
-    virtual void dump(const std::string& partialPath) const = 0;
+    virtual void dump(const std::string& partialPath, const long step) const = 0;
 
 protected:
     virtual void print(std::ostream& os) const = 0;
@@ -41,6 +43,8 @@ protected:
     std::string operation_;
     std::vector<T> values_;
     const StatisticsOptions& options_;
+
+    bool isInsideTolerance(T val) const { return (static_cast<double>(val) == options_.missingValue()); };
 
     friend std::ostream& operator<<(std::ostream& os, const Operation& a) {
         a.print(os);
@@ -68,9 +72,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override {
-
-    }
+    void dump(const std::string& partialPath, const long step) const override {}
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
 
@@ -97,15 +99,20 @@ public:
     using Operation<T>::name_;
     using Operation<T>::values_;
     using Operation<T>::options_;
+    using Operation<T>::isInsideTolerance;
 
     Average(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {}
 
     Average(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {
-        std::ostringstream os;
-        os << partialPath << "-average-data.bin";
-        std::string fname = os.str();
+        // std::ostringstream tmpOs;
+        std::ostringstream defOs;
+        // tmpOs << partialPath << "-average.tmp.bin";
+        defOs << partialPath << "-" << options.restartStep() << "-average.bin";
+        // eckit::PathName tmpFile(tmpOs.str());
+        // eckit::PathName defFile(defOs.str());
+        std::string fname = defOs.str();
         std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
@@ -113,13 +120,13 @@ public:
         long dim;
         wf.read((char*)&count_, sizeof(long));
         wf.read((char*)&dim, sizeof(long));
-        long checksum=0;
-        long cs=0;
+        long checksum = 0;
+        long cs = 0;
         checksum ^= count_;
         checksum ^= dim;
         if (dim != sz / sizeof(T)) {
             std::ostringstream err;
-            err << "Wrong size during restart of average-statistics :: " << dim << ", " << sz;
+            err << "Wrong size during restart of average-statistics :: (" << fname << ") " << dim << ", " << sz;
             throw eckit::SeriousBug(err.str(), Here());
         }
         LOG_DEBUG_LIB(LibMultio) << "The counter is :: " << count_ << std::endl;
@@ -127,7 +134,7 @@ public:
         for (int i = 0; i < dim; ++i) {
             double tmp;
             wf.read((char*)&tmp, sizeof(double));
-            checksum ^= static_cast<long>(tmp);
+            checksum ^= *((long*)&tmp);
             values_[i] = static_cast<T>(tmp);
         }
         wf.read((char*)&cs, sizeof(long));
@@ -137,38 +144,74 @@ public:
             err << "Error occurred at writing time :: " << fname;
             throw eckit::SeriousBug(err.str(), Here());
         }
-        if (cs != checksum ) {
+        if (cs != checksum) {
             std::ostringstream err;
-            err << "Error checksum not correct :: " << cs << ", " << checksum;
+            err << "Error checksum not correct :: (" << fname << ") " << cs << ", " << checksum;
             throw eckit::SeriousBug(err.str(), Here());
         }
         return;
     };
 
-    void dump(const std::string& partialPath) const override  {
-        std::ostringstream os;
-        os << partialPath << "-average-data.bin";
-        std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::binary);
+    void dump(const std::string& partialPath, const long step) const override {
+        std::ostringstream tmpOs;
+        std::ostringstream defOs;
+        std::ostringstream oldOs;
+        tmpOs << partialPath << "-" << std::to_string(step) << "-average.tmp.bin";
+        defOs << partialPath << "-" << std::to_string(step) << "-average.bin";
+        oldOs << partialPath << "-" << std::to_string(step - 2) << "-average.bin";
+        if (eckit::PathName oldFile(oldOs.str()); oldFile.exists()) {
+            oldFile.unlink();
+        }
+        eckit::PathName tmpFile(tmpOs.str());
+        eckit::PathName defFile(defOs.str());
+        std::string fname = tmpOs.str();
+        LOG_DEBUG_LIB(LibMultio) << fname << " - " << values_.size() << std::endl;
+        std::ofstream wf(fname, std::ios::binary | std::ofstream::trunc);
         if (!wf) {
-            throw eckit::SeriousBug("Cannot open file!", Here());
+            std::ostringstream err;
+            err << "Cannot open file :: (" << fname << ")";
+            throw eckit::SeriousBug(err.str(), Here());
         }
         long sz = values_.size();
-        long checksum=0;
+        long checksum = 0;
         wf.write((char*)&count_, sizeof(long));
+        if (!wf.good()) {
+            std::ostringstream err;
+            err << "Error writing counter! (" << fname << ")";
+            throw eckit::SeriousBug(err.str(), Here());
+        }
         wf.write((char*)&sz, sizeof(long));
+        if (!wf.good()) {
+            std::ostringstream err;
+            err << "Error writing size! (" << fname << ")";
+            throw eckit::SeriousBug(err.str(), Here());
+        }
         checksum ^= count_;
         checksum ^= sz;
         for (int i = 0; i < sz; ++i) {
             double tmp = double(values_[i]);
-            checksum ^= static_cast<long>(tmp);
+            checksum ^= *((long*)&tmp);
             wf.write((char*)&tmp, sizeof(double));
+            if (!wf.good()) {
+                std::ostringstream err;
+                err << "Error writing data! (" << fname << ") " << i;
+                throw eckit::SeriousBug(err.str(), Here());
+            }
         }
         wf.write((char*)&checksum, sizeof(long));
+        if (!wf.good()) {
+            std::ostringstream err;
+            err << "Error setting checksum! (" << fname << ")";
+            throw eckit::SeriousBug(err.str(), Here());
+        }
         wf.close();
         if (!wf.good()) {
-            throw eckit::SeriousBug("Error occurred at writing time!", Here());
+            std::ostringstream err;
+            err << "Error occurred at writing time! (" << fname << ")";
+            throw eckit::SeriousBug(err.str(), Here());
         }
+        eckit::PathName::rename(tmpFile, defFile);
+        return;
     }
 
 
@@ -192,8 +235,16 @@ public:
             // TODO: Handling missing values
             double icntpp = double(1.0) / double(count_ + 1);
             double sc = double(count_) * icntpp;
-            for (auto& v : values_) {
-                v = v * sc + (*val++) * icntpp;
+            if (options_.haveMissingValue()) {
+                for (int i = 0; i < sz; ++i) {
+                    values_[i] = isInsideTolerance(val[i]) ? static_cast<T>(options_.missingValue())
+                                                           : values_[i] * sc + (val[i]) * icntpp;
+                }
+            }
+            else {
+                for (auto& v : values_) {
+                    v = v * sc + (*val++) * icntpp;
+                }
             }
             ++count_;
         }
@@ -225,6 +276,7 @@ public:
     using Operation<T>::name_;
     using Operation<T>::values_;
     using Operation<T>::options_;
+    using Operation<T>::isInsideTolerance;
 
     FluxAverage(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {}
@@ -232,7 +284,7 @@ public:
     FluxAverage(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "average", sz, options} {
         std::ostringstream os;
-        os << partialPath << "-flux-average-data.bin";
+        os << partialPath << "-" << options.restartStep() << "-flux-average.bin";
         std::string fname = os.str();
         std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
@@ -241,8 +293,8 @@ public:
         long dim;
         wf.read((char*)&count_, sizeof(long));
         wf.read((char*)&dim, sizeof(long));
-        long checksum=0;
-        long cs=0;
+        long checksum = 0;
+        long cs = 0;
         checksum ^= count_;
         checksum ^= dim;
         if (dim != sz / sizeof(T)) {
@@ -265,7 +317,7 @@ public:
             err << "Error occurred at writing time :: " << fname;
             throw eckit::SeriousBug(err.str(), Here());
         }
-        if (cs != checksum ) {
+        if (cs != checksum) {
             std::ostringstream err;
             err << "Error checksum not correct :: " << cs << ", " << checksum;
             throw eckit::SeriousBug(err.str(), Here());
@@ -273,16 +325,25 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override  {
-        std::ostringstream os;
-        os << partialPath << "-flux-average-data.bin";
-        std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::binary);
+    void dump(const std::string& partialPath, const long step) const override {
+        std::ostringstream tmpOs;
+        std::ostringstream defOs;
+        std::ostringstream oldOs;
+        tmpOs << partialPath << "-" << std::to_string(step) << "-flux-average.tmp.bin";
+        defOs << partialPath << "-" << std::to_string(step) << "-flux-average.bin";
+        oldOs << partialPath << "-" << std::to_string(step - 2) << "-flux-average.bin";
+        if (eckit::PathName oldFile(oldOs.str()); oldFile.exists()) {
+            oldFile.unlink();
+        }
+        eckit::PathName tmpFile(tmpOs.str());
+        eckit::PathName defFile(defOs.str());
+        std::string fname = tmpOs.str();
+        std::ofstream wf(fname, std::ios::binary | std::ofstream::trunc);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
         long sz = values_.size();
-        long checksum=0;
+        long checksum = 0;
         wf.write((char*)&count_, sizeof(long));
         wf.write((char*)&sz, sizeof(long));
         checksum ^= count_;
@@ -297,14 +358,27 @@ public:
         if (!wf.good()) {
             throw eckit::SeriousBug("Error occurred at writing time!", Here());
         }
+        eckit::PathName::rename(tmpFile, defFile);
     }
 
 
     eckit::Buffer compute() override {
 
-        // TODO: take care of the missing values
-        for (auto& val : values_) {
-            val /= static_cast<T>(count_ * options_.stepFreq() * options_.timeStep());
+        if (options_.haveMissingValue()) {
+            long sec = count_ * options_.stepFreq() * options_.timeStep();
+            if (sec == 0) {
+                throw eckit::SeriousBug{"Divide by zero", Here()};
+            }
+            for (int i = 0; i < values_.size(); ++i) {
+                // TODO: Need to understand if this case is possible
+                values_[i] = isInsideTolerance(values_[i]) ? static_cast<T>(options_.missingValue())
+                                                           : values_[i] / static_cast<T>(sec);
+            }
+        }
+        else {
+            for (auto& val : values_) {
+                val /= static_cast<T>(count_ * options_.stepFreq() * options_.timeStep());
+            }
         }
         LOG_DEBUG_LIB(LibMultio) << "statistics (" << name_ << ") compute :: count=" << count_ << std::endl;
         return eckit::Buffer{values_.data(), values_.size() * sizeof(T)};
@@ -341,9 +415,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override  {
-
-    }
+    void dump(const std::string& partialPath, const long step) const override {}
 
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
@@ -379,9 +451,7 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override  {
-
-    }
+    void dump(const std::string& partialPath, const long step) const override {}
 
 
     eckit::Buffer compute() override { return eckit::Buffer{values_.data(), values_.size() * sizeof(T)}; }
@@ -408,23 +478,27 @@ class Accumulate final : public Operation<T> {
 public:
     using Operation<T>::values_;
     using Operation<T>::options_;
+    using Operation<T>::isInsideTolerance;
 
     Accumulate(const std::string& name, long sz, const StatisticsOptions& options) :
         Operation<T>{name, "accumulate", sz, options} {};
 
     Accumulate(const std::string& name, long sz, const std::string& partialPath, const StatisticsOptions& options) :
         Operation<T>{name, "accumulate", sz, options} {
-        std::ostringstream os;
-        os << partialPath << "-accumulate-data.bin";
-        std::string fname = os.str();
+        std::ostringstream defOs;
+        // tmpOs << partialPath << "-average.tmp.bin";
+        defOs << partialPath << "-" << options.restartStep() << "-accumulate.bin";
+        // eckit::PathName tmpFile(tmpOs.str());
+        // eckit::PathName defFile(defOs.str());
+        std::string fname = defOs.str();
         std::ifstream wf(fname, std::ios::binary);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
         long dim;
         wf.read((char*)&dim, sizeof(long));
-        long checksum=0;
-        long cs=0;
+        long checksum = 0;
+        long cs = 0;
         checksum ^= dim;
         if (dim != sz / sizeof(T)) {
             std::ostringstream err;
@@ -435,7 +509,7 @@ public:
         for (int i = 0; i < dim; ++i) {
             double tmp;
             wf.read((char*)&tmp, sizeof(double));
-            checksum ^= static_cast<long>(tmp);
+            checksum ^= *((long*)&tmp);
             values_[i] = static_cast<T>(tmp);
         }
         wf.read((char*)&cs, sizeof(long));
@@ -445,7 +519,7 @@ public:
             err << "Error occurred at writing time :: " << fname;
             throw eckit::SeriousBug(err.str(), Here());
         }
-        if (cs != checksum ) {
+        if (cs != checksum) {
             std::ostringstream err;
             err << "Error checksum not correct :: " << cs << ", " << checksum;
             throw eckit::SeriousBug(err.str(), Here());
@@ -453,21 +527,31 @@ public:
         return;
     };
 
-    void dump(const std::string& partialPath) const override  {
-        std::ostringstream os;
-        os << partialPath << "-accumulate-data.bin";
-        std::string fname = os.str();
-        std::ofstream wf(fname, std::ios::binary);
+    void dump(const std::string& partialPath, const long step) const override {
+        std::ostringstream tmpOs;
+        std::ostringstream defOs;
+        std::ostringstream oldOs;
+        tmpOs << partialPath << "-" << std::to_string(step) << "-accumulate.tmp.bin";
+        defOs << partialPath << "-" << std::to_string(step) << "-accumulate.bin";
+        oldOs << partialPath << "-" << std::to_string(step - 2) << "-accumulate.bin";
+        if (eckit::PathName oldFile(oldOs.str()); oldFile.exists()) {
+            oldFile.unlink();
+        }
+        eckit::PathName tmpFile(tmpOs.str());
+        eckit::PathName defFile(defOs.str());
+        std::string fname = tmpOs.str();
+        LOG_DEBUG_LIB(LibMultio) << fname << " - " << values_.size() << std::endl;
+        std::ofstream wf(fname, std::ios::binary | std::ofstream::trunc);
         if (!wf) {
             throw eckit::SeriousBug("Cannot open file!", Here());
         }
         long sz = values_.size();
-        long checksum=0;
+        long checksum = 0;
         wf.write((char*)&sz, sizeof(long));
         checksum ^= sz;
         for (int i = 0; i < sz; ++i) {
             double tmp = double(values_[i]);
-            checksum ^= static_cast<long>(tmp);
+            checksum ^= *((long*)&tmp);
             wf.write((char*)&tmp, sizeof(double));
         }
         wf.write((char*)&checksum, sizeof(long));
@@ -475,6 +559,8 @@ public:
         if (!wf.good()) {
             throw eckit::SeriousBug("Error occurred at writing time!", Here());
         }
+        eckit::PathName::rename(tmpFile, defFile);
+        return;
     }
 
 
@@ -486,8 +572,15 @@ public:
 
         ASSERT(values_.size() == static_cast<size_t>(sz));
 
-        for (auto& v : values_) {
-            v += *val++;
+        if (options_.haveMissingValue()) {
+            for (int i = 0; i < sz; ++i) {
+                values_[i] = isInsideTolerance(val[i]) ? static_cast<T>(options_.missingValue()) : values_[i] + val[i];
+            }
+        }
+        else {
+            for (auto& v : values_) {
+                v += *val++;
+            }
         }
     }
 
