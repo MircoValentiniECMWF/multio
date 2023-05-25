@@ -22,9 +22,10 @@ ecbuild_add_library(
 
     PRIVATE_INCLUDES
         ${ECKIT_INCLUDE_DIRS}
+        ${ATLAS_IO_INCLUDE_DIRS}
 
     CONDITION
 
     PUBLIC_LIBS
-        multio
+        multio atlas_io
 )

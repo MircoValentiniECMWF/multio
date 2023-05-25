@@ -7,9 +7,16 @@
 #include "eckit/filesystem/PathName.h"
 #include "multio/LibMultio.h"
 
+#include "atlas_io/atlas-io.h"
+
 namespace multio {
 namespace action {
 
+static eckit::LocalConfiguration no_compression = [] {
+    eckit::LocalConfiguration c;
+    c.set("compression", "none");
+    return c;
+}();
 
 eckit::DateTime epochDateTime(const message::Message& msg, const StatisticsOptions& options) {
     eckit::Date startDate{options.startDate()};
@@ -165,6 +172,12 @@ void DateTimePeriod::dump(const std::string& partialPath, const long step) const
     if (!wf.good()) {
         throw eckit::SeriousBug("Error occurred at writing time!", Here());
     }
+    atlas::io::RecordWriter record;
+    record.set("startDate", atlas::io::ref(sd), no_compression);
+    record.set("startTime", atlas::io::ref(st), no_compression);
+    record.set("endDate", atlas::io::ref(ed), no_compression);
+    record.set("endTime", atlas::io::ref(et), no_compression);
+    record.write(fname+".atlas_io");
     eckit::PathName::rename(tmpFile, defFile);
     return;
 }
