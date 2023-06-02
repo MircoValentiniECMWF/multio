@@ -20,8 +20,7 @@
 #include "multio/message/Message.h"
 #include "multio/util/ScopedTimer.h"
 
-namespace multio {
-namespace action {
+namespace multio::action {
 
 namespace {
 
@@ -54,15 +53,15 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
 
 void Statistics::DumpRestart(long step) const {
     try {
-        if (options_.writeRestart()) {
-            LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
-            int cnt = 0;
-            for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
-                LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << std::endl;
-                it->second->dump(step, options_);
-                cnt++;
-            }
-        }
+        // if (options_.writeRestart()) {
+        //     LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
+        //     int cnt = 0;
+        //     for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
+        //         LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << std::endl;
+        //         it->second->dump(step, options_);
+        //         cnt++;
+        //     }
+        // }
     }
     catch (...) {
         std::ostringstream os;
@@ -89,7 +88,7 @@ std::string Statistics::getKey(const message::Message& msg) const {
     os << options_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
        << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
        << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
-       << msg.metadata().getString("gridType", "unknown") << "-"
+       << msg.metadata().getString("gridType", "unknown") << "-" << msg.metadata().getString("precision", "unknown") << "-"
        << std::to_string(std::hash<std::string>{}(msg.source()));
     LOG_DEBUG_LIB(LibMultio) << "Generating key for the field :: " << os.str() << std::endl;
     return os.str();
@@ -164,35 +163,43 @@ void Statistics::executeImpl(message::Message msg) {
             // Initial conditions don't need to be used in computation
             if (opt.solver_send_initial_condition()) {
                 LOG_DEBUG_LIB(LibMultio) << "Exiting because of initial condition :: " << key << std::endl;
+                util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
                 return;
             }
         }
 
         // Time span needs to be computed here because otherwise it will be the timespan of the next window
         timeSpanInSeconds = fieldStats_.at(key)->current().timeSpanInSeconds();
-        if (fieldStats_.at(key)->process(msg, opt)) {
-            return;
-        }
+        fieldStats_.at(key)->update(msg, opt);
 
-        // Construct output metadata
-        auto md = outputMetadata(msg.metadata(), opt, key, timeSpanInSeconds);
+        // Emit statistics 
+        if (fieldStats_.at(key)->isEndOfWindow(msg, opt)) {
+            
+            // Construct output metadata
+            auto md = outputMetadata(msg.metadata(), opt, key, timeSpanInSeconds);
 
-        // Emit finished statistics
-        for (auto&& stat : fieldStats_.at(key)->compute(msg)) {
-            md.set("operation", stat.first);
-            message::Message newMsg{message::Message::Header{message::Message::Tag::Field, msg.source(),
-                                                             msg.destination(), message::Metadata{md}},
-                                    std::move(stat.second)};
-            LOG_DEBUG_LIB(LibMultio) << "Exit span in seconds :: " << timeSpanInSeconds << std::endl;
-            if (timeSpanInSeconds > 0) {
-                executeNext(newMsg);
+            // Create outpuit messages
+            for (  auto it=fieldStats_.at(key)->begin(); it!=fieldStats_.at(key)->end(); ++it){
+                eckit::Buffer payload;
+                payload.resize((*it)->byte_size());
+                payload.zero();
+                md.set("operation", (*it)->operation());
+                (*it)->compute( payload );
+                executeNext(message::Message{message::Message::Header{message::Message::Tag::Field, msg.source(),
+                                                                 msg.destination(), message::Metadata{md}},
+                                        std::move(payload)} );
             }
+
+            // Timing
+            util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
+
+            // Reset operations and update window
+            fieldStats_.at(key)->reset(msg,opt);
+
         }
+
     }
-
-    util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
-
-    fieldStats_.at(key)->reset(msg);
+    return;
 }
 
 void Statistics::print(std::ostream& os) const {
@@ -209,4 +216,4 @@ void Statistics::print(std::ostream& os) const {
 static ActionBuilder<Statistics> StatisticsBuilder("statistics");
 
 }  // namespace action
-}  // namespace multio
+

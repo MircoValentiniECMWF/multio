@@ -2,8 +2,7 @@
 
 #include "multio/action/statistics/Period.h"
 
-namespace multio {
-namespace action {
+namespace multio::action {
 
 
 namespace {
@@ -33,7 +32,7 @@ eckit::DateTime computeMonthWinEndTime(const eckit::DateTime& startPoint, long s
 }  // namespace
 
 DateTimePeriod setMonthlyPeriod(long span, const message::Message& msg, const std::string& partialPath,
-                                const StatisticsOptions& options) {
+                                StatisticsOptions& options) {
     eckit::DateTime startPoint{computeMonthWinStartTime(winStartDateTime(msg, options))};
     eckit::DateTime creationPoint{computeMonthWinCreationTime(winStartDateTime(msg, options))};
     eckit::DateTime endPoint{computeMonthWinEndTime(startPoint, span)};
@@ -41,12 +40,12 @@ DateTimePeriod setMonthlyPeriod(long span, const message::Message& msg, const st
                                  : DateTimePeriod{startPoint, creationPoint, endPoint, "m"};
 }
 MonthlyStatistics::MonthlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                     const std::string& partialPath, const StatisticsOptions& options) :
+                                     const std::string& partialPath, StatisticsOptions& options) :
     TemporalStatistics{operations, setMonthlyPeriod(span, msg, partialPath, options), msg, partialPath, options, span} {
 }
 
-void MonthlyStatistics::resetPeriod(const message::Message& msg) {
-    eckit::DateTime startPoint = computeMonthWinStartTime(currentDateTime(msg, options_));
+void MonthlyStatistics::resetPeriod(const message::Message& msg, StatisticsOptions& options) {
+    eckit::DateTime startPoint = computeMonthWinStartTime(currentDateTime(msg, options));
     eckit::DateTime endPoint = updateMonthEnd(startPoint, span_);
     current_.reset(startPoint, endPoint);
 };
@@ -56,4 +55,3 @@ void MonthlyStatistics::print(std::ostream& os) const {
 }
 
 }  // namespace action
-}  // namespace multio

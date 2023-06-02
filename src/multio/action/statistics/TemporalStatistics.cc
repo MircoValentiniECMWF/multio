@@ -9,23 +9,27 @@
 #include "multio/LibMultio.h"
 #include "multio/util/PrecisionTag.h"
 
-#include "DailyStatistics.h"
-#include "HourlyStatistics.h"
-#include "MonthlyStatistics.h"
+#include "windows/DailyStatistics.h"
+#include "windows/HourlyStatistics.h"
+#include "windows/MonthlyStatistics.h"
 
-namespace multio {
-namespace action {
+namespace multio::action {
 
 namespace {
 
-auto reset_statistics(const std::vector<std::string>& opNames, message::Message msg, const std::string& partialPath,
-                      const StatisticsOptions& options, bool restart) {
-    // NOTE: in this case the lambda must catch everything
+auto build_statistics(const std::vector<std::string>& opNames, message::Message msg, const std::string& partialPath,
+                      StatisticsOptions& options, bool restart) {
     return multio::util::dispatchPrecisionTag(msg.precision(), [&](auto pt) {
         using Precision = typename decltype(pt)::type;
-        std::vector<OperationVar> stats;
+        std::vector<std::unique_ptr<Operation>> stats;
         for (const auto& op : opNames) {
             stats.push_back(make_operation<Precision>(op, msg.size(), partialPath, options, restart));
+            if ( options.solver_send_initial_condition() ){
+                stats.back()->init(msg.payload().data(), msg.size(),currentDateTime(msg, options));
+            }
+            else {
+                stats.back()->init(prevDateTime(msg, options));
+            }
         }
         return stats;
     });
@@ -36,7 +40,7 @@ std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::string&
                                                               const std::vector<std::string>& operations,
                                                               const message::Message& msg,
                                                               const std::string& partialPath,
-                                                              const StatisticsOptions& options) {
+                                                              StatisticsOptions& options) {
 
     if (unit == "month") {
         return std::make_unique<MonthlyStatistics>(operations, span, msg, partialPath, options);
@@ -56,80 +60,53 @@ std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::string&
 
 TemporalStatistics::TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
                                        const message::Message& msg, const std::string& partialPath,
-                                       const StatisticsOptions& options, long span) :
+                                       StatisticsOptions& options, long span) :
     span_{span},
     name_{msg.name()},
     partialPath_{partialPath},
     prevStep_{options.step()},
     current_{period},
-    options_{options},
     opNames_{operations},
-    statistics_{reset_statistics(operations, msg, partialPath, options, options.readRestart())} {}
+    statistics_{build_statistics(operations, msg, partialPath, options, options.readRestart())} {}
 
 
-void TemporalStatistics::dump(const long step, const StatisticsOptions& options) const {
+void TemporalStatistics::dump(const long step, StatisticsOptions& options) const {
     LOG_DEBUG_LIB(LibMultio) << " [" << partialPath_ << "-" << step << " - " << options.logPrefix() << "] DUMP FILE"
                              << std::endl;
-    std::string fname = partialPath_ + "-" + std::to_string(step);
-    current_.dump(partialPath_, step);
-    for (auto const& stat : statistics_) {
-        std::visit(Overloaded{[this, step](const std::unique_ptr<Operation<double>>& arg) {
-                                  return arg->dump(this->partialPath_, step);
-                              },
-                              [this, step](const std::unique_ptr<Operation<float>>& arg) {
-                                  return arg->dump(this->partialPath_, step);
-                              }},
-                   stat);
+    current_.dump(partialPath_, options);
+    for (auto& stat : statistics_) {
+        stat->dump(partialPath_,step);
     }
     return;
 }
 
-
-bool TemporalStatistics::process(message::Message& msg, const StatisticsOptions& options) {
-    options_ = options;
-    return process_next(msg);
-}
-
-void TemporalStatistics::updateStatistics(const message::Message& msg) {
-    for (auto const& stat : statistics_) {
-        std::visit(Overloaded{[&msg](const std::unique_ptr<Operation<double>>& arg) {
-                                  return arg->update(msg.payload().data(), msg.size());
-                              },
-                              [&msg](const std::unique_ptr<Operation<float>>& arg) {
-                                  return arg->update(msg.payload().data(), msg.size());
-                              }},
-                   stat);
-    }
-}
-
-bool TemporalStatistics::process_next(message::Message& msg) {
-    if (name_ != msg.name()) {
-        std::ostringstream os;
-        os << "Name :: (" << name_ << ") of the current statistics is different from the name in the message :: ("
-           << msg.name() << ")" << std::endl;
-        throw eckit::SeriousBug(os.str(), Here());
-    }
-
+void TemporalStatistics::update(message::Message& msg, StatisticsOptions& options) {
+    checkName(msg.name());
     LOG_DEBUG_LIB(multio::LibMultio) << *this << std::endl;
-    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " [" << partialPath_ << "] *** Curr ";
+    LOG_DEBUG_LIB(multio::LibMultio) << options.logPrefix() << " [" << partialPath_ << "] *** Curr ";
 
-    auto dateTime = currentDateTime(msg, options_);
-    if (!current_.isWithin(dateTime)) {
-        std::ostringstream os;
-        os << options_.logPrefix() << dateTime << " is outside of current period " << current_ << std::endl;
-        throw eckit::UserError(os.str(), Here());
+    checkIsWithin( msg, options );
+    eckit::DateTime now = currentDateTime(msg, options);
+    for (auto& stat : statistics_) {
+        stat->update(msg.payload().data(), msg.size(), now);
     }
 
-    updateStatistics(msg);
-
-    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " [" << partialPath_ << "] *** Next ";
-    return current_.isWithin(nextDateTime(msg, options_));
+    LOG_DEBUG_LIB(multio::LibMultio) << options.logPrefix() << " [" << partialPath_ << "] *** Next ";
+    return;
 }
+
+bool TemporalStatistics::isEndOfWindow(message::Message& msg, StatisticsOptions& options) {
+    return !current_.isWithin(nextDateTime(msg, options));
+}
+
+
+
+
 
 std::string TemporalStatistics::stepRange(long step) {
     auto ret = std::to_string(prevStep_) + "-" + std::to_string(step);
     prevStep_ = step;
-    LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " *** Setting step range: " << ret << std::endl;
+    // LOG_DEBUG_LIB(multio::LibMultio) << options_.logPrefix() << " *** Setting step range: " << ret << std::endl;
     return ret;
 }
 
@@ -137,25 +114,38 @@ const DateTimePeriod& TemporalStatistics::current() const {
     return current_;
 }
 
-void TemporalStatistics::reset(const message::Message& msg) {
-    statistics_ = reset_statistics(opNames_, msg, partialPath_, options_, false);
-    resetPeriod(msg);
-    LOG_DEBUG_LIB(::multio::LibMultio) << options_.logPrefix() << " [" << partialPath_
-                                       << "] ------ Resetting statistics for temporal type " << *this << std::endl;
-}
-
-std::map<std::string, eckit::Buffer> TemporalStatistics::compute(const message::Message& msg) {
-    std::map<std::string, eckit::Buffer> retStats;
-    for (auto const& stat : statistics_) {
-
-        auto buf = std::visit([](auto&& arg) { return arg->compute(); }, stat);
-
-        const auto& operation = std::visit([](auto&& arg) { return arg->operation(); }, stat);
-
-        retStats.emplace(operation, std::move(buf));
+void TemporalStatistics::reset(const message::Message& msg, StatisticsOptions& options) {
+    resetPeriod(msg,options);
+    for (auto& stat : statistics_) {
+        stat->reset(msg.payload().data(), msg.size(), currentDateTime(msg, options));
     }
-    return retStats;
+    LOG_DEBUG_LIB(::multio::LibMultio) << options.logPrefix() << " [" << partialPath_
+                                       << "] ------ Resetting statistics for temporal type " << *this << std::endl;
+    return;
 }
 
-}  // namespace action
-}  // namespace multio
+long TemporalStatistics::startStep() const { 
+    return prevStep_;
+};
+
+void TemporalStatistics::checkName( const std::string& name ){
+    if (name_ != name) {
+        std::ostringstream os;
+        os << "Name :: (" << name_ << ") of the current statistics is different from the name in the message :: ("
+           << name << ")" << std::endl;
+        throw eckit::SeriousBug(os.str(), Here());
+    }
+    return;
+}
+
+void TemporalStatistics::checkIsWithin( message::Message& msg, StatisticsOptions& options ){
+    eckit::DateTime dateTime = currentDateTime(msg, options);
+    if (!current_.isWithin(dateTime)) {
+        std::ostringstream os;
+        os << options.logPrefix() << dateTime << " is outside of current period " << current_ << std::endl;
+        throw eckit::UserError(os.str(), Here());
+    }
+    return;
+}
+
+}

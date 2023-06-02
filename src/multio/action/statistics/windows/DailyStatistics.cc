@@ -2,9 +2,7 @@
 
 #include "multio/action/statistics/Period.h"
 
-namespace multio {
-namespace action {
-
+namespace multio::action {
 
 namespace {
 eckit::DateTime computeDayWinStartTime(const eckit::DateTime& currentTime) {
@@ -29,7 +27,7 @@ eckit::DateTime computeDayWinEndTime(const eckit::DateTime& startPoint, long spa
 }  // namespace
 
 DateTimePeriod setDailyPeriod(long span, const message::Message& msg, const std::string& partialPath,
-                              const StatisticsOptions& options) {
+                              StatisticsOptions& options) {
     eckit::DateTime startPoint{computeDayWinStartTime(winStartDateTime(msg, options))};
     eckit::DateTime creationPoint{computeDayWinCreationTime(winStartDateTime(msg, options))};
     eckit::DateTime endPoint{computeDayWinEndTime(startPoint, span)};
@@ -39,12 +37,12 @@ DateTimePeriod setDailyPeriod(long span, const message::Message& msg, const std:
 
 
 DailyStatistics::DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                 const std::string& partialPath, const StatisticsOptions& options) :
+                                 const std::string& partialPath, StatisticsOptions& options) :
     TemporalStatistics{operations, setDailyPeriod(span, msg, partialPath, options), msg, partialPath, options, span} {
     // Restart constructor
 }
-void DailyStatistics::resetPeriod(const message::Message& msg) {
-    eckit::DateTime startPoint = computeDayWinStartTime(currentDateTime(msg, options_));
+void DailyStatistics::resetPeriod(const message::Message& msg, StatisticsOptions& options) {
+    eckit::DateTime startPoint = computeDayWinStartTime(currentDateTime(msg, options));
     eckit::DateTime endPoint = updateDayEnd(startPoint, span_);
     current_.reset(startPoint, endPoint);
 };
@@ -53,4 +51,3 @@ void DailyStatistics::print(std::ostream& os) const {
 }
 
 }  // namespace action
-}  // namespace multio

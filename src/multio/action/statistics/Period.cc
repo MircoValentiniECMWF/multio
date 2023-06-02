@@ -6,6 +6,7 @@
 
 #include "eckit/filesystem/PathName.h"
 #include "multio/LibMultio.h"
+#include "StatisticsIO.h"
 
 #include "atlas_io/atlas-io.h"
 
@@ -18,7 +19,7 @@ static eckit::LocalConfiguration no_compression = [] {
     return c;
 }();
 
-eckit::DateTime epochDateTime(const message::Message& msg, const StatisticsOptions& options) {
+eckit::DateTime epochDateTime(const message::Message& msg, StatisticsOptions& options) {
     eckit::Date startDate{options.startDate()};
     long startTime = options.startTime();
     auto hour = startTime / 10000;
@@ -27,28 +28,29 @@ eckit::DateTime epochDateTime(const message::Message& msg, const StatisticsOptio
 }
 
 
-eckit::DateTime prevDateTime(const message::Message& msg, const StatisticsOptions& options) {
+eckit::DateTime prevDateTime(const message::Message& msg, StatisticsOptions& options) {
     return epochDateTime(msg, options)
          + static_cast<eckit::Second>(std::max((options.step() - 1L), 0L) * options.timeStep());
 }
 
 
-eckit::DateTime currentDateTime(const message::Message& msg, const StatisticsOptions& options) {
+eckit::DateTime currentDateTime(const message::Message& msg, StatisticsOptions& options) {
     return epochDateTime(msg, options) + static_cast<eckit::Second>(options.step() * options.timeStep());
 }
 
-eckit::DateTime nextDateTime(const message::Message& msg, const StatisticsOptions& options) {
+eckit::DateTime nextDateTime(const message::Message& msg, StatisticsOptions& options) {
     return epochDateTime(msg, options) + static_cast<eckit::Second>((options.step() + 1) * options.timeStep());
 }
 
-eckit::DateTime winStartDateTime(const message::Message& msg, const StatisticsOptions& options) {
+eckit::DateTime winStartDateTime(const message::Message& msg, StatisticsOptions& options) {
     return options.solver_send_initial_condition() ? currentDateTime(msg, options) : prevDateTime(msg, options);
 }
 
 
 DateTimePeriod::DateTimePeriod(const std::string& partialPath, const char* periodKind,
-                               const StatisticsOptions& options) :
+                               StatisticsOptions& options) :
     startPoint_{eckit::Date{0}, eckit::Time{0}}, endPoint_{eckit::Date{0}, eckit::Time{0}}, periodKind_{periodKind} {
+    /*
     long sd;
     long st;
     long ed;
@@ -90,6 +92,12 @@ DateTimePeriod::DateTimePeriod(const std::string& partialPath, const char* perio
     }
     startPoint_ = eckit::DateTime{eckit::Date{sd}, eckit::Time{st}};
     endPoint_ = eckit::DateTime{eckit::Date{ed}, eckit::Time{et}};
+    */
+    //StatisticsIO reader( options.restartStep() );
+    // Read the file again to check the values
+    options.reader().startPeriod( partialPath, "period", "r" );
+    options.reader().readPeriod( startPoint_, endPoint_, creationPoint_ );
+    options.reader().endPeriod();
     return;
 }
 
@@ -105,7 +113,7 @@ void DateTimePeriod::reset(const eckit::DateTime& startPoint, const eckit::DateT
 }
 
 bool DateTimePeriod::isWithin(const eckit::DateTime& dt) {
-    if (startPoint_ > dt) {
+    if (creationPoint_ > dt) {
         std::ostringstream os;
         os << "startPoint : " << startPoint_ << " is outside of current period " << dt << std::endl;
         throw eckit::SeriousBug(os.str(), Here());
@@ -117,8 +125,6 @@ bool DateTimePeriod::isWithin(const eckit::DateTime& dt) {
 }
 
 long DateTimePeriod::timeSpanInSeconds() const {
-    // The offset is added to fix the first timestep when no "step 0"
-    // is present. Better way to handle this is through a redesign of the action
     return long(endPoint_ - creationPoint_);
 }
 
@@ -136,8 +142,9 @@ eckit::DateTime DateTimePeriod::creationPoint() const {
 }
 
 
-void DateTimePeriod::dump(const std::string& partialPath, const long step) const {
-    std::ostringstream tmpOs;
+void DateTimePeriod::dump(const std::string& partialPath,
+                               StatisticsOptions& options) const {
+    /*std::ostringstream tmpOs;
     std::ostringstream defOs;
     std::ostringstream oldOs;
     tmpOs << partialPath << "-" << std::to_string(step) << "-period.tmp.bin";
@@ -158,6 +165,8 @@ void DateTimePeriod::dump(const std::string& partialPath, const long step) const
     long st = startPoint_.time().hhmmss();
     long ed = endPoint_.date().yyyymmdd();
     long et = endPoint_.time().hhmmss();
+    long cd = creationPoint_.date().yyyymmdd();
+    long ct = creationPoint_.time().hhmmss();
     long checksum = 0;
     checksum ^= sd;
     checksum ^= st;
@@ -173,12 +182,37 @@ void DateTimePeriod::dump(const std::string& partialPath, const long step) const
         throw eckit::SeriousBug("Error occurred at writing time!", Here());
     }
     atlas::io::RecordWriter record;
-    record.set("startDate", atlas::io::ref(sd), no_compression);
-    record.set("startTime", atlas::io::ref(st), no_compression);
-    record.set("endDate", atlas::io::ref(ed), no_compression);
-    record.set("endTime", atlas::io::ref(et), no_compression);
+    record.set("AAA/NamesAreNotGuaranteedToBeUniqueAcrossPlans-152-152-1-1-ml-reduced_gg-2421543025744876634-144.Period.startDate", atlas::io::ref(sd), no_compression);
+    record.set("AAA/NamesAreNotGuaranteedToBeUniqueAcrossPlans-152-152-1-1-ml-reduced_gg-2421543025744876634-144.Period.startTime", atlas::io::ref(st), no_compression);
+    record.set("AAA/NamesAreNotGuaranteedToBeUniqueAcrossPlans-152-152-1-1-ml-reduced_gg-2421543025744876634-144.Period.endDate", atlas::io::ref(ed), no_compression);
+    record.set("AAA/NamesAreNotGuaranteedToBeUniqueAcrossPlans-152-152-1-1-ml-reduced_gg-2421543025744876634-144.Period.endTime", atlas::io::ref(et), no_compression);
+    record.set("AAA/NamesAreNotGuaranteedToBeUniqueAcrossPlans-152-152-1-1-ml-reduced_gg-2421543025744876634-144.Period.creationDate", atlas::io::ref(cd), no_compression);
+    record.set("AAA/NamesAreNotGuaranteedToBeUniqueAcrossPlans-152-152-1-1-ml-reduced_gg-2421543025744876634-144.Period.creationTime", atlas::io::ref(ct), no_compression);
     record.write(fname+".atlas_io");
-    eckit::PathName::rename(tmpFile, defFile);
+    eckit::PathName::rename(tmpFile, defFile);*/
+    // StatisticsIO dumper( step );
+    // Read the file again to check the values
+    options.dumper().startPeriod( partialPath, "period", "w" );
+    options.dumper().writePeriod( startPoint_, endPoint_, creationPoint_ );
+    options.dumper().endPeriod();
+    /*
+    // Read the file again to check the values
+    eckit::DateTime start;
+    eckit::DateTime end;
+    eckit::DateTime creation;
+    dumper.startPeriod( partialPath, "period", "r" );
+    dumper.readPeriod( start, end, creation );
+    dumper.endPeriod();
+    if ( start != startPoint_) {
+        throw eckit::SeriousBug("Error start point mismatch!", Here()); 
+    };
+    if ( end != endPoint_) {
+        throw eckit::SeriousBug("Error end point mismatch!", Here());
+    };
+    if ( creation != creationPoint_ ) {
+        throw eckit::SeriousBug("Error creation Point mismatch!", Here());
+    };
+    */
     return;
 }
 

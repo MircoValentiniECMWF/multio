@@ -8,33 +8,45 @@
 #include "multio/action/statistics/Period.h"
 #include "multio/action/statistics/StatisticsOptions.h"
 #include "multio/message/Message.h"
+#include "eckit/types/DateTime.h"
 
 
-namespace multio {
-namespace action {
+namespace multio ::action {
 
 
 class TemporalStatistics {
 public:
+
+    using op = std::vector<std::unique_ptr<Operation>>;
+
+    op::iterator begin() {return statistics_.begin();};
+    op::iterator end() {return statistics_.end();};
+    op::const_iterator cbegin() const {return statistics_.cbegin();};
+    op::const_iterator cend() const {return statistics_.cend();};
+
     static std::unique_ptr<TemporalStatistics> build(const std::string& unit, long span,
                                                      const std::vector<std::string>& operations,
                                                      const message::Message& msg, const std::string& partialPath,
-                                                     const StatisticsOptions& options);
+                                                           StatisticsOptions& options);
 
     // Restart constructor
     TemporalStatistics(const std::vector<std::string>& operations, const DateTimePeriod& period,
-                       const message::Message& msg, const std::string& partialPath, const StatisticsOptions& options,
+                       const message::Message& msg, const std::string& partialPath, StatisticsOptions& options,
                        long span);
 
     virtual ~TemporalStatistics() = default;
-    bool process(message::Message& msg, const StatisticsOptions& options);
-    std::map<std::string, eckit::Buffer> compute(const message::Message& msg);
+
+
+    bool isEndOfWindow(message::Message& msg, StatisticsOptions& options);
+    void update(message::Message& msg, StatisticsOptions& options);
+    void reset(const message::Message& msg, StatisticsOptions& options);
+    void dump(long step, StatisticsOptions& options) const;
+
     std::string stepRange(long step);
     const DateTimePeriod& current() const;
-    void reset(const message::Message& msg);
-    long startStep() const { return prevStep_; };
+    long startStep() const;
+
     virtual void print(std::ostream& os) const = 0;
-    void dump(long step, const StatisticsOptions& options) const;
 
 protected:
     long span_;
@@ -42,17 +54,14 @@ protected:
     std::string partialPath_;
     long prevStep_;
     DateTimePeriod current_;
-    StatisticsOptions options_;
     std::vector<std::string> opNames_;
-    std::vector<OperationVar> statistics_;
-
-    void updateStatistics(const message::Message& msg);
+    std::vector<std::unique_ptr<Operation>> statistics_;
 
 private:
-    virtual bool process_next(message::Message& msg);
 
-    virtual void resetPeriod(const message::Message& msg) = 0;
-
+    virtual void resetPeriod(const message::Message& msg, StatisticsOptions& options) = 0;
+    void checkName( const std::string& name );
+    void checkIsWithin( message::Message& msg, StatisticsOptions& options );
 
     friend std::ostream& operator<<(std::ostream& os, const TemporalStatistics& a) {
         a.print(os);
@@ -61,4 +70,4 @@ private:
 };
 
 }  // namespace action
-}  // namespace multio
+

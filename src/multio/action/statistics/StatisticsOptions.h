@@ -5,6 +5,8 @@
 #include "eckit/config/LocalConfiguration.h"
 #include "multio/message/Message.h"
 
+#include "StatisticsIO.h"
+
 namespace multio {
 namespace action {
 
@@ -31,6 +33,9 @@ private:
     std::string restartPrefix_;
     std::string logPrefix_;
 
+    mutable StatisticsIO reader_;
+    mutable StatisticsIO dumper_;
+
 public:
     StatisticsOptions(const eckit::LocalConfiguration& confCtx);
     StatisticsOptions(const StatisticsOptions& confCtx, const message::Message& msg);
@@ -51,6 +56,10 @@ public:
 
     bool haveMissingValue() const;
     double missingValue() const;
+
+    StatisticsIO& reader(){ return reader_; };
+    StatisticsIO& dumper(){ return dumper_; };
+    
 };
 
 }  // namespace action
