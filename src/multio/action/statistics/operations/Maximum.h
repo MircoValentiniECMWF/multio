@@ -14,7 +14,7 @@ public:
     Maximum(const std::string& name, long sz, const MovingWindow& win, const StatisticsConfiguration& cfg) :
         OperationWithData<T>{name, "maximum", sz, true, win, cfg} {}
 
-    Maximum(const std::string& name, long sz, const MovingWindow& win, StatisticsIO& IOmanager,
+    Maximum(const std::string& name, long sz, const MovingWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
             const StatisticsConfiguration& cfg) :
         OperationWithData<T>{name, "maximum", sz, true, win, IOmanager, cfg} {};
 
@@ -25,7 +25,7 @@ public:
         return;
     };
 
-    void updateData(const void* data, long sz, eckit::DateTime dt) override {
+    void updateData(const void* data, long sz) override {
         checkSize(sz);
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const T* val = static_cast<const T*>(data);

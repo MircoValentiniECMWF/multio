@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cinttypes>
+
 #include "eckit/types/DateTime.h"
 
 #include "StatisticsConfiguration.h"
@@ -10,18 +12,18 @@ namespace multio::action {
 
 class MovingWindow {
 public:
-    MovingWindow(StatisticsIO& IOmanager, const char* periodKind, const StatisticsConfiguration& cfg);
+    MovingWindow(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg);
+
     MovingWindow(const eckit::DateTime& epochPoint, const eckit::DateTime& startPoint,
-                 const eckit::DateTime& creationPoint, const eckit::DateTime& endPoint, long timeStepInSeconds,
-                 const char* periodKind, long span);
+                 const eckit::DateTime& creationPoint, const eckit::DateTime& endPoint, long timeStepInSeconds);
 
     long count() const;
 
     void updateData(const eckit::DateTime& currentPoint);
     void updateWindow(const eckit::DateTime& startPoint, const eckit::DateTime& endPoint);
 
-    void dump(StatisticsIO& IOmanager, const StatisticsConfiguration& cfg) const;
-    void load(StatisticsIO& IOmanager, const StatisticsConfiguration& cfg);
+    void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const;
+    void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg);
 
     bool isWithin(const eckit::DateTime& dt) const;
     bool gtLowerBound(const eckit::DateTime& dt, bool throw_error) const;
@@ -31,23 +33,23 @@ public:
     long timeSpanInSteps() const;
     long lastPointsDiffInSeconds() const;
 
-    long startStepInSeconds() const;
-    long creationStepInSeconds() const;
-    long currStepInSeconds() const;
-    long prevStepInSeconds() const;
-    long endStepInSeconds() const;
+    long startPointInSeconds() const;
+    long creationPointInSeconds() const;
+    long currPointInSeconds() const;
+    long prevPointInSeconds() const;
+    long endPointInSeconds() const;
 
-    long startStepInHours() const;
-    long creationStepInHours() const;
-    long currStepInHours() const;
-    long prevStepInHours() const;
-    long endStepInHours() const;
+    long startPointInHours() const;
+    long creationPointInHours() const;
+    long currPointInHours() const;
+    long prevPointInHours() const;
+    long endPointInHours() const;
 
-    long startPointInStep() const;
-    long creationPointInStep() const;
-    long currPointInStep() const;
-    long prevPointInStep() const;
-    long endStep() const;
+    long startPointInSteps() const;
+    long creationPointInSteps() const;
+    long currPointInSteps() const;
+    long prevPointInSteps() const;
+    long endPointInSteps() const;
 
     eckit::DateTime epochPoint() const;
     eckit::DateTime startPoint() const;
@@ -69,8 +71,8 @@ private:
     long timeStepInSeconds_;
     long count_;
 
-    void serialize(std::array<int64_t, 16>& currState) const;
-    void deserialize(const std::array<int64_t, 16>& currState);
+    void serialize(std::array<std::uint64_t, 15>& currState) const;
+    void deserialize(const std::array<std::uint64_t, 15>& currState);
 
     void print(std::ostream& os) const;
     friend std::ostream& operator<<(std::ostream& os, const MovingWindow& a);

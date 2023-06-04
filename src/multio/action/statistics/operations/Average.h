@@ -11,11 +11,11 @@ public:
     using OperationWithData<T>::checkTimeInterval;
 
     Average(const std::string& name, long sz, const MovingWindow& win, const StatisticsConfiguration& cfg) :
-        OperationWithData<T>{name, "average", sz, win, cfg} {}
+        OperationWithData<T>{name, "average", sz, true, win, cfg} {}
 
-    Average(const std::string& name, long sz, const MovingWindow& win, StatisticsIO& IOmanager,
+    Average(const std::string& name, long sz, const MovingWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
             const StatisticsConfiguration& cfg) :
-        OperationWithData<T>{name, "average", sz, win, IOmanager, cfg} {};
+        OperationWithData<T>{name, "average", sz, true, win, IOmanager, cfg} {};
 
     void compute(eckit::Buffer& buf) override {
         checkTimeInterval();
@@ -24,7 +24,7 @@ public:
         return;
     }
 
-    void updateData(const void* data, long sz, eckit::DateTime dt) override {
+    void updateData(const void* data, long sz) override {
         checkSize(sz);
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const T* val = static_cast<const T*>(data);

@@ -32,21 +32,21 @@ StatisticsConfiguration::StatisticsConfiguration(const eckit::LocalConfiguration
     restartPrefix_{"StatisticsRestartFile"},
     logPrefix_{"Plan"} {
 
-    if (!confCtx.has("cfgions")) {
+    if (!confCtx.has("options")) {
         return;
     }
 
-    const auto& cfg = confCtx.getSubConfiguration("cfgions");
+    const auto& cfg = confCtx.getSubConfiguration("options");
 
     // TODO:: remove boilerplate code (same code in ConfigurationContext.cc)
     auto env = [](std::string_view replace) {
         std::string lookUpKey{replace};
         char* env = ::getenv(lookUpKey.c_str());
         if (env) {
-            return eckit::cfgional<std::string>{env};
+            return eckit::Optional<std::string>{env};
         }
         else {
-            return eckit::cfgional<std::string>{};
+            return eckit::Optional<std::string>{};
         }
     };
 
@@ -55,7 +55,7 @@ StatisticsConfiguration::StatisticsConfiguration(const eckit::LocalConfiguration
     stepFreq_ = cfg.getLong("step-frequency", 1L);
     timeStep_ = cfg.getLong("time-step", 3600L);
     solverSendInitStep_ = cfg.getBool("initial-condition-present", false);
-    eckit::cfgional<bool> r;
+    eckit::Optional<bool> r;
     r = util::parseBool(cfg, "restart", false);
     if (r) {
         restart_ = *r;

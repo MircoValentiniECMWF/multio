@@ -48,7 +48,7 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
     timeSpan_{set_frequency(confCtx.config().getString("output-frequency"))},
     step_{0},
     operations_{confCtx.config().getStringVector("operations")},
-    options_{confCtx.config()} {}
+    cfg_{confCtx.config()} {}
 
 
 void Statistics::DumpRestart(long step) const {
@@ -85,27 +85,28 @@ Statistics::~Statistics() {
 std::string Statistics::getKey(const message::Message& msg) const {
     std::ostringstream os;
     step_ = msg.metadata().getLong("step", 0);
-    os << options_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
+    os << cfg_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
        << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
        << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
-       << msg.metadata().getString("gridType", "unknown") << "-" << msg.metadata().getString("precision", "unknown") << "-"
-       << std::to_string(std::hash<std::string>{}(msg.source()));
+       << msg.metadata().getString("gridType", "unknown") << "-" << msg.metadata().getString("precision", "unknown")
+       << "-" << std::to_string(std::hash<std::string>{}(msg.source()));
     LOG_DEBUG_LIB(LibMultio) << "Generating key for the field :: " << os.str() << std::endl;
     return os.str();
 }
 
-std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsOptions& opt) const {
+std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsConfiguration& cfg) const {
     // Easy way to change (if needed in future) the name of the restart file
     std::ostringstream os;
-    os << opt.restartPath() << "/" << getKey(msg);
+    os << cfg.restartPath() << "/" << getKey(msg);
     LOG_DEBUG_LIB(LibMultio) << "Generating partial path for the field :: " << os.str() << std::endl;
     return os.str();
 }
 
-message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetadata, const StatisticsOptions& opt,
+message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetadata, const StatisticsConfiguration& cfg,
                                              const std::string& key, long timeSpanInSeconds) const {
     // Handling metadata
     auto md = inputMetadata;
+    /*
     md.set("timeUnit", timeUnit_);
     md.set("startDate", opt.startDate());
     md.set("startTime", opt.startTime());
@@ -128,6 +129,7 @@ message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetad
     auto stepRangeInHours = std::to_string(prevStep) + "-" + std::to_string(stepInHours);
     LOG_DEBUG_LIB(LibMultio) << "The step range (in hours) is :: " << stepRangeInHours << std::endl;
     md.set("stepRangeInHours", stepRangeInHours);
+    */
     return md;
 }
 
@@ -148,7 +150,8 @@ void Statistics::executeImpl(message::Message msg) {
 
 
     long timeSpanInSeconds;
-    StatisticsOptions opt{options_, msg};
+    std::shared_ptr<StatisticsIO> IOmanager{StatisticsIOFactory::instance().build("fstream_io")};
+    StatisticsConfiguration cfg{cfg_, msg};
 
     {
         util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
@@ -158,10 +161,9 @@ void Statistics::executeImpl(message::Message msg) {
                                          << std::endl;
         if (fieldStats_.find(key) == fieldStats_.end()) {
             // Create a new statistics
-            fieldStats_[key] = TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg,
-                                                         getRestartPartialPath(msg, opt), opt);
+            fieldStats_[key] = TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg, IOmanager, cfg);
             // Initial conditions don't need to be used in computation
-            if (opt.solver_send_initial_condition()) {
+            if (cfg.solver_send_initial_condition()) {
                 LOG_DEBUG_LIB(LibMultio) << "Exiting because of initial condition :: " << key << std::endl;
                 util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
                 return;
@@ -169,35 +171,33 @@ void Statistics::executeImpl(message::Message msg) {
         }
 
         // Time span needs to be computed here because otherwise it will be the timespan of the next window
-        timeSpanInSeconds = fieldStats_.at(key)->current().timeSpanInSeconds();
-        fieldStats_.at(key)->update(msg, opt);
+        timeSpanInSeconds = fieldStats_.at(key)->win().timeSpanInSeconds();
+        fieldStats_.at(key)->updateData(msg, cfg);
 
-        // Emit statistics 
-        if (fieldStats_.at(key)->isEndOfWindow(msg, opt)) {
-            
+        // Emit statistics
+        if (fieldStats_.at(key)->isEndOfWindow(msg, cfg)) {
+
             // Construct output metadata
-            auto md = outputMetadata(msg.metadata(), opt, key, timeSpanInSeconds);
+            auto md = outputMetadata(msg.metadata(), cfg, key, timeSpanInSeconds);
 
             // Create outpuit messages
-            for (  auto it=fieldStats_.at(key)->begin(); it!=fieldStats_.at(key)->end(); ++it){
+            for (auto it = fieldStats_.at(key)->begin(); it != fieldStats_.at(key)->end(); ++it) {
                 eckit::Buffer payload;
                 payload.resize((*it)->byte_size());
                 payload.zero();
                 md.set("operation", (*it)->operation());
-                (*it)->compute( payload );
+                (*it)->compute(payload);
                 executeNext(message::Message{message::Message::Header{message::Message::Tag::Field, msg.source(),
-                                                                 msg.destination(), message::Metadata{md}},
-                                        std::move(payload)} );
+                                                                      msg.destination(), message::Metadata{md}},
+                                             std::move(payload)});
             }
 
             // Timing
             util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
 
             // Reset operations and update window
-            fieldStats_.at(key)->reset(msg,opt);
-
+            fieldStats_.at(key)->updateWindow(msg, cfg);
         }
-
     }
     return;
 }
@@ -215,5 +215,4 @@ void Statistics::print(std::ostream& os) const {
 
 static ActionBuilder<Statistics> StatisticsBuilder("statistics");
 
-}  // namespace action
-
+}  // namespace multio::action

@@ -1,20 +1,23 @@
 namespace multio::action {
 template <typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-class OperationWithData : public Operation {
+class OperationWithData : public OperationBase {
 public:
-    using Operation::cfg_;
-    using Operation::logHeader_;
-    using Operation::name_;
+    using OperationBase::cfg_;
+    using OperationBase::logHeader_;
+    using OperationBase::name_;
 
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const MovingWindow& win, const StatisticsConfiguration& cfg) :
-        Operation{name, operation, win, cfg},
+        OperationBase{name, operation, win, cfg},
         needRestart_{needRestart},
         values_{std::vector<T>(sz /= sizeof(T), 0.0)} {}
 
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
-                      const MovingWindow& win, StatisticsIO& IOmanager, const StatisticsConfiguration& cfg) :
-        Operation{name, operation, win, cfg}, needRestart_{needRestart}, values_{std::vector<T>(sz /= sizeof(T), 0.0)} {
+                      const MovingWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
+                      const StatisticsConfiguration& cfg) :
+        OperationBase{name, operation, win, cfg},
+        needRestart_{needRestart},
+        values_{std::vector<T>(sz /= sizeof(T), 0.0)} {
         load(IOmanager, cfg);
         return;
     }
@@ -36,27 +39,27 @@ public:
 
     size_t byte_size() const override { return values_.size() * sizeof(T); };
 
-    void dump(StatisticsIO& IOmanager, const StatisticsConfiguration& cfg) const {
+    void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const override {
         if (needRestart_) {
             std::vector<double> data(values_.size());
             serialize(data);
-            IOmanager.writeOperation(name_, data);
-            IOmanager.flush();
+            IOmanager->writeOperation(name_, data);
+            IOmanager->flush();
         }
         return;
     };
 
-    void load(StatisticsIO& IOmanager, const StatisticsConfiguration& cfg) override {
+    void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) override {
         if (needRestart_) {
             std::vector<double> data(values_.size());
-            IOmanager.readOperation(name_, data);
+            IOmanager->readOperation(name_, data);
             deserialize(data);
         }
         return;
     };
 
 protected:
-    void serialize(std::vector<double>& data) {
+    void serialize(std::vector<double>& data) const {
         std::transform(values_.cbegin(), values_.cend(), data.begin(), [](double v) { return static_cast<double>(v); });
         return;
     };

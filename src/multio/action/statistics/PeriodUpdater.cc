@@ -9,34 +9,34 @@ namespace multio::action {
 PeriodUpdater::PeriodUpdater(long span) : span_{span} {};
 
 
-eckit::DateTime PeriodUpdater::updatePeriodStart(const message::Message& msg, StatisticsConfiguration& cfg) {
+eckit::DateTime PeriodUpdater::updatePeriodStart(const message::Message& msg, const StatisticsConfiguration& cfg) {
     return computeWinStartTime(currentDateTime(msg, cfg));
 };
 
-eckit::DateTime PeriodUpdater::updatePeriodEnd(const message::Message& msg, StatisticsConfiguration& cfg) {
-    return updateEnd(computeWinStartTime(currentDateTime(msg, cfg)), span_);
+eckit::DateTime PeriodUpdater::updatePeriodEnd(const message::Message& msg, const StatisticsConfiguration& cfg) {
+    return updateWinEndTime(computeWinStartTime(currentDateTime(msg, cfg)));
 };
 
-DateTimePeriod PeriodUpdater::initWindow(const message::Message& msg, const StatisticsIO& IOmanager,
-                                         const StatisticsConfiguration& cfg) {
+MovingWindow PeriodUpdater::initPeriod(const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
+                                       const StatisticsConfiguration& cfg) {
     if (cfg.readRestart()) {
         eckit::DateTime epochPoint{epochDateTime(msg, cfg)};
         eckit::DateTime startPoint{computeWinStartTime(winStartDateTime(msg, cfg))};
         eckit::DateTime creationPoint{computeWinCreationTime(winStartDateTime(msg, cfg))};
-        eckit::DateTime endPoint{computeWinEndTime(startPoint, span_)};
+        eckit::DateTime endPoint{computeWinEndTime(startPoint)};
         return MovingWindow{epochPoint, startPoint, creationPoint, endPoint, cfg.timeStep()};
     }
     else {
-        return MovingWindow { IOmanager, cfg }
+        return MovingWindow{IOmanager, cfg};
     }
-}
+};
 
 eckit::DateTime PeriodUpdater::computeWinCreationTime(const eckit::DateTime& currentTime) {
     return currentTime;
 };
 
 eckit::DateTime PeriodUpdater::computeWinEndTime(const eckit::DateTime& startPoint) {
-    return eckit::DateTime{updateWinEndTime(startPoint, span_)};
+    return eckit::DateTime{updateWinEndTime(startPoint)};
 };
 
 
@@ -47,10 +47,10 @@ HourPeriodUpdater::HourPeriodUpdater(long span) : PeriodUpdater{span} {};
 
 const std::string HourPeriodUpdater::name() const {
     std::ostringstream os;
-    os << std::setw(4) << std::setfill(0) << span_ << "-"
+    os << std::setw(4) << std::setfill('0') << span_ << "-"
        << "hour";
     return os.str();
-}
+};
 
 eckit::DateTime HourPeriodUpdater::computeWinStartTime(const eckit::DateTime& currentTime) {
     return eckit::DateTime{currentTime.date(), eckit::Time{currentTime.time().hours(), 0, 0}};
@@ -69,10 +69,10 @@ DayPeriodUpdater::DayPeriodUpdater(long span) : PeriodUpdater{span} {};
 
 const std::string DayPeriodUpdater::name() const {
     std::ostringstream os;
-    os << std::setw(4) << std::setfill(0) << span_ << "-"
+    os << std::setw(4) << std::setfill('0') << span_ << "-"
        << "day";
     return os.str();
-}
+};
 
 eckit::DateTime DayPeriodUpdater::computeWinStartTime(const eckit::DateTime& currentTime) {
     return eckit::DateTime{currentTime.date(), eckit::Time{0}};
@@ -91,10 +91,10 @@ MonthPeriodUpdater::MonthPeriodUpdater(long span) : PeriodUpdater{span} {};
 
 const std::string MonthPeriodUpdater::name() const {
     std::ostringstream os;
-    os << std::setw(4) << std::setfill(0) << span_ << "-"
+    os << std::setw(4) << std::setfill('0') << span_ << "-"
        << "month";
     return os.str();
-}
+};
 
 eckit::DateTime MonthPeriodUpdater::computeWinStartTime(const eckit::DateTime& currentTime) {
     auto year = currentTime.date().year();
@@ -108,4 +108,22 @@ eckit::DateTime MonthPeriodUpdater::updateWinEndTime(const eckit::DateTime& star
     auto endMonth = totalSpan % 12 + 1;
     return eckit::DateTime{eckit::Date{endYear, endMonth, 1}, eckit::Time{0}};
 };
+
+
+// -------------------------------------------------------------------------------------------------------------------
+
+
+std::unique_ptr<PeriodUpdater> make_period_updater(const std::string& periodKind, long span) {
+    if (periodKind == "h") {
+        return std::make_unique<HourPeriodUpdater>(span);
+    }
+    if (periodKind == "d") {
+        return std::make_unique<DayPeriodUpdater>(span);
+    }
+    if (periodKind == "m") {
+        return std::make_unique<MonthPeriodUpdater>(span);
+    }
+    throw eckit::SeriousBug("Unknown period kind", Here());
+};
+
 }  // namespace multio::action

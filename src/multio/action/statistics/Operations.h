@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "Period.h"
 #include "StatisticsConfiguration.h"
 #include "StatisticsIO.h"
 #include "multio/LibMultio.h"
@@ -35,8 +34,9 @@ namespace multio::action {
 
 
 template <typename Precision>
-std::unique_ptr<OperationBase> make_operation(const std::string& opname, long sz, StatisticsIO& IOmanager,
-                                              const MovingWindow& win, const StatisticsConfiguration& cfg) {
+std::unique_ptr<OperationBase> make_operation(const std::string& opname, long sz,
+                                              std::shared_ptr<StatisticsIO>& IOmanager, const MovingWindow& win,
+                                              const StatisticsConfiguration& cfg) {
 
     if (opname == "instant") {
         return cfg.readRestart() ? std::make_unique<Instant<Precision>>(opname, sz, win, IOmanager, cfg)
@@ -69,7 +69,9 @@ std::unique_ptr<OperationBase> make_operation(const std::string& opname, long sz
 }
 
 std::vector<std::unique_ptr<OperationBase>> make_operations(const std::vector<std::string>& opNames,
-                                                            message::Message msg, , StatisticsIO& IOmanager,
-                                                            const StatisticsConfiguration& cfg, bool restart);
+                                                            message::Message msg,
+                                                            std::shared_ptr<StatisticsIO>& IOmanager,
+                                                            const MovingWindow& win,
+                                                            const StatisticsConfiguration& cfg);
 
 }  // namespace multio::action

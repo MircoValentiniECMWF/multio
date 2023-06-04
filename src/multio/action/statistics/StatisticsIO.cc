@@ -1,6 +1,15 @@
 #include "StatisticsIO.h"
 
-namespace multio::StatisticsIO {
+#include <mutex>
+
+#include "eckit/exception/Exceptions.h"
+#include "eckit/log/Log.h"
+
+#include "multio/LibMultio.h"
+
+namespace multio::action {
+
+
 StatisticsIOFactory& StatisticsIOFactory::instance() {
     static StatisticsIOFactory singleton;
     return singleton;
@@ -28,21 +37,20 @@ void StatisticsIOFactory::list(std::ostream& out) {
     }
 }
 
-std::unique_ptr<StatisticsIO> StatisticsIOFactory::build(const std::string& name, const ConfigurationContext& confCtx) {
+std::shared_ptr<StatisticsIO> StatisticsIOFactory::build(const std::string& name) {
     std::lock_guard<std::recursive_mutex> lock{mutex_};
-    ASSERT(confCtx.componentTag() == util::ComponentTag::StatisticsIO);
 
     LOG_DEBUG_LIB(LibMultio) << "Looking for StatisticsIOFactory [" << name << "]" << std::endl;
 
     auto f = factories_.find(name);
 
     if (f != factories_.end())
-        return f->second->make(confCtx);
+        return f->second->make();
 
-    Log::error() << "No StatisticsIOFactory for [" << name << "]" << std::endl;
-    Log::error() << "StatisticsIOFactories are:" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << "No StatisticsIOFactory for [" << name << "]" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << "StatisticsIOFactories are:" << std::endl;
     for (auto const& factory : factories_) {
-        Log::error() << "   " << factory.first << std::endl;
+        LOG_DEBUG_LIB(LibMultio) << "   " << factory.first << std::endl;
     }
     throw eckit::SeriousBug(std::string("No StatisticsIOFactory called ") + name);
 }
@@ -58,4 +66,4 @@ StatisticsIOBuilderBase::~StatisticsIOBuilderBase() {
 
 //----------------------------------------------------------------------------------------------------------------------
 
-}  // namespace multio::StatisticsIO
+}  // namespace multio::action

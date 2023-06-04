@@ -2,6 +2,7 @@
 #include "MovingWindow.h"
 
 #include <algorithm>
+#include <cinttypes>
 #include <iostream>
 
 #include "StatisticsIO.h"
@@ -12,14 +13,14 @@ namespace multio::action {
 
 namespace {
 
-uint64_t compueChecksum(const std::array<uint64_t, 16>& state) {
+uint64_t compueChecksum(const std::array<std::uint64_t, 15>& state) {
     uint64_t checksum = 1979339339;  // Just a big prime number
     auto last = state.cend();
     // TODO: maybe some better strategy can be used?
     std::for_each(state.cbegin(), --last, [&checksum](const int64_t& v) {
-        *checksum <<= 1;
-        *checksum *= 31;
-        *checksum ^= v;
+        checksum <<= 1;
+        checksum *= 31;
+        checksum ^= v;
     });
     return checksum;
 }
@@ -27,8 +28,8 @@ uint64_t compueChecksum(const std::array<uint64_t, 16>& state) {
 long lastDayOfTheMonth(long y, long m) {
     // month must be base 0
     long i = m - 1;
-    return 31 - std::max(0, i % 6 - i / 6) % 2
-         - std::max(0, 2 - i * (i % 2)) % 2 * (y % 4 == 0 ? y % 100 == 0 ? y % 400 == 0 ? 1 : 2 : 1 : 2);
+    return 31 - std::max(0L, i % 6 - i / 6) % 2
+         - std::max(0L, 2 - i * (i % 2)) % 2 * (y % 4 == 0 ? y % 100 == 0 ? y % 400 == 0 ? 1 : 2 : 1 : 2);
 }
 
 void yyyymmdd2ymd(uint64_t yyyymmdd, long& y, long& m, long& d) {
@@ -57,8 +58,6 @@ void hhmmss2hms(uint64_t hhmmss, long& h, long& m, long& s) {
     if (s < 0 || s > 23) {
         throw eckit::SeriousBug("invalid hour range", Here());
     }
-
-    // TODO: check coherency
     return;
 }
 
@@ -71,7 +70,7 @@ eckit::DateTime yyyymmdd_hhmmss2DateTime(uint64_t yyyymmdd, uint64_t hhmmss) {
 }  // namespace
 
 
-MovingWindow::MovingWindow(StatisticsIO& IOmanager, const char* periodKind, const StatisticsConfiguration& cfg) :
+MovingWindow::MovingWindow(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) :
     epochPoint_{eckit::Date{0}, eckit::Time{0}},
     startPoint_{eckit::Date{0}, eckit::Time{0}},
     endPoint_{eckit::Date{0}, eckit::Time{0}},
@@ -96,30 +95,30 @@ MovingWindow::MovingWindow(const eckit::DateTime& epochPoint, const eckit::DateT
     timeStepInSeconds_{timeStepInSeconds},
     count_{0} {}
 
-long count() const {
+long MovingWindow::count() const {
     return count_;
 }
 
-void MovingWindow::load(StatisticsIO& IOmanager, const StatisticsConfiguration& cfg) {
-    std::array<unit64_t, 15> restartState;
-    IOmanager.readPeriod("window", restartState);
+void MovingWindow::load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) {
+    std::array<std::uint64_t, 15> restartState;
+    IOmanager->readPeriod("window", restartState);
     deserialize(restartState);
     return;
 }
 
-void MovingWindow::dump(StatisticsIO& IOmanager, const StatisticsConfiguration& cfg) const {
-    std::array<unit64_t, 15> restartState;
+void MovingWindow::dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const {
+    std::array<std::uint64_t, 15> restartState;
     serialize(restartState);
-    IOmanager.writePeriod("window", restartState);
-    IOmanager.flush();
+    IOmanager->writePeriod("window", restartState);
+    IOmanager->flush();
     return;
 }
 
 void MovingWindow::updateData(const eckit::DateTime& currentPoint) {
     gtLowerBound(currentPoint, true);
     leUpperBound(currentPoint, true);
-    prevPoint_ = currPoint_;
-    currPoint_ = currPoint;
+    prevPoint_ = currentPoint;
+    currPoint_ = currentPoint;
     count_++;
     return;
 }
@@ -131,7 +130,7 @@ void MovingWindow::updateWindow(const eckit::DateTime& startPoint, const eckit::
     currPoint_ = startPoint;
     prevPoint_ = startPoint;
     endPoint_ = endPoint;
-    count = 0;
+    count_ = 0;
     return;
 }
 
@@ -264,48 +263,48 @@ eckit::DateTime MovingWindow::prevPoint() const {
 
 const std::string MovingWindow::stepRange() const {
     std::ostringstream os;
-    os << std::to_string(creationPointInSteps()) << "-" std::to_string(endPointInSteps());
+    os << std::to_string(creationPointInSteps()) << "-" << std::to_string(endPointInSteps());
     return os.str();
 };
 
 const std::string MovingWindow::stepRangeInHours() const {
     std::ostringstream os;
-    os << std::to_string(creationPointInHours()) << "-" std::to_string(endPointInHours());
+    os << std::to_string(creationPointInHours()) << "-" << std::to_string(endPointInHours());
     return os.str();
 }
 
-void MovingWindow::serialize(std::array<uint64_t, 15>& currState) const {
+void MovingWindow::serialize(std::array<std::uint64_t, 15>& currState) const {
 
 
-    currState[0] = static_cast<uint64_t>(epochPoint.date().yyyymmdd());
-    currState[1] = static_cast<uint64_t>(epochPoint.date().hhmmss());
+    currState[0] = static_cast<std::uint64_t>(epochPoint_.date().yyyymmdd());
+    currState[1] = static_cast<std::uint64_t>(epochPoint_.time().hhmmss());
 
-    currState[2] = static_cast<uint64_t>(startPoint.date().yyyymmdd());
-    currState[3] = static_cast<uint64_t>(startPoint.date().hhmmss());
+    currState[2] = static_cast<std::uint64_t>(startPoint_.date().yyyymmdd());
+    currState[3] = static_cast<std::uint64_t>(startPoint_.time().hhmmss());
 
-    currState[4] = static_cast<uint64_t>(endPoint.date().yyyymmdd());
-    currState[5] = static_cast<uint64_t>(endPoint.date().hhmmss());
+    currState[4] = static_cast<std::uint64_t>(endPoint_.date().yyyymmdd());
+    currState[5] = static_cast<std::uint64_t>(endPoint_.time().hhmmss());
 
-    currState[6] = static_cast<uint64_t>(creationPoint.date().yyyymmdd());
-    currState[7] = static_cast<uint64_t>(creationPoint.date().hhmmss());
+    currState[6] = static_cast<std::uint64_t>(creationPoint_.date().yyyymmdd());
+    currState[7] = static_cast<std::uint64_t>(creationPoint_.time().hhmmss());
 
-    currState[8] = static_cast<uint64_t>(prevPoint.date().yyyymmdd());
-    currState[9] = static_cast<uint64_t>(prevPoint.date().hhmmss());
+    currState[8] = static_cast<std::uint64_t>(prevPoint_.date().yyyymmdd());
+    currState[9] = static_cast<std::uint64_t>(prevPoint_.time().hhmmss());
 
-    currState[10] = static_cast<uint64_t>(currPoint.date().yyyymmdd());
-    currState[11] = static_cast<uint64_t>(currPoint.date().hhmmss());
+    currState[10] = static_cast<std::uint64_t>(currPoint_.date().yyyymmdd());
+    currState[11] = static_cast<std::uint64_t>(currPoint_.time().hhmmss());
 
-    currState[12] = static_cast<uint64_t>(timeStepInSeconds_);
-    currState[13] = static_cast<uint64_t>(count_);
+    currState[12] = static_cast<std::uint64_t>(timeStepInSeconds_);
+    currState[13] = static_cast<std::uint64_t>(count_);
 
     currState[14] = compueChecksum(currState);
 
     return;
 }
 
-void MovingWindow::deserialize(const std::array<uint64_t, 15>& currState) const {
+void MovingWindow::deserialize(const std::array<std::uint64_t, 15>& currState) {
 
-    if (checksum != compueChecksum(currState)) {
+    if (currState[14] != compueChecksum(currState)) {
         throw eckit::SeriousBug("Checksum mismatch!", Here());
     }
     epochPoint_ = yyyymmdd_hhmmss2DateTime(currState[0], currState[1]);
