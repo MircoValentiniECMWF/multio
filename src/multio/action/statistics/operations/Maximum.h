@@ -1,47 +1,52 @@
+namespace multio::action {
 template <typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
 class Maximum final : public OperationWithData<T> {
 public:
     using OperationWithData<T>::name_;
-    using OperationWithData<T>::options_;
+    using OperationWithData<T>::cfg_;
     using OperationWithData<T>::logHeader_;
     using OperationWithData<T>::values_;
-    using OperationWithData<T>::count_;
+    using OperationWithData<T>::win_;
     using OperationWithData<T>::checkSize;
     using OperationWithData<T>::checkTimeInterval;
 
 
-    Maximum(const std::string& name, long sz, StatisticsOptions& options) :
-        OperationWithData<T>{name, "maximum", sz, options}{}
+    Maximum(const std::string& name, long sz, const MovingWindow& win, const StatisticsConfiguration& cfg) :
+        OperationWithData<T>{name, "maximum", sz, true, win, cfg} {}
 
-    Maximum(const std::string& name, long sz, const std::string& partialPath, StatisticsOptions& options) :
-        OperationWithData<T>{name, "maximum", sz, partialPath, options}{ };
+    Maximum(const std::string& name, long sz, const MovingWindow& win, StatisticsIO& IOmanager,
+            const StatisticsConfiguration& cfg) :
+        OperationWithData<T>{name, "maximum", sz, true, win, IOmanager, cfg} {};
 
-    void compute( eckit::Buffer& buf ) override { 
+    void compute(eckit::Buffer& buf) override {
         checkTimeInterval();
-        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << count_ << std::endl;
-        buf.copy( values_.data(), values_.size() * sizeof(T));
+        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;
+        buf.copy(values_.data(), values_.size() * sizeof(T));
         return;
     };
 
-    void update(const void* data, long sz, eckit::DateTime dt ) override {
+    void updateData(const void* data, long sz, eckit::DateTime dt) override {
         checkSize(sz);
-        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << count_ << std::endl;
+        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const T* val = static_cast<const T*>(data);
-        options_.haveMissingValue() ? updateWithMissing(val) : updateWithoutMissing(val);
-        ++count_;
+        cfg_.haveMissingValue() ? updateWithMissing(val) : updateWithoutMissing(val);
         return;
     };
 
 
 private:
-    void updateWithoutMissing( const T* val ){       
-        std::transform( values_.begin(), values_.end(), val, values_.begin(), [](T v1, T v2){ return static_cast<T>(v1>v2 ? v1 : v2); } );
+    void updateWithoutMissing(const T* val) {
+        std::transform(values_.begin(), values_.end(), val, values_.begin(),
+                       [](T v1, T v2) { return static_cast<T>(v1 > v2 ? v1 : v2); });
         return;
     };
-    void updateWithMissing( const T* val ){
-        double m=options_.missingValue();   
-        std::transform( values_.begin(), values_.end(), val, values_.begin(), [m](T v1, T v2){ return static_cast<T>(m==v2 ? m : v1>v2 ? v1 : v2); } );
-        return;        
+    void updateWithMissing(const T* val) {
+        double m = cfg_.missingValue();
+        std::transform(values_.begin(), values_.end(), val, values_.begin(), [m](T v1, T v2) {
+            return static_cast<T>(m == v2 ? m : v1 > v2 ? v1 : v2);
+        });
+        return;
     };
     void print(std::ostream& os) const override { os << logHeader_; };
 };
+}  // namespace multio::action

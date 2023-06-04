@@ -3,15 +3,14 @@
 #include <string>
 
 #include "eckit/config/LocalConfiguration.h"
+
 #include "multio/message/Message.h"
 
-#include "StatisticsIO.h"
 
-namespace multio {
-namespace action {
+namespace multio::action {
 
 
-class StatisticsOptions {
+class StatisticsConfiguration {
 
 private:
     bool useDateTime_;
@@ -33,12 +32,9 @@ private:
     std::string restartPrefix_;
     std::string logPrefix_;
 
-    mutable StatisticsIO reader_;
-    mutable StatisticsIO dumper_;
-
 public:
-    StatisticsOptions(const eckit::LocalConfiguration& confCtx);
-    StatisticsOptions(const StatisticsOptions& confCtx, const message::Message& msg);
+    StatisticsConfiguration(const eckit::LocalConfiguration& confCtx);
+    StatisticsConfiguration(const StatisticsConfiguration& confCtx, const message::Message& msg);
 
     bool useDateTime() const;
     long stepFreq() const;
@@ -56,11 +52,6 @@ public:
 
     bool haveMissingValue() const;
     double missingValue() const;
-
-    StatisticsIO& reader(){ return reader_; };
-    StatisticsIO& dumper(){ return dumper_; };
-    
 };
 
-}  // namespace action
-}  // namespace multio
+}  // namespace multio::action

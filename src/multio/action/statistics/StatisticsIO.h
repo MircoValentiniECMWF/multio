@@ -1,99 +1,75 @@
-#pragma once 
+#pragma once
 
-#include <string>
-#include <iostream>
-#include <fstream>
 #include <algorithm>
 #include <cinttypes>
+#include <fstream>
+#include <iostream>
+#include <string>
 
 #include "eckit/filesystem/PathName.h"
 #include "eckit/types/DateTime.h"
 
-namespace multio::action{
+namespace multio::action {
 
 class StatisticsIO {
+public:
+    StatisticsIO();
+    virtual void setPath(const std::string& path) = 0;
+    virtual void setName(const std::string& baseName) = 0;
+    virtual void setDetail(const std::string& suffix, long step) = 0;
+    virtual void writePeriod(const std::string& name, const std::array<unit64_t, 15>& data) = 0;
+    virtual void readPeriod(const std::string& name, std::array<unit64_t, 15>& data) = 0;
+    virtual void writeOperation(const std::string& name, const std::vector<double>& data) = 0;
+    virtual void readOperation(const std::string& name, std::vector<double>& data) = 0;
+    virtual void flush() = 0;
+
 private:
-    // 
+    std::string path_;
+    std::string name_;
+    std::string suffix_;
     long step_;
-    long seed_;
-    size_t fileLengthInBytes_;
-    std::fstream *wf_;
-    std::string stepStr_;
-    std::string stepStrOld_; 
-    std::string fname_;
-    eckit::PathName oldFile_;
-    eckit::PathName tmpFile_;
-    eckit::PathName defFile_;
+};
 
-    void fileLength();
+class StatisticsIOBuilderBase;
 
-    bool check() const;
+class StatisticsIOFactory : private eckit::NonCopyable {
+private:  // methods
+    ActionFactory() {}
+
+public:  // methods
+    static StatisticsIOFactory& instance();
+
+    void enregister(const std::string& name, const StatisticsIOBuilderBase* builder);
+    void deregister(const std::string& name);
+
+    void list(std::ostream&);
+
+    std::unique_ptr<StatisticsIO> build(const std::string&);
+
+private:  // members
+    std::map<std::string, const StatisticsIOBuilderBase*> factories_;
+
+    std::recursive_mutex mutex_;
+};
+
+class StatisticsIOBuilderBase : private eckit::NonCopyable {
+public:  // methods
+    virtual std::unique_ptr<StatisticsIO> make() const = 0;
+
+protected:  // methods
+    StatisticsIOBuilderBase(const std::string&);
+
+    virtual ~StatisticsIOBuilderBase();
+
+    std::string name_;
+};
+
+template <class T>
+class StatisticsIOBuilder final : public StatisticsIOBuilderBase {
+    std::unique_ptr<StatisticsIO> make() const override { return std::make_unique<T>(); }
 
 public:
-    StatisticsIO( );
-    void setStep( long step );
-
-    int open(const std::string& path, const std::string name, const std::string& mode );
-    int close();
-
-    void startPeriod( const std::string& partialPath, const std::string periodKind, const std::string& mode );
-    void writePeriod( const eckit::DateTime& startTime, const eckit::DateTime& endTime, const eckit::DateTime& creationTime );
-    void readPeriod (       eckit::DateTime& startTime,       eckit::DateTime& endTime,       eckit::DateTime& creationTime );
-    void endPeriod();
-
-    void startOperation(const std::string& partialPath, const std::string& operationKind, const std::string& mode );  
-    template <typename T>
-    void writeOperation( size_t count, const std::vector<T>& values ){
-        std::array<std::int64_t,3> data;
-        data[0] = values.size();
-        data[1] = count;
-        data[2] = seed_;
-        data[2] ^= data[0];
-        data[2] ^= data[1];
-        std::vector<double> tmp(values.size(),0.0);
-        std::transform( values.cbegin(), values.cend(), tmp.begin(), [&data]( T v ){ double tmp=static_cast<double>(v); data[2] ^= *reinterpret_cast<std::int64_t*>(&tmp); return tmp;} );
-        wf_->write( reinterpret_cast<char*>(&data[0]), data.size()*sizeof(std::int64_t) );
-        check();
-        wf_->write( reinterpret_cast<char*>(&tmp[0]), tmp.size()*sizeof(double) );
-        check();
-        wf_->flush();
-        check();
-        fileLength();     
-        // Exit point
-        return;
-    };
-    
-    template <typename T>
-    void readOperation( size_t& count, std::vector<T>& values ){
-        check();
-        fileLength();
-        std::array<std::int64_t,3> data;
-        wf_->read( reinterpret_cast<char*>(&data[0]), data.size()*sizeof(std::int64_t) );
-        check(); 
-        if ( data[0] != values.size() ) {
-            throw eckit::SeriousBug("Error dimension mismatch!", Here());
-        }
-        if ( fileLengthInBytes_ != data.size()*sizeof(std::int64_t)+data[0]*sizeof(double) ) {
-            std::string d1(std::to_string(data.size()*sizeof(std::int64_t)+data[0]*sizeof(double)));
-            std::string d2(std::to_string(fileLengthInBytes_));
-            throw eckit::SeriousBug("Error file dimension mismatch :: " + d1 + ", " + d2, Here());
-        }
-        count = data[1];
-        std::vector<double> tmp(values.size(),0.0);
-        wf_->read( reinterpret_cast<char*>(&tmp[0]), values.size()*sizeof(double) );
-        check();
-        std::int64_t checksum = seed_;
-        checksum  = seed_;
-        checksum ^= data[0];
-        checksum ^= data[1];
-        std::transform( tmp.cbegin(), tmp.cend(), values.begin(), [&checksum]( double v ){ T tmp=static_cast<T>(v); checksum ^= *reinterpret_cast<std::int64_t*>(&v); return tmp;} );
-        if ( checksum != data[2]){
-            throw eckit::SeriousBug("Error checksum mismatch!", Here());
-        }
-        // Exit point
-        return;
-    };
-    void endOperation();
+    StatisticsIOBuilder(const std::string& name) : StatisticsIOBuilderBase(name) {}
 };
 
 }  // namespace multio::action

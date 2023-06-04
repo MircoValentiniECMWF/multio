@@ -1,4 +1,4 @@
-#include "StatisticsOptions.h"
+#include "StatisticsConfiguration.h"
 
 #include <limits.h>
 #include <unistd.h>
@@ -11,11 +11,10 @@
 #include "multio/util/PrecisionTag.h"
 #include "multio/util/Substitution.h"
 
-namespace multio {
-namespace action {
+namespace multio::action {
 
 
-StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
+StatisticsConfiguration::StatisticsConfiguration(const eckit::LocalConfiguration& confCtx) :
     useDateTime_{false},
     stepFreq_{1},
     timeStep_{3600},
@@ -33,31 +32,31 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     restartPrefix_{"StatisticsRestartFile"},
     logPrefix_{"Plan"} {
 
-    if (!confCtx.has("options")) {
+    if (!confCtx.has("cfgions")) {
         return;
     }
 
-    const auto& opt = confCtx.getSubConfiguration("options");
+    const auto& cfg = confCtx.getSubConfiguration("cfgions");
 
     // TODO:: remove boilerplate code (same code in ConfigurationContext.cc)
     auto env = [](std::string_view replace) {
         std::string lookUpKey{replace};
         char* env = ::getenv(lookUpKey.c_str());
         if (env) {
-            return eckit::Optional<std::string>{env};
+            return eckit::cfgional<std::string>{env};
         }
         else {
-            return eckit::Optional<std::string>{};
+            return eckit::cfgional<std::string>{};
         }
     };
 
     // Overwrite defaults
-    useDateTime_ = opt.getBool("use-current-time", false);
-    stepFreq_ = opt.getLong("step-frequency", 1L);
-    timeStep_ = opt.getLong("time-step", 3600L);
-    solverSendInitStep_ = opt.getBool("initial-condition-present", false);
-    eckit::Optional<bool> r;
-    r = util::parseBool(opt, "restart", false);
+    useDateTime_ = cfg.getBool("use-current-time", false);
+    stepFreq_ = cfg.getLong("step-frequency", 1L);
+    timeStep_ = cfg.getLong("time-step", 3600L);
+    solverSendInitStep_ = cfg.getBool("initial-condition-present", false);
+    eckit::cfgional<bool> r;
+    r = util::parseBool(cfg, "restart", false);
     if (r) {
         restart_ = *r;
         readRestart_ = *r;
@@ -68,7 +67,7 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
         throw eckit::SeriousBug{"Unable to read restart", Here()};
     }
 #if 0
-    r = util::parseBool(opt, "read-restart", false);
+    r = util::parseBool(cfg, "read-restart", false);
     if (r) {
         readRestart_ = *r;
     }
@@ -76,7 +75,7 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
         throw eckit::SeriousBug{"Unable to read read-restart", Here()};
     }
 
-    r = util::parseBool(opt, "write-restart", false);
+    r = util::parseBool(cfg, "write-restart", false);
     if (r) {
         writeRestart_ = *r;
     }
@@ -86,15 +85,15 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
 #endif
     // TODO: Add functionality to automatically create restart path if it not exists
     // (same improvement can be done in sink). Feature already present in eckit::PathName
-    if (opt.has("restart-path")) {
-        restartPath_ = util::replaceCurly(opt.getString("restart-path", "."), env);
+    if (cfg.has("restart-path")) {
+        restartPath_ = util::replaceCurly(cfg.getString("restart-path", "."), env);
         eckit::PathName path{restartPath_};
         if (!path.exists() || !path.isDir()) {
             throw eckit::UserError{"restart path not exist", Here()};
         }
     }
-    restartPrefix_ = util::replaceCurly(opt.getString("restart-prefix", "StatisticsDump"), env);
-    logPrefix_ = util::replaceCurly(opt.getString("log-prefix", "Plan"), env);
+    restartPrefix_ = util::replaceCurly(cfg.getString("restart-prefix", "StatisticsDump"), env);
+    logPrefix_ = util::replaceCurly(cfg.getString("log-prefix", "Plan"), env);
     std::ostringstream os;
 
     os << ", pid=" << std::left << std::setw(10) << ::getpid();
@@ -108,21 +107,21 @@ StatisticsOptions::StatisticsOptions(const eckit::LocalConfiguration& confCtx) :
     return;
 };
 
-StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message::Message& msg) :
-    useDateTime_{opt.useDateTime()},
-    stepFreq_{opt.stepFreq()},
-    timeStep_{opt.timeStep()},
+StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& cfg, const message::Message& msg) :
+    useDateTime_{cfg.useDateTime()},
+    stepFreq_{cfg.stepFreq()},
+    timeStep_{cfg.timeStep()},
     startDate_{0},
     startTime_{0},
-    readRestart_{opt.readRestart()},
-    writeRestart_{opt.writeRestart()},
+    readRestart_{cfg.readRestart()},
+    writeRestart_{cfg.writeRestart()},
     step_{-1},
     restartStep_{-1},
-    solverSendInitStep_{opt.solver_send_initial_condition()},
+    solverSendInitStep_{cfg.solver_send_initial_condition()},
     haveMissingValue_{false},
     missingValue_{9999.0},
-    restartPath_{opt.restartPath()},
-    restartPrefix_{opt.restartPrefix()},
+    restartPath_{cfg.restartPath()},
+    restartPrefix_{cfg.restartPrefix()},
     logPrefix_{""} {
 
     if (useDateTime() && msg.metadata().has("time")) {
@@ -160,11 +159,11 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
     // Logging prefix
     // TODO: can be skipped if MULTIO_DEBUG is 0
     std::ostringstream os;
-    if (opt.logPrefix() != "Plan") {
-        os << "(prefix=" << opt.logPrefix();
+    if (cfg.logPrefix() != "Plan") {
+        os << "(prefix=" << cfg.logPrefix();
     }
-    else if (opt.restartPrefix() != "StatisticsRestartFile") {
-        os << "(prefix=" << opt.restartPrefix();
+    else if (cfg.restartPrefix() != "StatisticsRestartFile") {
+        os << "(prefix=" << cfg.restartPrefix();
     }
     os << ", step=" << std::left << std::setw(6) << step_;
     if (msg.metadata().has("param")) {
@@ -206,69 +205,68 @@ StatisticsOptions::StatisticsOptions(const StatisticsOptions& opt, const message
 };
 
 
-bool StatisticsOptions::readRestart() const {
+bool StatisticsConfiguration::readRestart() const {
     std::cout << "Read restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << readRestart_
               << std::endl;
     return ((step_ == 0 && solverSendInitStep_) || (step_ == 1 && solverSendInitStep_)) ? false : readRestart_;
 };
 
-bool StatisticsOptions::writeRestart() const {
+bool StatisticsConfiguration::writeRestart() const {
     std::cout << "Write restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << writeRestart_
               << std::endl;
     return writeRestart_;
 };
 
-const std::string& StatisticsOptions::restartPath() const {
+const std::string& StatisticsConfiguration::restartPath() const {
     return restartPath_;
 };
 
-const std::string& StatisticsOptions::restartPrefix() const {
+const std::string& StatisticsConfiguration::restartPrefix() const {
     return restartPrefix_;
 };
 
-const std::string& StatisticsOptions::logPrefix() const {
+const std::string& StatisticsConfiguration::logPrefix() const {
     return logPrefix_;
 };
 
-bool StatisticsOptions::useDateTime() const {
+bool StatisticsConfiguration::useDateTime() const {
     return useDateTime_;
 };
 
-long StatisticsOptions::stepFreq() const {
+long StatisticsConfiguration::stepFreq() const {
     return stepFreq_;
 };
-long StatisticsOptions::timeStep() const {
+long StatisticsConfiguration::timeStep() const {
     return timeStep_;
 };
 
-long StatisticsOptions::startDate() const {
+long StatisticsConfiguration::startDate() const {
     return startDate_;
 }
 
-long StatisticsOptions::startTime() const {
+long StatisticsConfiguration::startTime() const {
     return startTime_;
 }
 
-long StatisticsOptions::step() const {
+long StatisticsConfiguration::step() const {
     return step_;
 }
 
-long StatisticsOptions::restartStep() const {
+long StatisticsConfiguration::restartStep() const {
     return restartStep_;
 }
 
-bool StatisticsOptions::solver_send_initial_condition() const {
+bool StatisticsConfiguration::solver_send_initial_condition() const {
     return solverSendInitStep_;
 }
 
-bool StatisticsOptions::haveMissingValue() const {
+bool StatisticsConfiguration::haveMissingValue() const {
     return haveMissingValue_ != 0;
 };
 
 
-double StatisticsOptions::missingValue() const {
+double StatisticsConfiguration::missingValue() const {
     return missingValue_;
 };
 
-}  // namespace action
-}  // namespace multio
+}  // namespace multio::action

@@ -9,11 +9,14 @@ ecbuild_add_library(
         TemporalStatistics.h
         Period.cc
         Period.h
+        Operation.cc
         Operation.h
         StatisticsOptions.cc
         StatisticsOptions.h
         StatisticsIO.cc
         StatisticsIO.h
+        operations/OperationBase.h
+        operations/OperationWithData.h
         operations/Accumulate.h
         operations/Average.h
         operations/FluxAverage.h

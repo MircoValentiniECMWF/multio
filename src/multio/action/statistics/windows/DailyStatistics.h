@@ -1,13 +1,15 @@
+#pragma once
 
-#include "multio/action/statistics/TemporalStatistics.h"
+#include "StatisticsConfiguration.h"
+#include "TemporalStatistics.h"
 
 namespace multio::action {
 
 class DailyStatistics : public TemporalStatistics {
 public:
     DailyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                    const std::string& partialPath, StatisticsOptions& options);
-    void resetPeriod(const message::Message& msg, StatisticsOptions& options) override;
+                    const std::string& partialPath, const StatisticsConfiguration& cfg);
+    void resetPeriod(const message::Message& msg, const StatisticsConfiguration& cfg) override;
     void print(std::ostream& os) const override;
 };
-}  // namespace action
+}  // namespace multio::action

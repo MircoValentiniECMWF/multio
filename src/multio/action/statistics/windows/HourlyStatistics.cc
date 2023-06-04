@@ -1,19 +1,16 @@
 #include "HourlyStatistics.h"
 
-
-#include "multio/action/statistics/Period.h"
+#include "Period.h"
 
 namespace multio::action {
 
 namespace {
 
 eckit::DateTime computeHourWinStartTime(const eckit::DateTime& currentTime) {
-    // Not set to the beginning of the day otherwise the step range is broken
     return eckit::DateTime{currentTime.date(), eckit::Time{currentTime.time().hours(), 0, 0}};
 };
 
 eckit::DateTime computeHourWinCreationTime(const eckit::DateTime& currentTime) {
-    // Not set to the beginning of the hour otherwise the step range is broken
     return currentTime;
 };
 
@@ -29,22 +26,23 @@ eckit::DateTime computeHourWinEndTime(const eckit::DateTime& startPoint, long sp
 }  // namespace
 
 DateTimePeriod setHourlyPeriod(long span, const message::Message& msg, const std::string& partialPath,
-                               StatisticsOptions& options) {
-    eckit::DateTime startPoint{computeHourWinStartTime(winStartDateTime(msg, options))};
-    eckit::DateTime creationPoint{computeHourWinCreationTime(winStartDateTime(msg, options))};
+                               const StatisticsConfiguration& cfg) {
+    eckit::DateTime epochPoint{epochDateTime(msg, cfg)};
+    eckit::DateTime startPoint{computeHourWinStartTime(winStartDateTime(msg, cfg))};
+    eckit::DateTime creationPoint{computeHourWinCreationTime(winStartDateTime(msg, cfg))};
     eckit::DateTime endPoint{computeHourWinEndTime(startPoint, span)};
-    return options.readRestart() ? DateTimePeriod{partialPath, "h", options}
-                                 : DateTimePeriod{startPoint, creationPoint, endPoint, "h"};
+    return cfg.readRestart() ? DateTimePeriod{partialPath, "h", cfg}
+                             : DateTimePeriod{epochPoint, startPoint, creationPoint, endPoint, cfg.timeStep(), "h"};
 }
 
 HourlyStatistics::HourlyStatistics(const std::vector<std::string> operations, long span, message::Message msg,
-                                   const std::string& partialPath, StatisticsOptions& options) :
-    TemporalStatistics{operations, setHourlyPeriod(span, msg, partialPath, options), msg, partialPath, options, span} {
+                                   const std::string& partialPath, const StatisticsConfiguration& cfg) :
+    TemporalStatistics{operations, setHourlyPeriod(span, msg, partialPath, cfg), msg, partialPath, cfg, span} {
     // Restart constructor
 }
 
-void HourlyStatistics::resetPeriod(const message::Message& msg, StatisticsOptions& options) {
-    eckit::DateTime startPoint = computeHourWinStartTime(currentDateTime(msg, options));
+void HourlyStatistics::resetPeriod(const message::Message& msg, const StatisticsConfiguration& cfg) {
+    eckit::DateTime startPoint = computeHourWinStartTime(currentDateTime(msg, cfg));
     eckit::DateTime endPoint = updateHourEnd(startPoint, span_);
     current_.reset(startPoint, endPoint);
 };
@@ -53,4 +51,4 @@ void HourlyStatistics::print(std::ostream& os) const {
     os << "Hourly Statistics(" << current_ << ")";
 }
 
-}  // namespace action
+}  // namespace multio::action
