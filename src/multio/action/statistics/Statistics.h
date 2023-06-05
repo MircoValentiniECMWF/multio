@@ -16,6 +16,7 @@
 #pragma once
 
 
+#include "PeriodUpdater.h"
 #include "StatisticsConfiguration.h"
 #include "StatisticsIO.h"
 #include "multio/action/ChainedAction.h"
@@ -41,6 +42,7 @@ private:
     void print(std::ostream& os) const override;
     const std::string timeUnit_;
     const long timeSpan_;
+    std::shared_ptr<PeriodUpdater> periodUpdater_;
     const std::vector<std::string> operations_;
     const StatisticsConfiguration cfg_;
 

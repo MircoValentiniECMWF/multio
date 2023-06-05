@@ -114,7 +114,7 @@ eckit::DateTime MonthPeriodUpdater::updateWinEndTime(const eckit::DateTime& star
 // -------------------------------------------------------------------------------------------------------------------
 
 
-std::unique_ptr<PeriodUpdater> make_period_updater(const std::string& periodKind, long span) {
+std::shared_ptr<PeriodUpdater> make_period_updater(const std::string& periodKind, long span) {
     if (periodKind == "hour") {
         return std::make_unique<HourPeriodUpdater>(span);
     }

@@ -12,23 +12,21 @@
 
 namespace multio::action {
 
-std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::string& unit, long span,
+std::unique_ptr<TemporalStatistics> TemporalStatistics::build(const std::shared_ptr<PeriodUpdater>& periodUpdater,
                                                               const std::vector<std::string>& operations,
                                                               const message::Message& msg,
                                                               std::shared_ptr<StatisticsIO>& IOmanager,
                                                               const StatisticsConfiguration& cfg) {
 
 
-    return std::make_unique<TemporalStatistics>(unit, span, operations, msg, IOmanager, cfg);
-
-    throw eckit::SeriousBug{"Temporal statistics for base period " + unit + " is not defined"};
+    return std::make_unique<TemporalStatistics>(periodUpdater, operations, msg, IOmanager, cfg);
 }
 
 
-TemporalStatistics::TemporalStatistics(const std::string& unit, long span, const std::vector<std::string>& operations,
-                                       const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
-                                       const StatisticsConfiguration& cfg) :
-    periodUpdater_{make_period_updater(unit, span)},
+TemporalStatistics::TemporalStatistics(const std::shared_ptr<PeriodUpdater>& periodUpdater,
+                                       const std::vector<std::string>& operations, const message::Message& msg,
+                                       std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) :
+    periodUpdater_{periodUpdater},
     window_{periodUpdater_->initPeriod(msg, IOmanager, cfg)},
     statistics_{make_operations(operations, msg, IOmanager, window_, cfg)} {}
 

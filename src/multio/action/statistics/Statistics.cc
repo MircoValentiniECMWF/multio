@@ -46,6 +46,7 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
     ChainedAction{confCtx},
     timeUnit_{set_unit(confCtx.config().getString("output-frequency"))},
     timeSpan_{set_frequency(confCtx.config().getString("output-frequency"))},
+    periodUpdater_{make_period_updater(timeUnit_, timeSpan_)},
     operations_{confCtx.config().getStringVector("operations")},
     cfg_{confCtx.config()} {}
 
@@ -130,7 +131,7 @@ void Statistics::executeImpl(message::Message msg) {
         LOG_DEBUG_LIB(multio::LibMultio) << "*** " << msg.destination() << " -- metadata: " << msg.metadata()
                                          << std::endl;
         if (fieldStats_.find(key) == fieldStats_.end()) {
-            fieldStats_[key] = TemporalStatistics::build(timeUnit_, timeSpan_, operations_, msg, IOmanager, cfg);
+            fieldStats_[key] = TemporalStatistics::build(periodUpdater_, operations_, msg, IOmanager, cfg);
             if (cfg.solver_send_initial_condition()) {
                 LOG_DEBUG_LIB(LibMultio) << "Exiting because of initial condition :: " << key << std::endl;
                 util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};

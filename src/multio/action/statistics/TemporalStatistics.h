@@ -20,13 +20,13 @@ public:
     op::iterator begin() { return statistics_.begin(); };
     op::iterator end() { return statistics_.end(); };
 
-    static std::unique_ptr<TemporalStatistics> build(const std::string& unit, long span,
+    static std::unique_ptr<TemporalStatistics> build(const std::shared_ptr<PeriodUpdater>& periodUpdater,
                                                      const std::vector<std::string>& operations,
                                                      const message::Message& msg,
                                                      std::shared_ptr<StatisticsIO>& IOmanager,
                                                      const StatisticsConfiguration& cfg);
 
-    TemporalStatistics(const std::string& unit, long span, const std::vector<std::string>& operations,
+    TemporalStatistics(const std::shared_ptr<PeriodUpdater>& periodUpdater, const std::vector<std::string>& operations,
                        const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
                        const StatisticsConfiguration& cfg);
 
@@ -42,7 +42,7 @@ public:
     void print(std::ostream& os) const;
 
 private:
-    const std::unique_ptr<PeriodUpdater> periodUpdater_;
+    const std::shared_ptr<PeriodUpdater>& periodUpdater_;
     MovingWindow window_;
     std::vector<std::unique_ptr<OperationBase>> statistics_;
 

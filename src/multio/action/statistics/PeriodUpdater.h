@@ -73,6 +73,6 @@ private:
 // -------------------------------------------------------------------------------------------------------------------
 
 
-std::unique_ptr<PeriodUpdater> make_period_updater(const std::string& periodKind, long span);
+std::shared_ptr<PeriodUpdater> make_period_updater(const std::string& periodKind, long span);
 
 }  // namespace multio::action
