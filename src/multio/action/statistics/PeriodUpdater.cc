@@ -20,14 +20,15 @@ eckit::DateTime PeriodUpdater::updatePeriodEnd(const message::Message& msg, cons
 MovingWindow PeriodUpdater::initPeriod(const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
                                        const StatisticsConfiguration& cfg) {
     if (cfg.readRestart()) {
+        IOmanager->setSuffix(name());
+        return MovingWindow{IOmanager, cfg};
+    }
+    else {
         eckit::DateTime epochPoint{epochDateTime(msg, cfg)};
         eckit::DateTime startPoint{computeWinStartTime(winStartDateTime(msg, cfg))};
         eckit::DateTime creationPoint{computeWinCreationTime(winStartDateTime(msg, cfg))};
         eckit::DateTime endPoint{computeWinEndTime(startPoint)};
         return MovingWindow{epochPoint, startPoint, creationPoint, endPoint, cfg.timeStep()};
-    }
-    else {
-        return MovingWindow{IOmanager, cfg};
     }
 };
 
@@ -114,16 +115,16 @@ eckit::DateTime MonthPeriodUpdater::updateWinEndTime(const eckit::DateTime& star
 
 
 std::unique_ptr<PeriodUpdater> make_period_updater(const std::string& periodKind, long span) {
-    if (periodKind == "h") {
+    if (periodKind == "hour") {
         return std::make_unique<HourPeriodUpdater>(span);
     }
-    if (periodKind == "d") {
+    if (periodKind == "day") {
         return std::make_unique<DayPeriodUpdater>(span);
     }
-    if (periodKind == "m") {
+    if (periodKind == "month") {
         return std::make_unique<MonthPeriodUpdater>(span);
     }
-    throw eckit::SeriousBug("Unknown period kind", Here());
+    throw eckit::SeriousBug("Unknown period kind : " + periodKind, Here());
 };
 
 }  // namespace multio::action

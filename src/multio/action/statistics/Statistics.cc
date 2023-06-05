@@ -46,22 +46,24 @@ Statistics::Statistics(const ConfigurationContext& confCtx) :
     ChainedAction{confCtx},
     timeUnit_{set_unit(confCtx.config().getString("output-frequency"))},
     timeSpan_{set_frequency(confCtx.config().getString("output-frequency"))},
-    step_{0},
     operations_{confCtx.config().getStringVector("operations")},
     cfg_{confCtx.config()} {}
 
 
-void Statistics::DumpRestart(long step) const {
+void Statistics::DumpRestart() const {
     try {
-        // if (options_.writeRestart()) {
-        //     LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
-        //     int cnt = 0;
-        //     for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
-        //         LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << std::endl;
-        //         it->second->dump(step, options_);
-        //         cnt++;
-        //     }
-        // }
+        std::shared_ptr<StatisticsIO> IOmanager{
+            StatisticsIOFactory::instance().build("fstream_io", cfg_.restartPath(), cfg_.restartPrefix(), 0)};
+        if (cfg_.writeRestart()) {
+            LOG_DEBUG_LIB(LibMultio) << "Writing statistics checkpoint..." << std::endl;
+            for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
+                LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << ", "
+                                         << it->second->win().currPointInSteps() << std::endl;
+                IOmanager->setStep(it->second->win().currPointInSteps());
+                IOmanager->setKey(it->first);
+                it->second->dump(IOmanager, cfg_);
+            }
+        }
     }
     catch (...) {
         std::ostringstream os;
@@ -70,66 +72,37 @@ void Statistics::DumpRestart(long step) const {
     }
 }
 
-Statistics::~Statistics() {
-    try {
-        LOG_DEBUG_LIB(multio::LibMultio) << "Saving restart files in the destructor" << std::endl;
-        DumpRestart(999999);
-    }
-    catch (...) {
-        std::ostringstream os;
-        os << "Failed to write restart from destructor :: " << std::endl;
-        LOG_DEBUG_LIB(multio::LibMultio) << os.str() << std::endl;
-    }
-}
-
-std::string Statistics::getKey(const message::Message& msg) const {
+std::string Statistics::generateKey(const message::Message& msg) const {
     std::ostringstream os;
-    step_ = msg.metadata().getLong("step", 0);
-    os << cfg_.restartPrefix() << "-" << msg.metadata().getString("param", "") << "-"
-       << msg.metadata().getString("paramId", "") << "-" << msg.metadata().getLong("level", 0) << "-"
-       << msg.metadata().getLong("levelist", 0) << "-" << msg.metadata().getString("levtype", "unknown") << "-"
-       << msg.metadata().getString("gridType", "unknown") << "-" << msg.metadata().getString("precision", "unknown")
-       << "-" << std::to_string(std::hash<std::string>{}(msg.source()));
+    os << msg.metadata().getString("param", "") << "-" << msg.metadata().getString("paramId", "") << "-"
+       << msg.metadata().getLong("level", 0) << "-" << msg.metadata().getLong("levelist", 0) << "-"
+       << msg.metadata().getString("levtype", "unknown") << "-" << msg.metadata().getString("gridType", "unknown")
+       << "-" << msg.metadata().getString("precision", "unknown") << "-"
+       << std::to_string(std::hash<std::string>{}(msg.source()));
     LOG_DEBUG_LIB(LibMultio) << "Generating key for the field :: " << os.str() << std::endl;
     return os.str();
 }
 
-std::string Statistics::getRestartPartialPath(const message::Message& msg, const StatisticsConfiguration& cfg) const {
-    // Easy way to change (if needed in future) the name of the restart file
-    std::ostringstream os;
-    os << cfg.restartPath() << "/" << getKey(msg);
-    LOG_DEBUG_LIB(LibMultio) << "Generating partial path for the field :: " << os.str() << std::endl;
-    return os.str();
-}
 
 message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetadata, const StatisticsConfiguration& cfg,
-                                             const std::string& key, long timeSpanInSeconds) const {
+                                             const std::string& key) const {
     // Handling metadata
-    auto md = inputMetadata;
-    /*
-    md.set("timeUnit", timeUnit_);
-    md.set("startDate", opt.startDate());
-    md.set("startTime", opt.startTime());
-    long timeSpanInHours = timeSpanInSeconds / 3600;
-    md.set("timeSpanInHours", timeSpanInHours);
-    md.set("stepRange", fieldStats_.at(key)->stepRange(md.getLong("step")));
-    md.set("currentDate", fieldStats_.at(key)->current().endPoint().date().yyyymmdd());
-    md.set("currentTime", fieldStats_.at(key)->current().endPoint().time().hhmmss());
-    auto stepInSeconds = md.getLong("step") * opt.timeStep();
-    LOG_DEBUG_LIB(LibMultio) << "The step is :: " << md.getLong("step") << std::endl;
-    if (stepInSeconds % 3600 != 0L) {
+    if (fieldStats_.at(key)->win().endPointInSeconds() % 3600 != 0L) {
         std::ostringstream os;
-        os << "Step in seconds needs to be a multiple of 3600 :: " << stepInSeconds << std::endl;
+        os << "Step in seconds needs to be a multiple of 3600 :: " << fieldStats_.at(key)->win().endPointInSeconds()
+           << std::endl;
         throw eckit::SeriousBug(os.str(), Here());
     }
-    auto stepInHours = stepInSeconds / 3600;
-    LOG_DEBUG_LIB(LibMultio) << "The step (in hours) is :: " << stepInHours << std::endl;
-    md.set("stepInHours", stepInHours);
-    auto prevStep = std::max(stepInHours - timeSpanInHours, 0L);
-    auto stepRangeInHours = std::to_string(prevStep) + "-" + std::to_string(stepInHours);
-    LOG_DEBUG_LIB(LibMultio) << "The step range (in hours) is :: " << stepRangeInHours << std::endl;
-    md.set("stepRangeInHours", stepRangeInHours);
-    */
+    auto md = inputMetadata;
+    md.set("timeUnit", timeUnit_);
+    md.set("startDate", cfg.startDate());
+    md.set("startTime", cfg.startTime());
+    md.set("timeSpanInHours", fieldStats_.at(key)->win().timeSpanInHours());
+    md.set("stepRange", fieldStats_.at(key)->win().stepRange());
+    md.set("currentDate", fieldStats_.at(key)->win().endPoint().date().yyyymmdd());
+    md.set("currentTime", fieldStats_.at(key)->win().endPoint().time().hhmmss());
+    md.set("stepInHours", fieldStats_.at(key)->win().endPointInHours());
+    md.set("stepRangeInHours", fieldStats_.at(key)->win().stepRangeInHours());
     return md;
 }
 
@@ -139,19 +112,19 @@ void Statistics::executeImpl(message::Message msg) {
     // Pass through -- no statistics for messages other than fields
     if (msg.tag() != message::Message::Tag::Field) {
         if (msg.tag() == message::Message::Tag::Flush) {
-            LOG_DEBUG_LIB(multio::LibMultio) << "statistics  :: Flux received" << std::endl;
-            DumpRestart(step_);
+            LOG_DEBUG_LIB(multio::LibMultio) << "statistics  :: Flush received" << std::endl;
+            DumpRestart();
         }
         executeNext(msg);
         return;
     }
 
-    std::string key = getKey(msg);
-
-
-    long timeSpanInSeconds;
-    std::shared_ptr<StatisticsIO> IOmanager{StatisticsIOFactory::instance().build("fstream_io")};
+    // Local variables
+    std::string key = generateKey(msg);
     StatisticsConfiguration cfg{cfg_, msg};
+    std::shared_ptr<StatisticsIO> IOmanager{
+        StatisticsIOFactory::instance().build("fstream_io", cfg.restartPath(), cfg.restartPrefix(), cfg.step())};
+    IOmanager->setKey(key);
 
     {
         util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
@@ -170,15 +143,13 @@ void Statistics::executeImpl(message::Message msg) {
             }
         }
 
-        // Time span needs to be computed here because otherwise it will be the timespan of the next window
-        timeSpanInSeconds = fieldStats_.at(key)->win().timeSpanInSeconds();
         fieldStats_.at(key)->updateData(msg, cfg);
 
         // Emit statistics
         if (fieldStats_.at(key)->isEndOfWindow(msg, cfg)) {
 
             // Construct output metadata
-            auto md = outputMetadata(msg.metadata(), cfg, key, timeSpanInSeconds);
+            auto md = outputMetadata(msg.metadata(), cfg, key);
 
             // Create outpuit messages
             for (auto it = fieldStats_.at(key)->begin(); it != fieldStats_.at(key)->end(); ++it) {

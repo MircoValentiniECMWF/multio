@@ -120,6 +120,7 @@ void MovingWindow::updateData(const eckit::DateTime& currentPoint) {
     prevPoint_ = currentPoint;
     currPoint_ = currentPoint;
     count_++;
+    std::cout << "Update window :: " << count_ << std::endl;
     return;
 }
 
@@ -160,6 +161,10 @@ bool MovingWindow::leUpperBound(const eckit::DateTime& dt, bool throw_error) con
     }
     return dt <= endPoint() + eckit::Second{1.0};
 };
+
+long MovingWindow::timeSpanInHours() const {
+    return long(endPoint_ - creationPoint_) / 3600;
+}
 
 long MovingWindow::timeSpanInSeconds() const {
     return long(endPoint_ - creationPoint_);

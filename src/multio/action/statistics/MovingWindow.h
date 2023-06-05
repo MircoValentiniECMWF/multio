@@ -30,6 +30,7 @@ public:
     bool leUpperBound(const eckit::DateTime& dt, bool throw_error) const;
 
     long timeSpanInSeconds() const;
+    long timeSpanInHours() const;
     long timeSpanInSteps() const;
     long lastPointsDiffInSeconds() const;
 

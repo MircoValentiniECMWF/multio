@@ -35,7 +35,7 @@ TemporalStatistics::TemporalStatistics(const std::string& unit, long span, const
 
 void TemporalStatistics::dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const {
     LOG_DEBUG_LIB(LibMultio) << cfg.logPrefix() << " *** Dump restart file" << std::endl;
-    // TODO: set file name and other file options
+    IOmanager->setSuffix(periodUpdater_->name());
     window_.dump(IOmanager, cfg);
     for (auto& stat : statistics_) {
         stat->dump(IOmanager, cfg);

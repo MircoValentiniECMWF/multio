@@ -149,7 +149,7 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
         throw eckit::SeriousBug{"Step metadata not present", Here()};
     }
     step_ = msg.metadata().getLong("step");
-    restartStep_ = msg.metadata().getLong("restart-stepstep", step_);
+    restartStep_ = msg.metadata().getLong("restart-step", step_);
 
 
     // step and frequency

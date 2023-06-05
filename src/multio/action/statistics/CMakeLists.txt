@@ -3,6 +3,8 @@ StatisticsConfiguration.cc
 StatisticsConfiguration.h
 StatisticsIO.cc
 StatisticsIO.h
+io/FstreamIO.cc
+io/FstreamIO.h
 TimeUtils.cc
 TimeUtils.h
 PeriodUpdater.cc
@@ -23,6 +25,7 @@ TemporalStatistics.cc
 TemporalStatistics.h
 Statistics.cc
 Statistics.h )
+
 
 
 ecbuild_add_library(

@@ -31,19 +31,16 @@ class TemporalStatistics;
 class Statistics : public ChainedAction {
 public:
     explicit Statistics(const ConfigurationContext& confCtx);
-    ~Statistics();
     void executeImpl(message::Message msg) override;
     message::Metadata outputMetadata(const message::Metadata& inputMetadata, const StatisticsConfiguration& opt,
-                                     const std::string& key, long timeSpanInSeconds) const;
+                                     const std::string& key) const;
 
 private:
-    void DumpRestart(long step) const;
-    std::string getKey(const message::Message& msg) const;
-    std::string getRestartPartialPath(const message::Message& msg, const StatisticsConfiguration& opt) const;
+    void DumpRestart() const;
+    std::string generateKey(const message::Message& msg) const;
     void print(std::ostream& os) const override;
     const std::string timeUnit_;
     const long timeSpan_;
-    mutable long step_;
     const std::vector<std::string> operations_;
     const StatisticsConfiguration cfg_;
 

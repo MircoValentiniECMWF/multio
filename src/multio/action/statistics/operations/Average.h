@@ -45,8 +45,8 @@ private:
                        [c1, c2, m](T v1, T v2) { return static_cast<T>(m == v2 ? m : v1 * c1 + v2 * c2); });
         return;
     }
-    double icntpp() const { return double(1.0) / double(win_.count() - 1); };
-    double sc(double v) const { return double(win_.count()) * v; };
+    double icntpp() const { return double(1.0) / double(win_.count()); };
+    double sc(double v) const { return double(win_.count() - 1) * v; };
     void print(std::ostream& os) const override { os << logHeader_; }
 };
 }  // namespace multio::action
