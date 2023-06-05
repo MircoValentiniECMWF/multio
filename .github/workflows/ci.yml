@@ -177,6 +177,7 @@ jobs:
           ecmwf/ecbuild
           ecmwf/eckit
           ecmwf/fckit
+          ecmwf/atlas
           MathisRosenhauer/libaec@master
           ecmwf/eccodes
           ecmwf/metkit
@@ -185,5 +186,6 @@ jobs:
         dependency_cmake_options: |
           ecmwf/eckit: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF  -DENABLE_ECKIT_SQL=OFF"
           ecmwf/fckit: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF"
+          ecmwf/atlas: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_TESTS=OFF -DENABLE_TASSELATION=OFF -DENABLE_TRANS=OFF -DENABLE_CLANG_TIDY=OFF -DENABLE_GRIDTOOLS_STORAGE=OFF"
         cmake_options: "-G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DENABLE_LEGACY_IFSIO=ON ${{ matrix.cmake_options }}"
         ctest_options: "${{ matrix.ctest_options }}"

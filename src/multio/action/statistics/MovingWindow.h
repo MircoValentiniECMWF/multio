@@ -34,6 +34,7 @@ public:
     long timeSpanInSteps() const;
     long lastPointsDiffInSeconds() const;
 
+
     long startPointInSeconds() const;
     long creationPointInSeconds() const;
     long currPointInSeconds() const;
@@ -52,6 +53,26 @@ public:
     long prevPointInSteps() const;
     long endPointInSteps() const;
 
+
+    long startPointInSeconds(const eckit::DateTime& refPoint) const;
+    long creationPointInSeconds(const eckit::DateTime& refPoint) const;
+    long currPointInSeconds(const eckit::DateTime& refPoint) const;
+    long prevPointInSeconds(const eckit::DateTime& refPoint) const;
+    long endPointInSeconds(const eckit::DateTime& refPoint) const;
+
+    long startPointInHours(const eckit::DateTime& refPoint) const;
+    long creationPointInHours(const eckit::DateTime& refPoint) const;
+    long currPointInHours(const eckit::DateTime& refPoint) const;
+    long prevPointInHours(const eckit::DateTime& refPoint) const;
+    long endPointInHours(const eckit::DateTime& refPoint) const;
+
+    long startPointInSteps(const eckit::DateTime& refPoint) const;
+    long creationPointInSteps(const eckit::DateTime& refPoint) const;
+    long currPointInSteps(const eckit::DateTime& refPoint) const;
+    long prevPointInSteps(const eckit::DateTime& refPoint) const;
+    long endPointInSteps(const eckit::DateTime& refPoint) const;
+
+
     eckit::DateTime epochPoint() const;
     eckit::DateTime startPoint() const;
     eckit::DateTime creationPoint() const;
@@ -61,6 +82,9 @@ public:
 
     const std::string stepRange() const;
     const std::string stepRangeInHours() const;
+
+    const std::string stepRange(const eckit::DateTime& refPoint) const;
+    const std::string stepRangeInHours(const eckit::DateTime& refPoint) const;
 
 private:
     eckit::DateTime epochPoint_;

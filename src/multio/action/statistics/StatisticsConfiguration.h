@@ -30,6 +30,7 @@ private:
 
     std::string restartPath_;
     std::string restartPrefix_;
+    std::string restartLib_;
     std::string logPrefix_;
 
 public:
@@ -48,10 +49,35 @@ public:
     bool solver_send_initial_condition() const;
     const std::string& restartPath() const;
     const std::string& restartPrefix() const;
+    const std::string& restartLib() const;
     const std::string& logPrefix() const;
 
     bool haveMissingValue() const;
     double missingValue() const;
+
+private:
+    void parseUseDateTime(const eckit::LocalConfiguration& cfg);
+    void parseStepFrequency(const eckit::LocalConfiguration& cfg);
+    void parseTimeStep(const eckit::LocalConfiguration& cfg);
+    void parseInitialConditionPresent(const eckit::LocalConfiguration& cfg);
+    void parseRestartActivation(const eckit::LocalConfiguration& cfg);
+    void parseRestartPath(const eckit::LocalConfiguration& cfg);
+    void parseRestartPrefix(const eckit::LocalConfiguration& cfg);
+    void parseRestartLib(const eckit::LocalConfiguration& cfg);
+    void parseLogPrefix(const eckit::LocalConfiguration& cfg);
+
+
+    void readStartTime(const message::Message& msg);
+    void readStartDate(const message::Message& msg);
+    void readStep(const message::Message& msg);
+    void readRestartStep(const message::Message& msg);
+    void readTimeStep(const message::Message& msg);
+    void readStepFrequency(const message::Message& msg);
+    void readMissingValue(const message::Message& msg);
+    void createLoggingPrefix(const StatisticsConfiguration& cfg, const message::Message& msg);
+
+    void dumpConfiguration();
+    void usage();
 };
 
 }  // namespace multio::action

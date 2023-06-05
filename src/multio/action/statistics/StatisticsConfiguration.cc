@@ -8,6 +8,7 @@
 #include "eckit/exception/Exceptions.h"
 #include "eckit/filesystem/PathName.h"
 
+#include "multio/LibMultio.h"
 #include "multio/util/PrecisionTag.h"
 #include "multio/util/Substitution.h"
 
@@ -30,7 +31,13 @@ StatisticsConfiguration::StatisticsConfiguration(const eckit::LocalConfiguration
     missingValue_{9999.0},
     restartPath_{"."},
     restartPrefix_{"StatisticsRestartFile"},
+    restartLib_{"fstream_io"},
     logPrefix_{"Plan"} {
+
+    if (confCtx.has("help")) {
+        usage();
+        throw eckit::SeriousBug{"Usage requested", Here()};
+    }
 
     if (!confCtx.has("options")) {
         return;
@@ -38,71 +45,15 @@ StatisticsConfiguration::StatisticsConfiguration(const eckit::LocalConfiguration
 
     const auto& cfg = confCtx.getSubConfiguration("options");
 
-    // TODO:: remove boilerplate code (same code in ConfigurationContext.cc)
-    auto env = [](std::string_view replace) {
-        std::string lookUpKey{replace};
-        char* env = ::getenv(lookUpKey.c_str());
-        if (env) {
-            return eckit::Optional<std::string>{env};
-        }
-        else {
-            return eckit::Optional<std::string>{};
-        }
-    };
-
-    // Overwrite defaults
-    useDateTime_ = cfg.getBool("use-current-time", false);
-    stepFreq_ = cfg.getLong("step-frequency", 1L);
-    timeStep_ = cfg.getLong("time-step", 3600L);
-    solverSendInitStep_ = cfg.getBool("initial-condition-present", false);
-    eckit::Optional<bool> r;
-    r = util::parseBool(cfg, "restart", false);
-    if (r) {
-        restart_ = *r;
-        readRestart_ = *r;
-        writeRestart_ = *r;
-        std::cout << "restart :: " << *r << std::endl;
-    }
-    else {
-        throw eckit::SeriousBug{"Unable to read restart", Here()};
-    }
-#if 0
-    r = util::parseBool(cfg, "read-restart", false);
-    if (r) {
-        readRestart_ = *r;
-    }
-    else {
-        throw eckit::SeriousBug{"Unable to read read-restart", Here()};
-    }
-
-    r = util::parseBool(cfg, "write-restart", false);
-    if (r) {
-        writeRestart_ = *r;
-    }
-    else {
-        throw eckit::SeriousBug{"Unable to read write-restart", Here()};
-    }
-#endif
-    // TODO: Add functionality to automatically create restart path if it not exists
-    // (same improvement can be done in sink). Feature already present in eckit::PathName
-    if (cfg.has("restart-path")) {
-        restartPath_ = util::replaceCurly(cfg.getString("restart-path", "."), env);
-        eckit::PathName path{restartPath_};
-        if (!path.exists() || !path.isDir()) {
-            throw eckit::UserError{"restart path not exist", Here()};
-        }
-    }
-    restartPrefix_ = util::replaceCurly(cfg.getString("restart-prefix", "StatisticsDump"), env);
-    logPrefix_ = util::replaceCurly(cfg.getString("log-prefix", "Plan"), env);
-    std::ostringstream os;
-
-    os << ", pid=" << std::left << std::setw(10) << ::getpid();
-    {
-        char hostname[255];
-        gethostname(hostname, 255);
-        os << ", hostname=" << std::string{hostname} << ") ";
-    }
-    logPrefix_ = os.str();
+    parseUseDateTime(cfg);
+    parseStepFrequency(cfg);
+    parseTimeStep(cfg);
+    parseInitialConditionPresent(cfg);
+    parseRestartActivation(cfg);
+    parseRestartPath(cfg);
+    parseRestartPrefix(cfg);
+    parseLogPrefix(cfg);
+    parseRestartLib(cfg);
 
     return;
 };
@@ -122,8 +73,145 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
     missingValue_{9999.0},
     restartPath_{cfg.restartPath()},
     restartPrefix_{cfg.restartPrefix()},
+    restartLib_{cfg.restartLib()},
     logPrefix_{""} {
 
+    readStartTime(msg);
+    readStartDate(msg);
+    readStep(msg);
+    readRestartStep(msg);
+    readTimeStep(msg);
+    readStepFrequency(msg);
+    readMissingValue(msg);
+    createLoggingPrefix(cfg, msg);
+
+    dumpConfiguration();
+
+    return;
+};
+
+
+void StatisticsConfiguration::parseUseDateTime(const eckit::LocalConfiguration& cfg) {
+    // In nemo startDate and startTime are used, while in ifs
+    // date and time are used with the same meaning.
+    // If this flag is present and true, date/time are readed
+    // otherwise startDate and startTime are readed.
+    // Default value is false
+    useDateTime_ = cfg.getBool("use-current-time", false);
+    return;
+};
+
+void StatisticsConfiguration::parseStepFrequency(const eckit::LocalConfiguration& cfg) {
+    // Distance in steps between two messages
+    stepFreq_ = cfg.getLong("step-frequency", 1L);
+    return;
+};
+
+void StatisticsConfiguration::parseTimeStep(const eckit::LocalConfiguration& cfg) {
+    // How many seconds in a timestep
+    timeStep_ = cfg.getLong("time-step", 3600L);
+    return;
+};
+
+void StatisticsConfiguration::parseInitialConditionPresent(const eckit::LocalConfiguration& cfg) {
+    // Used to determine if the solver emit the initial condition.
+    // This is a relevant information for statistics computations.
+    // At the moment ifs emit the initial condition and nemo not.
+    // Default value is false so that nemo can work without options.
+    solverSendInitStep_ = cfg.getBool("initial-condition-present", false);
+    return;
+};
+
+void StatisticsConfiguration::parseRestartActivation(const eckit::LocalConfiguration& cfg) {
+    // Used to determine if the simulation need to save/load
+    // restart files.
+    eckit::Optional<bool> r;
+    r = util::parseBool(cfg, "restart", false);
+    if (r) {
+        restart_ = *r;
+        readRestart_ = *r;
+        writeRestart_ = *r;
+    }
+    else {
+        usage();
+        throw eckit::SeriousBug{"Unable to read restart", Here()};
+    }
+    return;
+};
+
+void StatisticsConfiguration::parseRestartPath(const eckit::LocalConfiguration& cfg) {
+    // Read the path used to restart statistics
+    // Default value is "."
+    auto env = [](std::string_view replace) {
+        std::string lookUpKey{replace};
+        char* env = ::getenv(lookUpKey.c_str());
+        if (env) {
+            return eckit::Optional<std::string>{env};
+        }
+        else {
+            return eckit::Optional<std::string>{};
+        }
+    };
+    if (cfg.has("restart-path")) {
+        restartPath_ = util::replaceCurly(cfg.getString("restart-path", "."), env);
+        eckit::PathName path{restartPath_};
+        if (!path.exists() || !path.isDir()) {
+            throw eckit::UserError{"restart path not exist", Here()};
+        }
+    }
+    return;
+};
+
+
+void StatisticsConfiguration::parseRestartPrefix(const eckit::LocalConfiguration& cfg) {
+    // Prefix used for the restart file names in order
+    // to make the file name unique across different plans
+    auto env = [](std::string_view replace) {
+        std::string lookUpKey{replace};
+        char* env = ::getenv(lookUpKey.c_str());
+        if (env) {
+            return eckit::Optional<std::string>{env};
+        }
+        else {
+            return eckit::Optional<std::string>{};
+        }
+    };
+    restartPrefix_ = util::replaceCurly(cfg.getString("restart-prefix", "StatisticsDump"), env);
+    return;
+};
+
+void StatisticsConfiguration::parseRestartLib(const eckit::LocalConfiguration& cfg) {
+    restartLib_ = cfg.getString("restart-lib", "fstream_io");
+    return;
+};
+
+
+void StatisticsConfiguration::parseLogPrefix(const eckit::LocalConfiguration& cfg) {
+    // Prefix used for logging. Pid and hostname are appended to the
+    // log prefix in order to simplify the debug
+    auto env = [](std::string_view replace) {
+        std::string lookUpKey{replace};
+        char* env = ::getenv(lookUpKey.c_str());
+        if (env) {
+            return eckit::Optional<std::string>{env};
+        }
+        else {
+            return eckit::Optional<std::string>{};
+        }
+    };
+    logPrefix_ = util::replaceCurly(cfg.getString("log-prefix", "Plan"), env);
+    std::ostringstream os;
+    os << logPrefix_ << ", pid=" << std::left << std::setw(10) << ::getpid();
+    {
+        char hostname[255];
+        gethostname(hostname, 255);
+        os << ", hostname=" << std::string{hostname} << ") ";
+    }
+    logPrefix_ = os.str();
+    return;
+};
+
+void StatisticsConfiguration::readStartTime(const message::Message& msg) {
     if (useDateTime() && msg.metadata().has("time")) {
         startTime_ = msg.metadata().getLong("time");
     }
@@ -133,7 +221,10 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
     else {
         throw eckit::SeriousBug{"Unable to find start time", Here()};
     }
+    return;
+};
 
+void StatisticsConfiguration::readStartDate(const message::Message& msg) {
     if (useDateTime() && msg.metadata().has("date")) {
         startDate_ = msg.metadata().getLong("date");
     }
@@ -143,21 +234,44 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
     else {
         throw eckit::SeriousBug{"Unable to find start date", Here()};
     }
+    return;
+};
 
-    // Step is here in case we need some hacks
+
+void StatisticsConfiguration::readStep(const message::Message& msg) {
     if (!msg.metadata().has("step")) {
         throw eckit::SeriousBug{"Step metadata not present", Here()};
     }
     step_ = msg.metadata().getLong("step");
-    restartStep_ = msg.metadata().getLong("restart-step", step_);
+    return;
+};
 
+void StatisticsConfiguration::readRestartStep(const message::Message& msg) {
+    // TODO: for restart statistics with nemo some special handling is needed
+    restartStep_ = msg.metadata().getLong("restart-step", solverSendInitStep_ ? step_ : step_ - 1);
+    return;
+};
 
-    // step and frequency
+void StatisticsConfiguration::readTimeStep(const message::Message& msg) {
     timeStep_ = msg.metadata().getLong("timeStep", timeStep_);
-    stepFreq_ = msg.metadata().getLong("step-frequency", stepFreq_);
+    return;
+};
 
-    // Logging prefix
-    // TODO: can be skipped if MULTIO_DEBUG is 0
+void StatisticsConfiguration::readStepFrequency(const message::Message& msg) {
+    stepFreq_ = msg.metadata().getLong("step-frequency", stepFreq_);
+    return;
+};
+
+
+void StatisticsConfiguration::readMissingValue(const message::Message& msg) {
+    if (msg.metadata().has("missingValue") && msg.metadata().has("bitmapPresent")
+        && msg.metadata().getBool("bitmapPresent")) {
+        haveMissingValue_ = true;
+        missingValue_ = msg.metadata().getDouble("missingValue");
+    }
+    return;
+};
+void StatisticsConfiguration::createLoggingPrefix(const StatisticsConfiguration& cfg, const message::Message& msg) {
     std::ostringstream os;
     if (cfg.logPrefix() != "Plan") {
         os << "(prefix=" << cfg.logPrefix();
@@ -192,28 +306,77 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
         os << ", hostname=" << std::string{hostname} << ") ";
     }
     logPrefix_ = os.str();
-
-
-    // Handle missing values
-    if (msg.metadata().has("missingValue") && msg.metadata().has("bitmapPresent")
-        && msg.metadata().getBool("bitmapPresent")) {
-        haveMissingValue_ = true;
-        missingValue_ = msg.metadata().getDouble("missingValue");
-    }
-
     return;
 };
 
 
+void StatisticsConfiguration::dumpConfiguration() {
+    LOG_DEBUG_LIB(LibMultio) << " + useDateTime_        :: " << useDateTime_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + stepFreq_           :: " << stepFreq_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + timeStep_           :: " << timeStep_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + startDate_          :: " << startDate_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + startTime_          :: " << startTime_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + restart_            :: " << restart_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + readRestart_        :: " << readRestart_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + writeRestart_       :: " << writeRestart_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + step_               :: " << step_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + restartStep_        :: " << restartStep_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + solverSendInitStep_ :: " << solverSendInitStep_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + haveMissingValue_   :: " << haveMissingValue_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + missingValue_       :: " << missingValue_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + restartPath_        :: " << restartPath_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + restartPrefix_      :: " << restartPrefix_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + restartLib_         :: " << restartLib_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + logPrefix_          :: " << logPrefix_ << ";" << std::endl;
+    return;
+}
+
+
+void StatisticsConfiguration::usage() {
+    std::cout << "use-current-time          : "
+              << "type=bool,   "
+              << "default=false              : "
+              << "use \"time\" or \"startTime\" from message metadata" << std::endl;
+    std::cout << "step-frequency            : "
+              << "type=int,    "
+              << "default=1                  : "
+              << "distance in number of steps between two messages" << std::endl;
+    std::cout << "time-step                 : "
+              << "type=int,    "
+              << "default=3600               : "
+              << "length in seconds of a step" << std::endl;
+    std::cout << "initial-condition-present : "
+              << "type=bool,   "
+              << "default=false              : "
+              << "true if the solver send the initial condition to multio" << std::endl;
+    std::cout << "restart                   : "
+              << "type=bool,   "
+              << "default=false              : "
+              << "if true restart file are generated and loaded" << std::endl;
+    std::cout << "restart-path              : "
+              << "type=string, "
+              << "default=\".\"              : "
+              << "path used for restart files" << std::endl;
+    std::cout << "restart-prefix            : "
+              << "type=string, "
+              << "default=\"StatisticsDump\" : "
+              << "prefix used to make the restart file names unique across plans" << std::endl;
+    std::cout << "log-prefix                : "
+              << "type=string, "
+              << "default=\"Plan\"           : "
+              << "Prefix used in loggin (useful in debug to identify the plans)" << std::endl;
+    std::cout << "restart-library           : "
+              << "type=string, "
+              << "default=\"fstream_io\"     : "
+              << "library used to write/read the restart files" << std::endl;
+    return;
+}
+
 bool StatisticsConfiguration::readRestart() const {
-    std::cout << "Read restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << readRestart_
-              << std::endl;
     return ((step_ == 0 && solverSendInitStep_) || (step_ == 1 && solverSendInitStep_)) ? false : readRestart_;
 };
 
 bool StatisticsConfiguration::writeRestart() const {
-    std::cout << "Write restart condition :: " << step_ << ", " << solverSendInitStep_ << ", " << writeRestart_
-              << std::endl;
     return writeRestart_;
 };
 
@@ -223,6 +386,10 @@ const std::string& StatisticsConfiguration::restartPath() const {
 
 const std::string& StatisticsConfiguration::restartPrefix() const {
     return restartPrefix_;
+};
+
+const std::string& StatisticsConfiguration::restartLib() const {
+    return restartLib_;
 };
 
 const std::string& StatisticsConfiguration::logPrefix() const {

@@ -241,6 +241,67 @@ long MovingWindow::prevPointInSteps() const {
     return prevPointInSeconds() / timeStepInSeconds_;
 }
 
+long MovingWindow::startPointInSeconds(const eckit::DateTime& refPoint) const {
+    return startPoint_ - refPoint;
+}
+
+long MovingWindow::creationPointInSeconds(const eckit::DateTime& refPoint) const {
+    return creationPoint_ - refPoint;
+}
+
+long MovingWindow::endPointInSeconds(const eckit::DateTime& refPoint) const {
+    return endPoint_ - refPoint;
+}
+
+long MovingWindow::currPointInSeconds(const eckit::DateTime& refPoint) const {
+    return currPoint_ - refPoint;
+}
+
+long MovingWindow::prevPointInSeconds(const eckit::DateTime& refPoint) const {
+    return prevPoint_ - refPoint;
+}
+
+
+long MovingWindow::startPointInHours(const eckit::DateTime& refPoint) const {
+    return startPointInSeconds(refPoint) / 3600;
+}
+
+long MovingWindow::creationPointInHours(const eckit::DateTime& refPoint) const {
+    return creationPointInSeconds(refPoint) / 3600;
+}
+
+long MovingWindow::endPointInHours(const eckit::DateTime& refPoint) const {
+    return endPointInSeconds(refPoint) / 3600;
+}
+
+long MovingWindow::currPointInHours(const eckit::DateTime& refPoint) const {
+    return currPointInSeconds(refPoint) / 3600;
+}
+
+long MovingWindow::prevPointInHours(const eckit::DateTime& refPoint) const {
+    return prevPointInSeconds(refPoint) / 3600;
+}
+
+
+long MovingWindow::startPointInSteps(const eckit::DateTime& refPoint) const {
+    return startPointInSeconds(refPoint) / timeStepInSeconds_;
+}
+
+long MovingWindow::creationPointInSteps(const eckit::DateTime& refPoint) const {
+    return creationPointInSeconds(refPoint) / timeStepInSeconds_;
+}
+
+long MovingWindow::endPointInSteps(const eckit::DateTime& refPoint) const {
+    return endPointInSeconds(refPoint) / timeStepInSeconds_;
+}
+
+long MovingWindow::currPointInSteps(const eckit::DateTime& refPoint) const {
+    return currPointInSeconds(refPoint) / timeStepInSeconds_;
+}
+
+long MovingWindow::prevPointInSteps(const eckit::DateTime& refPoint) const {
+    return prevPointInSeconds(refPoint) / timeStepInSeconds_;
+}
 
 eckit::DateTime MovingWindow::epochPoint() const {
     return epochPoint_;
@@ -275,6 +336,18 @@ const std::string MovingWindow::stepRange() const {
 const std::string MovingWindow::stepRangeInHours() const {
     std::ostringstream os;
     os << std::to_string(creationPointInHours()) << "-" << std::to_string(endPointInHours());
+    return os.str();
+}
+
+const std::string MovingWindow::stepRange(const eckit::DateTime& refPoint) const {
+    std::ostringstream os;
+    os << std::to_string(creationPointInSteps(refPoint)) << "-" << std::to_string(endPointInSteps(refPoint));
+    return os.str();
+};
+
+const std::string MovingWindow::stepRangeInHours(const eckit::DateTime& refPoint) const {
+    std::ostringstream os;
+    os << std::to_string(creationPointInHours(refPoint)) << "-" << std::to_string(endPointInHours(refPoint));
     return os.str();
 }
 
