@@ -57,10 +57,10 @@ private:
                                      const message::Metadata& inputMetadata, const StatisticsConfiguration& opt,
                                      const std::string& key) const;
 
-    template <typename Precision>
+    template <typename T>
     bool update(const message::Message& msg, StatisticsConfiguration& cfg);
 
-    template <typename Precision>
+    template <typename T>
     message::Message compute(message::Message&& msg, StatisticsConfiguration& cfg);
 
     multiMap<Operation, Updater> maps_;

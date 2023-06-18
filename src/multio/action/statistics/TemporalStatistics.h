@@ -34,7 +34,7 @@
 
 namespace multio::action {
 
-template <typename Precision, template <typename Precision> typename Operation, typename Updater>
+template <typename Precision, template <typename T> typename Operation, typename Updater>
 class TemporalStatistics {
 public:
     TemporalStatistics(const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,

@@ -102,20 +102,20 @@ message::Metadata Statistics<Operation, Updater>::outputMetadata(const MovingWin
 
 
 template <template <typename Precision> typename Operation, typename Updater>
-template <typename Precision>
-bool Statistics<Operation, Updater>::update<Precision>(const message::Message& msg, StatisticsConfiguration& cfg) {
+template <typename T> 
+bool Statistics<Operation, Updater>::update(const message::Message& msg, StatisticsConfiguration& cfg) {
 
 
     std::string key = generateKey(msg);
-    precisionMap<Precision, Operation, Updater>& PrecisionMap
-        = std::get<precisionMap<Precision, Operation, Updater>>(maps_);
+    precisionMap<T, Operation, Updater>& PrecisionMap
+        = std::get<precisionMap<T, Operation, Updater>>(maps_);
 
     IOmanager_->reset();
     IOmanager_->setCurrStep(cfg.restartStep());
     IOmanager_->setKey(key);
 
     if (PrecisionMap.find(key) == PrecisionMap.end()) {
-        PrecisionMap[key] = std::make_unique<TemporalStatistics<Precision, Operation, Updater>>(msg, IOmanager_, cfg);
+        PrecisionMap[key] = std::make_unique<TemporalStatistics<T, Operation, Updater>>(msg, IOmanager_, cfg);
         if (cfg.solver_send_initial_condition()) {
             return false;
         }
@@ -129,13 +129,13 @@ bool Statistics<Operation, Updater>::update<Precision>(const message::Message& m
 
 
 template <template <typename Precision> typename Operation, typename Updater>
-template <typename Precision>
-message::Message Statistics<Operation, Updater>::compute<Precision>(message::Message&& msg,
+template <typename T>
+message::Message Statistics<Operation, Updater>::compute(message::Message&& msg,
                                                                     StatisticsConfiguration& cfg) {
 
     std::string key = generateKey(msg);
-    precisionMap<Precision, Operation, Updater>& PrecisionMap
-        = std::get<precisionMap<Precision, Operation, Updater>>(maps_);
+    precisionMap<T, Operation, Updater>& PrecisionMap
+        = std::get<precisionMap<T, Operation, Updater>>(maps_);
     auto& Ts = PrecisionMap.at(key);
 
     auto md = outputMetadata(Ts->win(), Ts->timeUnit(), msg.metadata(), cfg, key);
