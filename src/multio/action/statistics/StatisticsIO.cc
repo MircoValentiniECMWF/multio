@@ -11,16 +11,89 @@
 namespace multio::action {
 
 
-uint64_t computeChecksum(const std::vector<std::uint64_t>& state, std::size_t size) {
-    uint64_t checksum = 1979339339;  // Just a big prime number
-    // TODO: maybe some better strategy can be used?
-    std::for_each(state.cbegin(), state.cbegin() + size - 1, [&checksum](const int64_t& v) {
+uint64_t IOBuffer::checksum() const {
+    uint64_t checksum = 1979339339;
+    for (int i = 0; i < size_ - 1; ++i) {
         checksum <<= 1;
         checksum *= 31;
-        checksum ^= v;
-    });
+        checksum ^= buffer_[i];
+    }
     return checksum;
-}
+};
+
+IOBuffer::IOBuffer(std::vector<uint64_t>& buffer) : buffer_{buffer}, size_{buffer_.size()}, good_{true} {};
+IOBuffer::IOBuffer(std::vector<uint64_t>& buffer, size_t size) : buffer_{buffer}, size_{0}, good_{true} {
+    if (size <= buffer_.size()) {
+        size_ = size;
+    }
+    else {
+        std::ostringstream os;
+        os << "ERROR : size too large for buffer";
+        throw eckit::SeriousBug{os.str(), Here()};
+    }
+    return;
+};
+
+size_t IOBuffer::size() const {
+    return size_;
+};
+
+uint64_t* IOBuffer::data() {
+    return buffer_.data();
+};
+
+const uint64_t* IOBuffer::data() const {
+    return buffer_.data();
+};
+
+void IOBuffer::setStatus(bool stat) {
+    good_ = false;
+};
+
+bool IOBuffer::good() const {
+    return good_;
+};
+
+uint64_t& IOBuffer::operator[](const size_t idx) {
+    if ( idx >= size_) {
+        std::ostringstream os;
+        os << "ERROR : idx too large";
+        std::cout << os.str() << std::endl;
+        throw eckit::SeriousBug{os.str(), Here()};
+    };
+    return buffer_[idx];
+};
+
+const uint64_t& IOBuffer::operator[](const size_t idx) const {
+    if ( idx >= size_) {
+        std::ostringstream os;
+        os << "ERROR : idx too large";
+        std::cout << os.str() << std::endl;
+        throw eckit::SeriousBug{os.str(), Here()};
+    };
+    return buffer_[idx];
+};
+
+void IOBuffer::zero() {
+    std::transform(buffer_.cbegin(), buffer_.cbegin() + size_, buffer_.begin(),
+                   [](const uint64_t& v) { return static_cast<uint64_t>(0); });
+};
+
+void IOBuffer::computeChecksum() {
+    buffer_[size_ - 1] = checksum();
+    return;
+};
+
+void IOBuffer::checkChecksum() const {
+    if (buffer_[size_ - 1] != checksum()) {
+        std::ostringstream os;
+        os << "ERROR : wrong Checksum";
+        throw eckit::SeriousBug{os.str(), Here()};
+    }
+    return;
+};
+
+// -------------------------------------------------------------------------------------------------------------------
 
 StatisticsIO::StatisticsIO(const std::string& path, const std::string& prefix, const std::string& ext) :
     path_{path}, prefix_{prefix}, currStep_{0}, prevStep_{0}, key_{""}, name_{""}, ext_{ext}, buffer_{8192, 0} {};
@@ -57,18 +130,13 @@ void StatisticsIO::reset() {
     return;
 };
 
-std::vector<std::uint64_t>& StatisticsIO::getBuffer(std::size_t size) {
+IOBuffer StatisticsIO::getBuffer(std::size_t size) {
     std::size_t tmp = buffer_.size();
-    if (tmp >= size) {
-        return buffer_;
+    while (tmp < size) {
+        tmp *= 2;
     }
-    else {
-        while (tmp < size) {
-            tmp *= 2;
-        }
-        buffer_.resize(tmp);
-        return buffer_;
-    }
+    buffer_.resize(tmp);
+    return IOBuffer{buffer_, size};
 };
 
 std::string StatisticsIO::generatePathName() const {

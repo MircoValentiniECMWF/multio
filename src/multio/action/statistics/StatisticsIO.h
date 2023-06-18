@@ -12,8 +12,35 @@
 
 namespace multio::action {
 
-uint64_t computeChecksum(const std::vector<std::uint64_t>& state, std::size_t size);
+class IOBuffer {
+private:
+    std::vector<uint64_t>& buffer_;
+    size_t size_;
+    bool good_;
 
+    uint64_t checksum() const;
+
+public:
+    typename std::vector<uint64_t>::iterator begin() { return buffer_.begin(); };
+    typename std::vector<uint64_t>::iterator end() { return buffer_.begin() + size_; };
+    typename std::vector<uint64_t>::const_iterator cbegin() const{ return buffer_.cbegin(); };
+    typename std::vector<uint64_t>::const_iterator cend() const { return buffer_.cbegin() + size_; };
+
+    IOBuffer(std::vector<uint64_t>& buffer);
+    IOBuffer(std::vector<uint64_t>& buffer, size_t size);
+    size_t size() const;
+    uint64_t* data();
+    const uint64_t* data() const;
+    void setStatus(bool stat);
+    bool good() const;
+    uint64_t& operator[](const size_t idx);
+    const uint64_t& operator[](const size_t idx) const;
+    void zero();
+    void computeChecksum();
+    void checkChecksum() const;
+};
+
+// -------------------------------------------------------------------------------------------------------------------
 class StatisticsIO {
 public:
     StatisticsIO(const std::string& path, const std::string& prefix, const std::string& ext);
@@ -24,10 +51,10 @@ public:
     void setPrevStep(long step);
     void setSuffix(const std::string& suffix);
     void reset();
-    std::vector<std::uint64_t>& getBuffer(std::size_t size);
+    IOBuffer getBuffer(std::size_t size);
 
-    virtual void write(const std::string& name, std::size_t writeSize) = 0;
-    virtual void read(const std::string& name, std::size_t readSize) = 0;
+    virtual void write(const std::string& name, size_t writeSize) = 0;
+    virtual void read(const std::string& name, size_t readSize) = 0;
     virtual void flush() = 0;
 
 

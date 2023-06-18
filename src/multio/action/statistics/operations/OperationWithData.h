@@ -38,7 +38,8 @@ public:
 
     void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const {
         if (needRestart_) {
-            std::vector<std::uint64_t>& restartState = IOmanager->getBuffer(restartSize());
+            IOBuffer restartState{ IOmanager->getBuffer(restartSize())};
+            restartState.zero();
             serialize(restartState);
             IOmanager->write(name_, restartSize());
             IOmanager->flush();
@@ -48,33 +49,28 @@ public:
 
     void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) {
         if (needRestart_) {
-            std::vector<std::uint64_t>& restartState = IOmanager->getBuffer(restartSize());
+            IOBuffer restartState{IOmanager->getBuffer(restartSize())};
             IOmanager->read(name_, restartSize());
             deserialize(restartState);
+            restartState.zero();
         }
         return;
     };
 
 protected:
-    void serialize(std::vector<std::uint64_t>& restartState) const {
+    void serialize(IOBuffer& restartState) const {
         std::transform(values_.cbegin(), values_.cend(), restartState.begin(), [](const T& v) {
             T lv = v;
             double dv = static_cast<double>(lv);
             return *reinterpret_cast<uint64_t*>(&dv);
         });
-        restartState[restartSize() - 1] = computeChecksum(restartState, restartSize());
+        restartState.computeChecksum();
         return;
     };
 
-    void deserialize(const std::vector<std::uint64_t>& restartState) {
-        if (restartState[restartSize() - 1] != computeChecksum(restartState, restartSize())) {
-            std::cout << restartState << std::endl;
-            std::cout << restartState[restartSize() - 1] << std::endl;
-            std::cout << computeChecksum(restartState, restartSize()) << std::endl;
-            throw eckit::SeriousBug("Checksum mismatch!", Here());
-        }
-        auto last = restartState.cbegin() + restartSize();
-        std::transform(restartState.cbegin(), --last, values_.begin(), [](const std::uint64_t& v) {
+    void deserialize(const IOBuffer& restartState) {
+        restartState.checkChecksum();
+        std::transform(restartState.cbegin(), restartState.cend() - 1, values_.begin(), [](const std::uint64_t& v) {
             std::uint64_t lv = v;
             double dv = *reinterpret_cast<double*>(&lv);
             return static_cast<T>(dv);

@@ -12,6 +12,7 @@
 namespace multio::action {
 
 namespace {
+
 template <typename T>
 class SubVector {
 private:
@@ -61,13 +62,13 @@ void AtlasIO::write(const std::string& name, std::size_t writeSize) {
     return;
 };
 
-void AtlasIO::read(const std::string& name, std::size_t writeSize) {
+void AtlasIO::read(const std::string& name, std::size_t readSize) {
     LOG_DEBUG_LIB(LibMultio) << " - The name of the operation read file is :: " << generateCurrFileName(name)
                              << std::endl;
     const std::string fname = generateCurrFileName(name);
     checkFileExist(fname);
     atlas::io::RecordReader record(fname);
-    SubVector<std::uint64_t> dat{buffer_.data(), writeSize};
+    SubVector<std::uint64_t> dat{buffer_.data(), readSize};
     record.read(name, dat).wait();
     if (!dat.good()) {
         std::ostringstream os;
