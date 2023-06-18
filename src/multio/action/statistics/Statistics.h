@@ -15,11 +15,14 @@
 
 #pragma once
 
+#include <tuple>
 
 #include "PeriodUpdater.h"
 #include "StatisticsConfiguration.h"
 #include "StatisticsIO.h"
 #include "multio/action/ChainedAction.h"
+
+#include "TemporalStatistics.h"
 
 namespace eckit {
 class Configuration;
@@ -27,26 +30,40 @@ class Configuration;
 
 namespace multio::action {
 
-class TemporalStatistics;
 
+template <typename T, template <typename Precision> typename Operation, typename Updater>
+using precisionMap = std::map<std::string, std::unique_ptr<TemporalStatistics<T, Operation, Updater>>>;
+
+
+template <template <typename Precision> typename Operation, typename Updater>
+using multiMap = std::tuple<precisionMap<float, Operation, Updater>, precisionMap<double, Operation, Updater>>;
+
+template <template <typename Precision> typename Operation, typename Updater>
 class Statistics : public ChainedAction {
 public:
     explicit Statistics(const ComponentConfiguration& compConf);
     void executeImpl(message::Message msg) override;
-    message::Metadata outputMetadata(const message::Metadata& inputMetadata, const StatisticsConfiguration& opt,
-                                     const std::string& key) const;
 
 private:
+    const StatisticsConfiguration cfg_;
+    std::shared_ptr<StatisticsIO> IOmanager_;
+
     void DumpRestart();
     std::string generateKey(const message::Message& msg) const;
     void print(std::ostream& os) const override;
-    const StatisticsConfiguration cfg_;
-    const std::vector<std::string> operations_;
-    std::shared_ptr<PeriodUpdater> periodUpdater_;
-    std::shared_ptr<StatisticsIO> IOmanager_;
 
 
-    std::map<std::string, std::unique_ptr<TemporalStatistics>> fieldStats_;
+    message::Metadata outputMetadata(const MovingWindow& win, const std::string timeUnit,
+                                     const message::Metadata& inputMetadata, const StatisticsConfiguration& opt,
+                                     const std::string& key) const;
+
+    template <typename Precision>
+    bool update(const message::Message& msg, StatisticsConfiguration& cfg);
+
+    template <typename Precision>
+    message::Message compute(message::Message&& msg, StatisticsConfiguration& cfg);
+
+    multiMap<Operation, Updater> maps_;
 };
 
 }  // namespace multio::action

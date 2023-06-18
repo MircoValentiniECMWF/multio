@@ -24,37 +24,32 @@ public:
         return;
     }
 
-    void updateWindow(const void* data, long sz) override {
+    void updateWindow(const void* data, long sz) {
         std::transform(values_.begin(), values_.end(), values_.begin(), [](T v) { return static_cast<T>(0.0); });
         return;
     };
 
-    void init(const void* data, long sz) override {
+    void init(const void* data, long sz) {
         // TODO: Used to save the first field of the window
         return;
     };
 
-    void init() override {
-        // TODO: Used to save the initialization time of the window
-        return;
-    };
+    size_t byte_size() const { return values_.size() * sizeof(T); };
 
-    size_t byte_size() const override { return values_.size() * sizeof(T); };
-
-    void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const override {
+    void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const {
         if (needRestart_) {
-            std::vector<std::uint64_t> restartState(restartSize());
+            std::vector<std::uint64_t>& restartState = IOmanager->getBuffer(restartSize());
             serialize(restartState);
-            IOmanager->write(name_, restartState);
+            IOmanager->write(name_, restartSize());
             IOmanager->flush();
         }
         return;
     };
 
-    void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) override {
+    void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) {
         if (needRestart_) {
-            std::vector<std::uint64_t> restartState(restartSize());
-            IOmanager->read(name_, restartState);
+            std::vector<std::uint64_t>& restartState = IOmanager->getBuffer(restartSize());
+            IOmanager->read(name_, restartSize());
             deserialize(restartState);
         }
         return;
@@ -67,15 +62,18 @@ protected:
             double dv = static_cast<double>(lv);
             return *reinterpret_cast<uint64_t*>(&dv);
         });
-        restartState.back() = computeChecksum(restartState);
+        restartState[restartSize() - 1] = computeChecksum(restartState, restartSize());
         return;
     };
 
     void deserialize(const std::vector<std::uint64_t>& restartState) {
-        if (restartState.back() != computeChecksum(restartState)) {
+        if (restartState[restartSize() - 1] != computeChecksum(restartState, restartSize())) {
+            std::cout << restartState << std::endl;
+            std::cout << restartState[restartSize() - 1] << std::endl;
+            std::cout << computeChecksum(restartState, restartSize()) << std::endl;
             throw eckit::SeriousBug("Checksum mismatch!", Here());
         }
-        auto last = restartState.cend();
+        auto last = restartState.cbegin() + restartSize();
         std::transform(restartState.cbegin(), --last, values_.begin(), [](const std::uint64_t& v) {
             std::uint64_t lv = v;
             double dv = *reinterpret_cast<double*>(&lv);

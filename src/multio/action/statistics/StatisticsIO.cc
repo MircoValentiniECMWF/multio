@@ -11,11 +11,10 @@
 namespace multio::action {
 
 
-uint64_t computeChecksum(const std::vector<std::uint64_t>& state) {
+uint64_t computeChecksum(const std::vector<std::uint64_t>& state, std::size_t size) {
     uint64_t checksum = 1979339339;  // Just a big prime number
-    auto last = state.cend();
     // TODO: maybe some better strategy can be used?
-    std::for_each(state.cbegin(), --last, [&checksum](const int64_t& v) {
+    std::for_each(state.cbegin(), state.cbegin() + size - 1, [&checksum](const int64_t& v) {
         checksum <<= 1;
         checksum *= 31;
         checksum ^= v;
@@ -24,7 +23,7 @@ uint64_t computeChecksum(const std::vector<std::uint64_t>& state) {
 }
 
 StatisticsIO::StatisticsIO(const std::string& path, const std::string& prefix, const std::string& ext) :
-    path_{path}, prefix_{prefix}, step_{0}, key_{""}, name_{""}, ext_{ext} {};
+    path_{path}, prefix_{prefix}, currStep_{0}, prevStep_{0}, key_{""}, name_{""}, ext_{ext}, buffer_{8192, 0} {};
 
 
 void StatisticsIO::setKey(const std::string& key) {
@@ -32,8 +31,13 @@ void StatisticsIO::setKey(const std::string& key) {
     return;
 };
 
-void StatisticsIO::setStep(long step) {
-    step_ = step;
+void StatisticsIO::setCurrStep(long step) {
+    currStep_ = step;
+    return;
+};
+
+void StatisticsIO::setPrevStep(long step) {
+    prevStep_ = step;
     return;
 };
 
@@ -43,11 +47,28 @@ void StatisticsIO::setSuffix(const std::string& suffix) {
 };
 
 void StatisticsIO::reset() {
-    step_ = 0;
+    currStep_ = 0;
+    prevStep_ = 0;
     key_ = "";
     suffix_ = "";
     name_ = "";
+    std::transform(buffer_.cbegin(), buffer_.cend(), buffer_.begin(),
+                   [](const std::uint64_t v) { return static_cast<std::uint64_t>(0.0); });
     return;
+};
+
+std::vector<std::uint64_t>& StatisticsIO::getBuffer(std::size_t size) {
+    std::size_t tmp = buffer_.size();
+    if (tmp >= size) {
+        return buffer_;
+    }
+    else {
+        while (tmp < size) {
+            tmp *= 2;
+        }
+        buffer_.resize(tmp);
+        return buffer_;
+    }
 };
 
 std::string StatisticsIO::generatePathName() const {
@@ -57,15 +78,28 @@ std::string StatisticsIO::generatePathName() const {
     return os.str();
 };
 
-std::string StatisticsIO::generateFileName(const std::string& name, long step_offset) const {
+std::string StatisticsIO::generateCurrFileName(const std::string& name) const {
     std::ostringstream os;
-    os << generatePathName() << "/" << name << "-" << std::setw(10) << std::setfill('0') << step_ - step_offset << "."
-       << ext_;
+    os << generatePathName() << "/" << name << "-" << std::setw(10) << std::setfill('0') << currStep_ << "." << ext_;
     return os.str();
 };
 
-void StatisticsIO::removeOldFile(const std::string& name, long step_offset) const {
-    eckit::PathName file{generateFileName(name, step_offset)};
+std::string StatisticsIO::generatePrevFileName(const std::string& name) const {
+    std::ostringstream os;
+    os << generatePathName() << "/" << name << "-" << std::setw(10) << std::setfill('0') << prevStep_ << "." << ext_;
+    return os.str();
+};
+
+void StatisticsIO::removeCurrFile(const std::string& name) const {
+    eckit::PathName file{generateCurrFileName(name)};
+
+    if (file.exists()) {
+        file.unlink();
+    }
+};
+
+void StatisticsIO::removePrevFile(const std::string& name) const {
+    eckit::PathName file{generatePrevFileName(name)};
 
     if (file.exists()) {
         file.unlink();

@@ -2,9 +2,8 @@ plans:
   - name: test_average_1m_grib2
     actions:
 
-      - type: statistics
-        output-frequency: 1m
-        operations: [ average ]
+      - type: monthly-average
+        span: 1
         options:
           initial-condition-present: true
           restart-prefix: "NamesAreNotGuaranteedToBeUniqueAcrossPlans"

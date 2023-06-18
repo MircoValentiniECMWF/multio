@@ -16,6 +16,7 @@ namespace multio::action {
 
 StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfiguration& compConf) :
     useDateTime_{false},
+    span_{1},
     stepFreq_{1},
     timeStep_{3600},
     startDate_{0},
@@ -38,6 +39,8 @@ StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfigur
         throw eckit::SeriousBug{"Usage requested", Here()};
     }
 
+    parseSpan(compConf.parsedConfig());
+
     if (!compConf.parsedConfig().has("options")) {
         return;
     }
@@ -59,6 +62,7 @@ StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfigur
 
 StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& cfg, const message::Message& msg) :
     useDateTime_{cfg.useDateTime()},
+    span_{cfg.span()},
     stepFreq_{cfg.stepFreq()},
     timeStep_{cfg.timeStep()},
     startDate_{0},
@@ -97,6 +101,11 @@ void StatisticsConfiguration::parseUseDateTime(const eckit::LocalConfiguration& 
     // otherwise startDate and startTime are readed.
     // Default value is false
     useDateTime_ = cfg.getBool("use-current-time", false);
+    return;
+};
+
+void StatisticsConfiguration::parseSpan(const eckit::LocalConfiguration& cfg) {
+    span_ = cfg.getLong("span", 1L);
     return;
 };
 
@@ -283,61 +292,66 @@ void StatisticsConfiguration::createLoggingPrefix(const StatisticsConfiguration&
 
 
 void StatisticsConfiguration::dumpConfiguration() {
-    LOG_DEBUG_LIB(LibMultio) << " + useDateTime_        :: " << useDateTime_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + stepFreq_           :: " << stepFreq_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + timeStep_           :: " << timeStep_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + startDate_          :: " << startDate_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + startTime_          :: " << startTime_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + restart_            :: " << restart_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + readRestart_        :: " << readRestart_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + writeRestart_       :: " << writeRestart_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + step_               :: " << step_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + restartStep_        :: " << restartStep_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + solverSendInitStep_ :: " << solverSendInitStep_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + haveMissingValue_   :: " << haveMissingValue_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + missingValue_       :: " << missingValue_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + restartPath_        :: " << restartPath_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + restartPrefix_      :: " << restartPrefix_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + restartLib_         :: " << restartLib_ << ";" << std::endl;
-    LOG_DEBUG_LIB(LibMultio) << " + logPrefix_          :: " << logPrefix_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + span_                       :: " << useDateTime_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.useDateTime_        :: " << useDateTime_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.stepFreq_           :: " << stepFreq_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.timeStep_           :: " << timeStep_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.startDate_          :: " << startDate_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.startTime_          :: " << startTime_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.restart_            :: " << restart_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.readRestart_        :: " << readRestart_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.writeRestart_       :: " << writeRestart_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.step_               :: " << step_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.restartStep_        :: " << restartStep_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.solverSendInitStep_ :: " << solverSendInitStep_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.haveMissingValue_   :: " << haveMissingValue_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.missingValue_       :: " << missingValue_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.restartPath_        :: " << restartPath_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.restartPrefix_      :: " << restartPrefix_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.restartLib_         :: " << restartLib_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + options.logPrefix_          :: " << logPrefix_ << ";" << std::endl;
     return;
 }
 
 
 void StatisticsConfiguration::usage() {
-    std::cout << "use-current-time          : "
+    std::cout << "span                              : "
+              << "type=long,   "
+              << "default=1                  : "
+              << "width of the operation window used (unit is inherited from period)" << std::endl;
+    std::cout << "options.use-current-time          : "
               << "type=bool,   "
               << "default=false              : "
               << "use \"time\" or \"startTime\" from message metadata" << std::endl;
-    std::cout << "step-frequency            : "
+    std::cout << "options.step-frequency            : "
               << "type=int,    "
               << "default=1                  : "
               << "distance in number of steps between two messages" << std::endl;
-    std::cout << "time-step                 : "
+    std::cout << "options.time-step                 : "
               << "type=int,    "
               << "default=3600               : "
               << "length in seconds of a step" << std::endl;
-    std::cout << "initial-condition-present : "
+    std::cout << "options.initial-condition-present : "
               << "type=bool,   "
               << "default=false              : "
               << "true if the solver send the initial condition to multio" << std::endl;
-    std::cout << "restart                   : "
+    std::cout << "options.restart                   : "
               << "type=bool,   "
               << "default=false              : "
               << "if true restart file are generated and loaded" << std::endl;
-    std::cout << "restart-path              : "
+    std::cout << "options.restart-path              : "
               << "type=string, "
               << "default=\".\"              : "
               << "path used for restart files" << std::endl;
-    std::cout << "restart-prefix            : "
+    std::cout << "options.restart-prefix            : "
               << "type=string, "
               << "default=\"StatisticsDump\" : "
               << "prefix used to make the restart file names unique across plans" << std::endl;
-    std::cout << "log-prefix                : "
+    std::cout << "options.log-prefix                : "
               << "type=string, "
               << "default=\"Plan\"           : "
               << "Prefix used in loggin (useful in debug to identify the plans)" << std::endl;
-    std::cout << "restart-library           : "
+    std::cout << "options.restart-library           : "
               << "type=string, "
               << "default=\"fstream_io\"     : "
               << "library used to write/read the restart files" << std::endl;
@@ -370,6 +384,10 @@ const std::string& StatisticsConfiguration::logPrefix() const {
 
 bool StatisticsConfiguration::useDateTime() const {
     return useDateTime_;
+};
+
+long StatisticsConfiguration::span() const {
+    return span_;
 };
 
 long StatisticsConfiguration::stepFreq() const {

@@ -13,8 +13,6 @@
 #include <algorithm>
 #include <unordered_map>
 
-
-#include "TemporalStatistics.h"
 #include "eckit/exception/Exceptions.h"
 #include "multio/LibMultio.h"
 #include "multio/message/Message.h"
@@ -22,30 +20,50 @@
 
 namespace multio::action {
 
-Statistics::Statistics(const ComponentConfiguration& compConf) :
+namespace {
+template <size_t I = 0, typename... Ts>
+typename std::enable_if<I == sizeof...(Ts), void>::type dumpMultiMap(std::tuple<Ts...>& tup,
+                                                                     const StatisticsConfiguration& cfg,
+                                                                     std::shared_ptr<StatisticsIO>& IOmanager) {
+    return;
+}
+
+template <size_t I = 0, typename... Ts>
+typename std::enable_if<(I < sizeof...(Ts)), void>::type dumpMultiMap(std::tuple<Ts...>& tup,
+                                                                      const StatisticsConfiguration& cfg,
+                                                                      std::shared_ptr<StatisticsIO>& IOmanager) {
+    // TODO: improve the removing of old files
+    for (auto it = std::get<I>(tup).begin(); it != std::get<I>(tup).end(); it++) {
+        LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << ", "
+                                 << it->second->win().currPointInSteps() << std::endl;
+        IOmanager->setCurrStep(it->second->win().currPointInSteps());
+        IOmanager->setPrevStep(it->second->win().prevPointInSteps());
+        IOmanager->setKey(it->first);
+        it->second->dump(IOmanager, cfg);
+    }
+    dumpMultiMap<I + 1>(tup, cfg, IOmanager);
+}
+
+}  // namespace
+
+template <template <typename Precision> typename Operation, typename Updater>
+Statistics<Operation, Updater>::Statistics(const ComponentConfiguration& compConf) :
     ChainedAction{compConf},
     cfg_{compConf},
-    operations_{compConf.parsedConfig().getStringVector("operations")},
-    periodUpdater_{make_period_updater(compConf.parsedConfig().getString("output-frequency"))},
     IOmanager_{StatisticsIOFactory::instance().build(cfg_.restartLib(), cfg_.restartPath(), cfg_.restartPrefix())} {}
 
 
-void Statistics::DumpRestart() {
+template <template <typename Precision> typename Operation, typename Updater>
+void Statistics<Operation, Updater>::DumpRestart() {
     if (cfg_.writeRestart()) {
         IOmanager_->reset();
-        IOmanager_->setSuffix(periodUpdater_->name());
-        for (auto it = fieldStats_.begin(); it != fieldStats_.end(); it++) {
-            LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << ", "
-                                     << it->second->win().currPointInSteps() << std::endl;
-            IOmanager_->setStep(it->second->win().currPointInSteps());
-            IOmanager_->setKey(it->first);
-            it->second->dump(IOmanager_, cfg_);
-        }
+        dumpMultiMap(maps_, cfg_, IOmanager_);
     }
 }
 
 
-std::string Statistics::generateKey(const message::Message& msg) const {
+template <template <typename Precision> typename Operation, typename Updater>
+std::string Statistics<Operation, Updater>::generateKey(const message::Message& msg) const {
     std::ostringstream os;
     os << msg.metadata().getString("param", "") << "-" << msg.metadata().getString("paramId", "") << "-"
        << msg.metadata().getLong("level", 0) << "-" << msg.metadata().getLong("levelist", 0) << "-"
@@ -57,17 +75,18 @@ std::string Statistics::generateKey(const message::Message& msg) const {
 }
 
 
-message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetadata, const StatisticsConfiguration& cfg,
-                                             const std::string& key) const {
-    auto& win = fieldStats_.at(key)->win();
+template <template <typename Precision> typename Operation, typename Updater>
+message::Metadata Statistics<Operation, Updater>::outputMetadata(const MovingWindow& win, const std::string timeUnit,
+                                                                 const message::Metadata& inputMetadata,
+                                                                 const StatisticsConfiguration& cfg,
+                                                                 const std::string& key) const {
     if (win.endPointInSeconds() % 3600 != 0L) {
         std::ostringstream os;
-        os << "Step in seconds needs to be a multiple of 3600 :: " << fieldStats_.at(key)->win().endPointInSeconds()
-           << std::endl;
+        os << "Step in seconds needs to be a multiple of 3600 :: " << win.endPointInSeconds() << std::endl;
         throw eckit::SeriousBug(os.str(), Here());
     }
     auto md = inputMetadata;
-    md.set("timeUnit", periodUpdater_->timeUnit());
+    md.set("timeUnit", timeUnit);
     md.set("startDate", win.epochPoint().date().yyyymmdd());
     md.set("startTime", win.epochPoint().time().hhmmss());
     md.set("timeSpanInHours", win.timeSpanInHours());
@@ -82,7 +101,58 @@ message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetad
 }
 
 
-void Statistics::executeImpl(message::Message msg) {
+template <template <typename Precision> typename Operation, typename Updater>
+template <typename Precision>
+bool Statistics<Operation, Updater>::update<Precision>(const message::Message& msg, StatisticsConfiguration& cfg) {
+
+
+    std::string key = generateKey(msg);
+    precisionMap<Precision, Operation, Updater>& PrecisionMap
+        = std::get<precisionMap<Precision, Operation, Updater>>(maps_);
+
+    IOmanager_->reset();
+    IOmanager_->setCurrStep(cfg.restartStep());
+    IOmanager_->setKey(key);
+
+    if (PrecisionMap.find(key) == PrecisionMap.end()) {
+        PrecisionMap[key] = std::make_unique<TemporalStatistics<Precision, Operation, Updater>>(msg, IOmanager_, cfg);
+        if (cfg.solver_send_initial_condition()) {
+            return false;
+        }
+    }
+
+    auto& Ts = PrecisionMap.at(key);
+    Ts->updateData(msg, cfg);
+
+    return Ts->isEndOfWindow(msg, cfg);
+}
+
+
+template <template <typename Precision> typename Operation, typename Updater>
+template <typename Precision>
+message::Message Statistics<Operation, Updater>::compute<Precision>(message::Message&& msg,
+                                                                    StatisticsConfiguration& cfg) {
+
+    std::string key = generateKey(msg);
+    precisionMap<Precision, Operation, Updater>& PrecisionMap
+        = std::get<precisionMap<Precision, Operation, Updater>>(maps_);
+    auto& Ts = PrecisionMap.at(key);
+
+    auto md = outputMetadata(Ts->win(), Ts->timeUnit(), msg.metadata(), cfg, key);
+    md.set("operation", Ts->operation(cfg));
+    Ts->compute(msg.payload(), cfg);
+    Ts->updateWindow(msg, cfg);
+
+    return {
+        message::Message::Header{message::Message::Tag::Field, msg.source(), msg.destination(), message::Metadata{md}},
+        std::move(msg.payload())};
+}
+
+
+template <template <typename Precision> typename Operation, typename Updater>
+void Statistics<Operation, Updater>::executeImpl(message::Message msg) {
+
+    util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
 
     if (msg.tag() == message::Message::Tag::Flush) {
         DumpRestart();
@@ -95,60 +165,52 @@ void Statistics::executeImpl(message::Message msg) {
         return;
     }
 
-    std::string key = generateKey(msg);
     StatisticsConfiguration cfg{cfg_, msg};
-    IOmanager_->reset();
-    IOmanager_->setStep(cfg.restartStep());
-    IOmanager_->setKey(key);
 
 
-    util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
+    bool endOfWindow = util::dispatchPrecisionTag(msg.precision(), [&](auto pt) -> bool {
+        using Precision = typename decltype(pt)::type;
+        return update<Precision>(msg, cfg);
+    });
 
-    if (fieldStats_.find(key) == fieldStats_.end()) {
-        fieldStats_[key] = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, msg, IOmanager_, cfg);
-        if (cfg.solver_send_initial_condition()) {
-            util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
-            return;
-        }
+    if (endOfWindow) {
+        executeNext(util::dispatchPrecisionTag(msg.precision(), [&](auto pt) -> message::Message {
+            using Precision = typename decltype(pt)::type;
+            return compute<Precision>(std::move(msg), cfg);
+        }));
     }
+}
 
-    fieldStats_.at(key)->updateData(msg, cfg);
 
-    if (fieldStats_.at(key)->isEndOfWindow(msg, cfg)) {
-        auto md = outputMetadata(msg.metadata(), cfg, key);
-        for (auto it = fieldStats_.at(key)->begin(); it != fieldStats_.at(key)->end(); ++it) {
-            eckit::Buffer payload;
-            payload.resize((*it)->byte_size());
-            payload.zero();
-            md.set("operation", (*it)->operation());
-            (*it)->compute(payload);
-            executeNext(message::Message{message::Message::Header{message::Message::Tag::Field, msg.source(),
-                                                                  msg.destination(), message::Metadata{md}},
-                                         std::move(payload)});
-        }
-
-        util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
-
-        fieldStats_.at(key)->updateWindow(msg, cfg);
-    }
-
+template <template <typename Precision> typename Operation, typename Updater>
+void Statistics<Operation, Updater>::print(std::ostream& os) const {
+    os << "Statistics";
     return;
 }
 
 
-void Statistics::print(std::ostream& os) const {
-    os << "Statistics(output frequency = " << periodUpdater_->timeSpan() << ", unit = " << periodUpdater_->timeUnit()
-       << ", operations = ";
-    bool first = true;
-    for (const auto& ops : operations_) {
-        os << (first ? "" : ", ");
-        os << ops;
-        first = false;
-    }
-    os << ")";
-}
+static ActionBuilder<Statistics<Average, MonthPeriodUpdater>> MonthlyAverageBuilder("monthly-average");
+static ActionBuilder<Statistics<Average, DayPeriodUpdater>> DailyAverageBuilder("daily-average");
+static ActionBuilder<Statistics<Average, HourPeriodUpdater>> HourlyAverageBuilder("hourly-average");
 
+static ActionBuilder<Statistics<FluxAverage, MonthPeriodUpdater>> MonthlyFluxAverageBuilder("monthly-flux-average");
+static ActionBuilder<Statistics<FluxAverage, DayPeriodUpdater>> DailyFluxAverageBuilder("daily-flux-average");
+static ActionBuilder<Statistics<FluxAverage, HourPeriodUpdater>> HourlyFluxAverageBuilder("hourly-flux-average");
 
-static ActionBuilder<Statistics> StatisticsBuilder("statistics");
+static ActionBuilder<Statistics<Accumulate, MonthPeriodUpdater>> MonthlyAccumulateBuilder("monthly-accumulate");
+static ActionBuilder<Statistics<Accumulate, DayPeriodUpdater>> DailyAccumulateBuilder("daily-accumulate");
+static ActionBuilder<Statistics<Accumulate, HourPeriodUpdater>> HourlyAccumulateBuilder("hourly-accumulate");
+
+static ActionBuilder<Statistics<Instant, MonthPeriodUpdater>> MonthlyInstantBuilder("monthly-instant");
+static ActionBuilder<Statistics<Instant, DayPeriodUpdater>> DailyInstantBuilder("daily-instant");
+static ActionBuilder<Statistics<Instant, HourPeriodUpdater>> HourlyInstantBuilder("hourly-instant");
+
+static ActionBuilder<Statistics<Maximum, MonthPeriodUpdater>> MonthlyMaximumBuilder("monthly-maximum");
+static ActionBuilder<Statistics<Maximum, DayPeriodUpdater>> DailyMaximumBuilder("daily-maximum");
+static ActionBuilder<Statistics<Maximum, HourPeriodUpdater>> HourlyMaximumBuilder("hourly-maximum");
+
+static ActionBuilder<Statistics<Minimum, MonthPeriodUpdater>> MonthlyMinimumBuilder("monthly-minimum");
+static ActionBuilder<Statistics<Minimum, DayPeriodUpdater>> DailyMinimumBuilder("daily-minimum");
+static ActionBuilder<Statistics<Minimum, HourPeriodUpdater>> HourlyMinimumBuilder("hourly-minimum");
 
 }  // namespace multio::action

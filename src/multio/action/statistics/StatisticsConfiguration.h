@@ -14,6 +14,7 @@ class StatisticsConfiguration {
 
 private:
     bool useDateTime_;
+    long span_;
     long stepFreq_;
     long timeStep_;
     long startDate_;
@@ -38,6 +39,7 @@ public:
     StatisticsConfiguration(const StatisticsConfiguration& cfg, const message::Message& msg);
 
     bool useDateTime() const;
+    long span() const;
     long stepFreq() const;
     long timeStep() const;
     long startDate() const;
@@ -56,6 +58,7 @@ public:
     double missingValue() const;
 
 private:
+    void parseSpan(const eckit::LocalConfiguration& cfg);
     void parseUseDateTime(const eckit::LocalConfiguration& cfg);
     void parseStepFrequency(const eckit::LocalConfiguration& cfg);
     void parseTimeStep(const eckit::LocalConfiguration& cfg);

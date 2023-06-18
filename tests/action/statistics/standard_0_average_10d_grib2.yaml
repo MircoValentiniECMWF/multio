@@ -2,9 +2,8 @@ plans:
   - name: test_average_10d_grib2
     actions:
 
-      - type: statistics
-        output-frequency: 10d
-        operations: [ average ]
+      - type: daily-average
+        span: 10
         options:
           initial-condition-present: true
           step-frequency: 1

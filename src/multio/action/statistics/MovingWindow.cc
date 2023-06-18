@@ -87,16 +87,16 @@ long MovingWindow::count() const {
 }
 
 void MovingWindow::load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) {
-    std::vector<std::uint64_t> restartState(15, 0);
-    IOmanager->read("window", restartState);
+    std::vector<std::uint64_t>& restartState = IOmanager->getBuffer(15);
+    IOmanager->read("window", 15);
     deserialize(restartState);
     return;
 }
 
 void MovingWindow::dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const {
-    std::vector<std::uint64_t> restartState(15, 0);
+    std::vector<std::uint64_t>& restartState = IOmanager->getBuffer(15);
     serialize(restartState);
-    IOmanager->write("window", restartState);
+    IOmanager->write("window", 15);
     IOmanager->flush();
     return;
 }
@@ -362,14 +362,17 @@ void MovingWindow::serialize(std::vector<std::uint64_t>& currState) const {
     currState[12] = static_cast<std::uint64_t>(timeStepInSeconds_);
     currState[13] = static_cast<std::uint64_t>(count_);
 
-    currState[14] = computeChecksum(currState);
+    currState[14] = computeChecksum(currState, 15);
 
     return;
 }
 
 void MovingWindow::deserialize(const std::vector<std::uint64_t>& currState) {
 
-    if (currState[14] != computeChecksum(currState)) {
+    if (currState[14] != computeChecksum(currState, 15)) {
+        std::cout << currState << std::endl;
+        std::cout << currState[14] << std::endl;
+        std::cout << computeChecksum(currState, 15) << std::endl;
         throw eckit::SeriousBug("Checksum mismatch!", Here());
     }
     epochPoint_ = yyyymmdd_hhmmss2DateTime(currState[0], currState[1]);

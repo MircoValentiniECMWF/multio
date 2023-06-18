@@ -12,23 +12,24 @@ namespace multio::action {
 
 AtlasIO::AtlasIO(const std::string& path, const std::string& prefix) : StatisticsIO{path, prefix, "atlasIO"} {};
 
-void AtlasIO::write(const std::string& name, const std::vector<std::uint64_t>& data) {
-    LOG_DEBUG_LIB(LibMultio) << " - The name of the window write file is :: " << generateFileName(name, 0) << std::endl;
-    removeOldFile(name, 0);
-    const std::string fname = generateFileName(name, 0);
+void AtlasIO::write(const std::string& name, std::size_t writeSize) {
+    LOG_DEBUG_LIB(LibMultio) << " - The name of the window write file is :: " << generateCurrFileName(name)
+                             << std::endl;
+    removeCurrFile(name);
+    const std::string fname = generateCurrFileName(name);
     atlas::io::RecordWriter record;
-    record.set(name, atlas::io::ref(data), no_compression);
+    record.set(name, buffer, no_compression);
     record.write(fname);
-    removeOldFile(name, 2);
+    removePrevFile(name, 2);
     return;
 };
 
-void AtlasIO::read(const std::string& name, std::vector<std::uint64_t>& data) {
+void AtlasIO::read(const std::string& name, std::size_t writeSize) {
     LOG_DEBUG_LIB(LibMultio) << " - The name of the operation read file is :: " << generateFileName(name, 0)
                              << std::endl;
-    const std::string fname = generateFileName(name, 0);
+    const std::string fname = generateCurrFileName(name);
     atlas::io::RecordReader record(fname);
-    record.read(name, data).wait();
+    record.read(name, buffer_).wait();
     return;
 };
 

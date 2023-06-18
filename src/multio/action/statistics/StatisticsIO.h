@@ -6,12 +6,13 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "eckit/filesystem/PathName.h"
 
 namespace multio::action {
 
-uint64_t computeChecksum(const std::vector<std::uint64_t>& state);
+uint64_t computeChecksum(const std::vector<std::uint64_t>& state, std::size_t size);
 
 class StatisticsIO {
 public:
@@ -19,27 +20,35 @@ public:
     virtual ~StatisticsIO() = default;
 
     void setKey(const std::string& key);
-    void setStep(long step);
+    void setCurrStep(long step);
+    void setPrevStep(long step);
     void setSuffix(const std::string& suffix);
     void reset();
+    std::vector<std::uint64_t>& getBuffer(std::size_t size);
 
-    virtual void write(const std::string& name, const std::vector<std::uint64_t>& data) = 0;
-    virtual void read(const std::string& name, std::vector<std::uint64_t>& data) = 0;
+    virtual void write(const std::string& name, std::size_t writeSize) = 0;
+    virtual void read(const std::string& name, std::size_t readSize) = 0;
     virtual void flush() = 0;
+
 
 protected:
     std::string generatePathName() const;
-    std::string generateFileName(const std::string& name, long step_offset) const;
-    void removeOldFile(const std::string& name, long step_offset) const;
+    std::string generateCurrFileName(const std::string& name) const;
+    std::string generatePrevFileName(const std::string& name) const;
+    void removeCurrFile(const std::string& name) const;
+    void removePrevFile(const std::string& name) const;
 
     const std::string path_;
     const std::string prefix_;
-    long step_;
+    long prevStep_;
+    long currStep_;
 
     std::string key_;
     std::string suffix_;
     std::string name_;
     const std::string ext_;
+
+    std::vector<std::uint64_t> buffer_;
 };
 
 class StatisticsIOBuilderBase;
