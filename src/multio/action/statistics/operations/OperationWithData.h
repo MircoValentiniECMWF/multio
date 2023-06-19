@@ -12,14 +12,14 @@ public:
                       const MovingWindow& win, const StatisticsConfiguration& cfg) :
         OperationBase{name, operation, win, cfg},
         needRestart_{needRestart},
-        values_{std::vector<std::array<T, N>>{sz /= sizeof(T), std::array<T, N>{0.0}}} {}
+        values_{std::vector<std::array<T, N>>(sz /= sizeof(T), std::array<T, N>{0.0})} {}
 
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const MovingWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
                       const StatisticsConfiguration& cfg) :
         OperationBase{name, operation, win, cfg},
         needRestart_{needRestart},
-        values_{std::vector<std::array<T, N>>{sz /= sizeof(T), std::array<T, N>{0.0}}} {
+        values_{std::vector<std::array<T, N>>(sz /= sizeof(T), std::array<T, N>{0.0})} {
         load(IOmanager, cfg);
         return;
     }

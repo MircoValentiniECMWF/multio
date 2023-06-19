@@ -105,6 +105,7 @@ public:
 
 
     const MovingWindow& cwin() const { return window_; };
+    
     MovingWindow& win() { return window_; };
 
     void print(std::ostream& os) const {
