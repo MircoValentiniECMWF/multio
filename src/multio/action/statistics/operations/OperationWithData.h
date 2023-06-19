@@ -1,7 +1,7 @@
 
 namespace multio::action {
 
-template <typename T>
+template <typename T, size_t N>
 class OperationWithData : public OperationBase {
 public:
     using OperationBase::cfg_;
@@ -11,26 +11,24 @@ public:
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const MovingWindow& win, const StatisticsConfiguration& cfg) :
         OperationBase{name, operation, win, cfg},
-        values_{std::vector<T>(sz /= sizeof(T), 0.0)},
-        needRestart_{needRestart} {}
+        needRestart_{needRestart},
+        values_{std::vector<std::array<T, N>>{sz /= sizeof(T), std::array<T, N>{0.0}}} {}
 
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const MovingWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
                       const StatisticsConfiguration& cfg) :
         OperationBase{name, operation, win, cfg},
-        values_{std::vector<T>(sz /= sizeof(T), 0.0)},
-        needRestart_{needRestart} {
+        needRestart_{needRestart},
+        values_{std::vector<std::array<T, N>>{sz /= sizeof(T), std::array<T, N>{0.0}}} {
         load(IOmanager, cfg);
         return;
     }
 
-    void updateWindow(const void* data, long sz) {
-        std::transform(values_.begin(), values_.end(), values_.begin(), [](T v) { return static_cast<T>(0.0); });
-        return;
-    };
+    void init(const void* data, long sz) { return; };
 
-    void init(const void* data, long sz) {
-        // TODO: Used to save the first field of the window
+    void updateWindow(const void* data, long sz) {
+        std::transform(values_.cbegin(), values_.cend(), values_.begin(),
+                       [](const std::array<T, N>& v) { return std::array<T, N>{static_cast<T>(0.0)}; });
         return;
     };
 
@@ -38,7 +36,7 @@ public:
 
     void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const {
         if (needRestart_) {
-            IOBuffer restartState{ IOmanager->getBuffer(restartSize())};
+            IOBuffer restartState{IOmanager->getBuffer(restartSize())};
             restartState.zero();
             serialize(restartState);
             IOmanager->write(name_, restartSize());
@@ -59,22 +57,29 @@ public:
 
 protected:
     void serialize(IOBuffer& restartState) const {
-        std::transform(values_.cbegin(), values_.cend(), restartState.begin(), [](const T& v) {
-            T lv = v;
-            double dv = static_cast<double>(lv);
-            return *reinterpret_cast<uint64_t*>(&dv);
-        });
+        size_t cnt = 0;
+        for (size_t i = 0; i < values_.size(); ++i) {
+            for (int j = 0; j < N; j++) {
+                double dv = static_cast<double>(values_[i][j]);
+                restartState[cnt] = *reinterpret_cast<uint64_t*>(&dv);
+                cnt++;
+            }
+        }
         restartState.computeChecksum();
         return;
     };
 
     void deserialize(const IOBuffer& restartState) {
         restartState.checkChecksum();
-        std::transform(restartState.cbegin(), restartState.cend() - 1, values_.begin(), [](const std::uint64_t& v) {
-            std::uint64_t lv = v;
+        size_t cnt = 0;
+        for (size_t i = 0; i < restartState.size() - 1; ++i) {
+            std::uint64_t lv = restartState[i];
             double dv = *reinterpret_cast<double*>(&lv);
-            return static_cast<T>(dv);
-        });
+            size_t i = cnt / N;
+            size_t j = cnt % N;
+            values_[i][j] = static_cast<T>(dv);
+            cnt++;
+        }
         return;
     };
 
@@ -93,11 +98,12 @@ protected:
         return;
     };
 
-    size_t restartSize() const { return values_.size() + 1; }
-    std::vector<T> values_;
+
+    bool needRestart_;
+    std::vector<std::array<T, N>> values_;
 
 private:
-    bool needRestart_;
+    size_t restartSize() const { return N * values_.size() + 1; };
 };
 
 }  // namespace multio::action

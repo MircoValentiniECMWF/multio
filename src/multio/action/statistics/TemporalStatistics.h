@@ -45,7 +45,9 @@ public:
                                 : Operation<Precision>(msg.size(), window_, cfg)} {
         LOG_DEBUG_LIB(::multio::LibMultio)
             << cfg.logPrefix() << " :: " << *this << " :: Create new statistics " << std::endl;
-        stat_.init(msg.payload(), msg.size());
+        if (cfg.solver_send_initial_condition()) {
+            stat_.init(msg.payload(), msg.size());
+        }
         return;
     };
 
