@@ -87,6 +87,9 @@ public:
     std::string stepRange(const eckit::DateTime& refPoint) const;
     std::string stepRangeInHours(const eckit::DateTime& refPoint) const;
 
+    void updateFlush();
+    long lastFlushInSteps() const;
+
     size_t restartSize() const;
 
 private:
@@ -96,6 +99,7 @@ private:
     eckit::DateTime currPoint_;
     eckit::DateTime prevPoint_;
     eckit::DateTime endPoint_;
+    eckit::DateTime lastFlush_;
 
     long timeStepInSeconds_;
     long count_;

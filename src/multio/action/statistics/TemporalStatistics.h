@@ -96,7 +96,8 @@ public:
     }
 
 
-    const MovingWindow& win() const { return window_; };
+    const MovingWindow& cwin() const { return window_; };
+    MovingWindow& win() { return window_; };
 
     void print(std::ostream& os) const {
         os << "TemporalStatistics<" << stat_.operation() << ", " << timeUnit() << ">";

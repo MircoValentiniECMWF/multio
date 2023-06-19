@@ -35,11 +35,12 @@ typename std::enable_if<(I < sizeof...(Ts)), void>::type dumpMultiMap(std::tuple
     // TODO: improve the removing of old files
     for (auto it = std::get<I>(tup).begin(); it != std::get<I>(tup).end(); it++) {
         LOG_DEBUG_LIB(LibMultio) << "Restart for field with key :: " << it->first << ", "
-                                 << it->second->win().currPointInSteps() << std::endl;
-        IOmanager->setCurrStep(it->second->win().currPointInSteps());
-        IOmanager->setPrevStep(it->second->win().prevPointInSteps());
+                                 << it->second->cwin().currPointInSteps() << std::endl;
+        IOmanager->setCurrStep(it->second->cwin().currPointInSteps());
+        IOmanager->setPrevStep(it->second->cwin().lastFlushInSteps());
         IOmanager->setKey(it->first);
         it->second->dump(IOmanager, cfg);
+        it->second->win().updateFlush();
     }
     dumpMultiMap<I + 1>(tup, cfg, IOmanager);
 }
@@ -102,13 +103,12 @@ message::Metadata Statistics<Operation, Updater>::outputMetadata(const MovingWin
 
 
 template <template <typename Precision> typename Operation, typename Updater>
-template <typename T> 
+template <typename T>
 bool Statistics<Operation, Updater>::update(const message::Message& msg, StatisticsConfiguration& cfg) {
 
 
     std::string key = generateKey(msg);
-    precisionMap<T, Operation, Updater>& PrecisionMap
-        = std::get<precisionMap<T, Operation, Updater>>(maps_);
+    precisionMap<T, Operation, Updater>& PrecisionMap = std::get<precisionMap<T, Operation, Updater>>(maps_);
 
     IOmanager_->reset();
     IOmanager_->setCurrStep(cfg.restartStep());
@@ -130,15 +130,13 @@ bool Statistics<Operation, Updater>::update(const message::Message& msg, Statist
 
 template <template <typename Precision> typename Operation, typename Updater>
 template <typename T>
-message::Message Statistics<Operation, Updater>::compute(message::Message&& msg,
-                                                                    StatisticsConfiguration& cfg) {
+message::Message Statistics<Operation, Updater>::compute(message::Message&& msg, StatisticsConfiguration& cfg) {
 
     std::string key = generateKey(msg);
-    precisionMap<T, Operation, Updater>& PrecisionMap
-        = std::get<precisionMap<T, Operation, Updater>>(maps_);
+    precisionMap<T, Operation, Updater>& PrecisionMap = std::get<precisionMap<T, Operation, Updater>>(maps_);
     auto& Ts = PrecisionMap.at(key);
 
-    auto md = outputMetadata(Ts->win(), Ts->timeUnit(), msg.metadata(), cfg, key);
+    auto md = outputMetadata(Ts->cwin(), Ts->timeUnit(), msg.metadata(), cfg, key);
     md.set("operation", Ts->operation(cfg));
     Ts->compute(msg.payload(), cfg);
     Ts->updateWindow(msg, cfg);
