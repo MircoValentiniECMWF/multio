@@ -53,14 +53,14 @@ private:
         const double c2 = icntpp(), c1 = sc(c2);
         std::transform(
             values_.cbegin(), values_.cend(), val, values_.begin(),
-            [c1, c2](const std::array<T, 1>& v1, const T& v2) { return std::array<T, 1>{v1[0] * c1 + v2 * c2}; });
+            [c1, c2](const std::array<T, 1>& v1, const T& v2) { return std::array<T, 1>{static_cast<T>(v1[0] * c1 + v2 * c2)}; });
         return;
     }
     void updateWithMissing(const T* val) {
         const double c2 = icntpp(), c1 = sc(c2), m = cfg_.missingValue();
         std::transform(values_.cbegin(), values_.cend(), val, values_.begin(),
                        [c1, c2, m](const std::array<T, 1>& v1, const T& v2) {
-                           return std::array<T, 1>{m == v2 ? m : v1[0] * c1 + v2 * c2};
+                           return std::array<T, 1>{static_cast<T>(m == v2 ? m : v1[0] * c1 + v2 * c2)};
                        });
         return;
     }
