@@ -26,6 +26,9 @@
 #include "multio/action/statistics/operations/Maximum.h"
 #include "multio/action/statistics/operations/Minimum.h"
 
+#include "multio/action/statistics/operations/Difference.h"
+#include "multio/action/statistics/operations/StdDev.h"
+
 #include "MovingWindow.h"
 #include "PeriodUpdater.h"
 #include "StatisticsConfiguration.h"
@@ -45,7 +48,10 @@ public:
                                 : Operation<Precision>(msg.size(), window_, cfg)} {
         LOG_DEBUG_LIB(::multio::LibMultio)
             << cfg.logPrefix() << " :: " << *this << " :: Create new statistics " << std::endl;
-        if (cfg.solver_send_initial_condition()) {
+        if (!cfg.solver_send_initial_condition() && stat_.needInit()) {
+            throw eckit::SeriousBug{"Operation requires initialization", Here()};
+        }
+        if (cfg.solver_send_initial_condition() && stat_.needInit()) {
             stat_.init(msg.payload(), msg.size());
         }
         return;

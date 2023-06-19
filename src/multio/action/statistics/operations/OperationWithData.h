@@ -24,8 +24,6 @@ public:
         return;
     }
 
-    void init(const void* data, long sz) { return; };
-
     void updateWindow(const void* data, long sz) {
         std::transform(values_.cbegin(), values_.cend(), values_.begin(),
                        [](const std::array<T, N>& v) { return std::array<T, N>{static_cast<T>(0.0)}; });
@@ -71,14 +69,12 @@ protected:
 
     void deserialize(const IOBuffer& restartState) {
         restartState.checkChecksum();
-        size_t cnt = 0;
         for (size_t i = 0; i < restartState.size() - 1; ++i) {
             std::uint64_t lv = restartState[i];
             double dv = *reinterpret_cast<double*>(&lv);
-            size_t i = cnt / N;
-            size_t j = cnt % N;
-            values_[i][j] = static_cast<T>(dv);
-            cnt++;
+            size_t ii = i / N;
+            size_t jj = i % N;
+            values_[ii][jj] = static_cast<T>(dv);
         }
         return;
     };

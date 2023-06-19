@@ -21,6 +21,10 @@ public:
             const StatisticsConfiguration& cfg) :
         OperationWithData<T, 1>{"instant", "instant", sz, true, win, IOmanager, cfg} {};
 
+    void init(const void* data, long sz) { return; };
+
+    bool needInit() const { return false; };
+
     void compute(eckit::Buffer& buf) {
         checkTimeInterval();
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;

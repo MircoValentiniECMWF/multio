@@ -211,4 +211,12 @@ static ActionBuilder<Statistics<Minimum, MonthPeriodUpdater>> MonthlyMinimumBuil
 static ActionBuilder<Statistics<Minimum, DayPeriodUpdater>> DailyMinimumBuilder("daily-minimum");
 static ActionBuilder<Statistics<Minimum, HourPeriodUpdater>> HourlyMinimumBuilder("hourly-minimum");
 
+static ActionBuilder<Statistics<Difference, MonthPeriodUpdater>> MonthlyDifferenceBuilder("monthly-difference");
+static ActionBuilder<Statistics<Difference, DayPeriodUpdater>> DailyDifferenceBuilder("daily-difference");
+static ActionBuilder<Statistics<Difference, HourPeriodUpdater>> HourlyDifferenceBuilder("hourly-difference");
+
+static ActionBuilder<Statistics<StdDev, MonthPeriodUpdater>> MonthlyStdDevBuilder("monthly-stddev");
+static ActionBuilder<Statistics<StdDev, DayPeriodUpdater>> DailyStdDevBuilder("daily-stddev");
+static ActionBuilder<Statistics<StdDev, HourPeriodUpdater>> HourlyStdDevBuilder("hourly-stddev");
+
 }  // namespace multio::action

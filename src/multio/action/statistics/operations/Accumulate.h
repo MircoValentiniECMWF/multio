@@ -20,6 +20,10 @@ public:
     Accumulate(long sz, const MovingWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
                const StatisticsConfiguration& cfg) :
         OperationWithData<T, 1>{"accumulate", "accumulate", sz, true, win, IOmanager, cfg} {};
+    
+    void init(const void* data, long sz)  { return; };
+
+    bool needInit() const { return false; };
 
     void compute(eckit::Buffer& buf) {
         checkTimeInterval();
