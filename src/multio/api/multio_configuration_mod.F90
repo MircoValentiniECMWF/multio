@@ -81,6 +81,7 @@ contains
     function multio_new_configuration_from_filename(cc, file_name) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -165,6 +166,7 @@ contains
     function multio_conf_set_path(cc, path) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -250,8 +252,8 @@ contains
     !>
     !! @brief set the mpi client id
     !!
-    !! @param [in,out] cc       - handle passed object pointer
-    !! @param [in]     clien_id -???
+    !! @param [in,out] cc        - handle passed object pointer
+    !! @param [in]     clien_idt -???
     !!
     !! @return error code 
     !!
@@ -263,6 +265,7 @@ contains
     function multio_conf_mpi_client_id(cc, client_id) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc

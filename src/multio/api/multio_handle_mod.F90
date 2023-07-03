@@ -179,7 +179,7 @@ contains
             implicit none
                 type(c_ptr), value, intent(in) :: handle
                 integer(c_int) :: err
-            end function        
+            end function c_multio_delete_handle        
         end interface
         ! Implementation
         c_err = c_multio_delete_handle(handle%impl)
@@ -223,7 +223,7 @@ contains
             implicit none
                 type(c_ptr), value, intent(in) :: handle
                 integer(c_int) :: err
-            end function
+            end function c_multio_open_connections
         end interface
         ! implementation
         c_err = c_multio_open_connections(handle%impl)
@@ -302,7 +302,7 @@ contains
                 type(c_ptr), value, intent(in) :: handle
                 type(c_ptr), value, intent(in) :: metadata
                 integer(c_int) :: err
-            end function
+            end function c_multio_flush
         end interface
         ! Implementation
         c_err = c_multio_flush(handle%impl, metadata%impl)
@@ -343,7 +343,7 @@ contains
                 type(c_ptr), value, intent(in) :: handle
                 type(c_ptr), value, intent(in) :: metadata
                 integer(c_int) :: err
-            end function
+            end function c_multio_notify
         end interface
         ! Implementation
         c_err = c_multio_notify(handle%impl, metadata%impl)
@@ -391,7 +391,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_domain
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -441,7 +441,7 @@ contains
                 type(c_ptr), value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_mask_float
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -491,7 +491,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_mask_float
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -541,7 +541,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function 
+            end function c_multio_write_mask_double
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -591,7 +591,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_mask_double
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -641,7 +641,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_field_float
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -691,7 +691,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_field_float
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -741,7 +741,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_field_double
         end interface
         ! Implementation
         c_size = int(size(data),c_int)
@@ -791,7 +791,7 @@ contains
                 type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
-            end function
+            end function c_multio_write_field_double
         end interface
         ! Implementation
         c_size = int(size(data),c_int)

@@ -127,6 +127,7 @@ contains
     function multio_metadata_set_int(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -181,6 +182,7 @@ contains
     function multio_metadata_set_long(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -236,6 +238,7 @@ contains
     function multio_metadata_set_longlong(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_metadata),    intent(inout) :: metadata
@@ -292,6 +295,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_float
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -348,6 +352,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_double
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -403,6 +408,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_bool
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -460,6 +466,7 @@ contains
     function multio_metadata_set_string(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -482,7 +489,7 @@ contains
                 type(c_ptr), value, intent(in) :: key
                 type(c_ptr), value, intent(in) :: value
                 integer(c_int) :: err
-            end function
+            end function c_multio_metadata_set_string
         end interface
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
