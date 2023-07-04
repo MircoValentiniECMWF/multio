@@ -6,26 +6,28 @@ module multio_data_mod
 
 implicit none
 
-    ! Default visibility of the module
+    !> Default visibility of the module
     private
 
     !>
     !! @class datatype used to wrap eckit::buffer
     type :: multio_data
 
+        !! Class visibility
         private 
 
         type(c_ptr)          :: impl  = c_null_ptr
-        integer(kind=c_int)  :: byte_size = 0_c_int
+        integer(kind=c_int)  :: byte_size_ = 0_c_int
 
     contains
 
         procedure :: new    => multio_data_new
         procedure :: delete => multio_data_delete
         
-        procedure :: resize => multio_data_resize
-        procedure :: size   => multio_data_size
-        procedure :: zero   => multio_data_zero
+        procedure :: resize    => multio_data_resize
+        procedure :: size      => multio_data_size
+        procedure :: zero      => multio_data_zero
+        procedure :: byte_size => multio_data_byte_size
 
         procedure :: set_float_scalar  => multio_data_set_float_scalar
         procedure :: set_double_scalar => multio_data_set_double_scalar
@@ -35,7 +37,7 @@ implicit none
 
     end type ! multio_data
 
-   ! Public symbols whitelist
+    !> Public symbols whitelist
     public :: multio_data
 
 contains 
@@ -72,7 +74,7 @@ contains
             end function c_multio_data_new
         end interface 
         ! Call the c API
-        data%byte_size = int(byte_size,c_int)
+        data%byte_size_ = int(byte_size,c_int)
         c_err = c_multio_data_new(data%impl)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
@@ -91,7 +93,7 @@ contains
     !! @see multio_data_new
     !!
     function multio_data_delete(data) result(err)
-        use, intrinsic :: iso_c_binding, only: c_err
+        use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_null_ptr
     implicit none
         ! Dummy arguments
@@ -114,7 +116,7 @@ contains
         ! Call the c API
         c_err = c_multio_data_delete(data%impl)
         data%impl = c_null_ptr
-        data%byte_size = 0
+        data%byte_size_ = 0_c_int
         ! Output cast and cleanup
         err = int(c_err,kind(err))
         ! Exit point
@@ -156,7 +158,6 @@ contains
         ! Exit point
         return
     end function multio_data_zero
-
 
 
     !>
@@ -244,6 +245,27 @@ contains
 
 
     !>
+    !! @brief get the byte_size of the datatype used 
+    !!        i.e. 4 -> float, 8 -> double
+    !!
+    !! @param [in] data - handle passed object pointer
+    !!
+    !! @return byte_size of the datatype 
+    !!
+    function multio_data_byte_size(data) result(byte_size)
+    implicit none
+        ! Dummy arguments
+        class(multio_data), intent(in) :: data
+        ! Function Result
+        integer :: byte_size
+        ! Implementation
+        byte_size = int(data%byte_size_,kind(byte_size))
+        ! Exit point
+        return
+    end function multio_data_byte_size
+
+
+    !>
     !! @brief set a float element in a predefined position
     !!
     !! @param [in,out] data  - handle passed object pointer
@@ -255,11 +277,12 @@ contains
     function multio_data_set_float_scalar(data, value, pos) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_float
     implicit none
         ! Dummy arguments
-        class(multio_data),    intent(in) :: data
-        real(kind=sp), target, intent(in) :: value
-        integer(c_int),        intent(in) :: pos
+        class(multio_data),         intent(in) :: data
+        real(kind=c_float), target, intent(in) :: value
+        integer(c_int),             intent(in) :: pos
         ! Function Result
         integer :: err
         ! Local variables
@@ -299,14 +322,15 @@ contains
     !! @return error code 
     !!
     function multio_data_set_float_chunk(data, value, pos, size) result(err)
+        use, intrinsic :: iso_c_binding, only: c_float
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
     implicit none
         ! Dummy arguments
-        class(multio_data),                  intent(in) :: data
-        real(kind=sp), dimension(:), target, intent(in) :: value
-        integer,                             intent(in) :: pos
-        integer,                             intent(in) :: size
+        class(multio_data),                       intent(in) :: data
+        real(kind=c_float), dimension(:), target, intent(in) :: value
+        integer,                                  intent(in) :: pos
+        integer,                                  intent(in) :: size
         ! Function Result
         integer :: err
         ! Local variables
@@ -348,13 +372,14 @@ contains
     !! @return error code 
     !!
     function multio_data_set_double_scalar(data, value, pos) result(err)
+        use, intrinsic :: iso_c_binding, only: c_double
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
     implicit none
         ! Dummy arguments
-        class(multio_data),    intent(in) :: data
-        real(kind=dp), target, intent(in) :: value
-        integer,               intent(in) :: pos
+        class(multio_data),          intent(in) :: data
+        real(kind=c_double), target, intent(in) :: value
+        integer,                     intent(in) :: pos
         ! Function Result
         integer :: err
         ! Local variables
@@ -394,13 +419,15 @@ contains
     !! @return error code 
     !!
     function multio_data_set_double_chunk(data, value, pos, size) result(err)
+        use, intrinsic :: iso_c_binding, only: c_double
         use, intrinsic :: iso_c_binding, only: c_int
+        use, intrinsic :: iso_c_binding, only: c_loc
     implicit none
         ! Dummy arguments
-        class(multio_data),                  intent(in) :: data
-        real(kind=dp), dimension(:), target, intent(in) :: value
-        integer,                             intent(in) :: pos
-        integer,                             intent(in) :: size
+        class(multio_data),                        intent(in) :: data
+        real(kind=c_double), dimension(:), target, intent(in) :: value
+        integer,                                   intent(in) :: pos
+        integer,                                   intent(in) :: size
         ! Function Result
         integer :: err
         ! Local variables

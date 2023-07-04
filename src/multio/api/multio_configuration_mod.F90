@@ -1,5 +1,7 @@
 module multio_configuration_mod
-    use, intrinsic :: iso_C_binding, only: c_ptr
+    use, intrinsic :: iso_c_binding, only: c_int
+    use, intrinsic :: iso_c_binding, only: c_ptr
+    use, intrinsic :: iso_c_binding, only: c_null_ptr
 implicit none
 
     ! Default visibility of the module
@@ -9,6 +11,7 @@ implicit none
     !! @class datatype used to wrap the functionalities of a multio_configuration object
     type :: multio_configuration
         type(c_ptr) :: impl = c_null_ptr
+        integer(c_int), pointer :: failure_id => null()
     contains
         procedure, public, pass :: new_default       => multio_new_configuration
         procedure, public, pass :: new_from_filename => multio_new_configuration_from_filename
@@ -79,6 +82,7 @@ contains
     !! @see multio_delete_configuration
     !!
     function multio_new_configuration_from_filename(cc, file_name) result(err)
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
@@ -164,6 +168,7 @@ contains
     !! @return error code 
     !!
     function multio_conf_set_path(cc, path) result(err)
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
@@ -263,6 +268,7 @@ contains
     !! @see multio_conf_mpi_allow_world_default_comm
     !!
     function multio_conf_mpi_client_id(cc, client_id) result(err)
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char

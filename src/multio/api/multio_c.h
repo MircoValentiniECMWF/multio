@@ -55,6 +55,8 @@ typedef struct multio_metadata_t multio_metadata_t;
 struct multio_handle_t;
 typedef struct multio_handle_t multio_handle_t;
 
+struct multio_data_t;
+typedef struct multio_data_t multio_data_t;
 ///@}
 
 /** \defgroup Initialisation */
@@ -264,6 +266,15 @@ int multio_write_field_float(multio_handle_t* mio, multio_metadata_t* md, const 
 int multio_write_field_double(multio_handle_t* mio, multio_metadata_t* md, const double* data, int size);
 
 
+/** Writes (partial) fields
+ * \param mio Handle to the multio (client) instance
+ * \param md Metadata information about the field
+ * \param d Pointer to the (eckit::Buffer) data containing the (partial) field values
+ * \param byte_size Size of the packed data (i.e.4 for float 8 for double)
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_write_field_buffer(multio_handle_t* mio, multio_metadata_t* md, multio_data_t* d, int byte_size);
+
 /** @} */
 
 
@@ -345,6 +356,76 @@ int multio_metadata_set_float(multio_metadata_t* md, const char* key, float valu
  * \returns Return code (#MultioErrorValues)
  */
 int multio_metadata_set_double(multio_metadata_t* md, const char* key, double value);
+
+
+/** Creates a multio data object
+ * \param md Return a handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_new(multio_data_t** md);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_delete(multio_data_t* md);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_zero(multio_data_t* md);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_resize(multio_data_t* md, int new_size);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_size(multio_data_t* md, int* size);
+
+/** Sets a metadata key-value pair for integer values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Integer value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_float_scalar(multio_data_t* md, float* value, int pos);
+
+
+/** Sets a metadata key-value pair for long values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Long value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_double_scalar(multio_data_t* md, double* value, int pos);
+
+
+/** Sets a metadata key-value pair for integer values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Integer value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_float_chunk(multio_data_t* md, float* value, int pos, int size);
+
+
+/** Sets a metadata key-value pair for long values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Long value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_double_chunk(multio_data_t* md, double* value, int pos, int size);
 
 
 /** Determines if the pipelines are configured to accept the specified data

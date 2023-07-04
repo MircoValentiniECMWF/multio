@@ -1,6 +1,7 @@
 module multio_handle_mod
     use, intrinsic :: iso_c_binding, only: c_ptr
-    use, intrinsic :: iso_c_binding, only: c_int 
+    use, intrinsic :: iso_c_binding, only: c_int
+    use, intrinsic :: iso_c_binding, only: c_null_ptr 
 implicit none
 
     ! Default symbols visibility
@@ -34,26 +35,28 @@ implicit none
         procedure, public,  pass :: write_domain         => multio_write_domain
 
         ! Mask handling
+        procedure, private, pass :: write_field_buffer   => multio_write_field_buffer
         procedure, private, pass :: write_mask_float_1d  => multio_write_mask_float_1d
         procedure, private, pass :: write_mask_double_1d => multio_write_mask_double_1d
         procedure, private, pass :: write_mask_float_2d  => multio_write_mask_float_2d
         procedure, private, pass :: write_mask_double_2d => multio_write_mask_double_2d
-        generic,   public        :: write_mask => write_mask_float_1d,  &
+        generic,   public        :: write_mask => write_field_buffer,   &
+                                               &  write_mask_float_1d,  &
                                                &  write_mask_float_2d,  &
                                                &  write_mask_double_1d, &
                                                &  write_mask_double_2d
 
         ! Field handling
-        procedure, private, pass :: write_field_buffer    => multio_write_field_buffer
+        ! procedure, private, pass :: write_field_buffer    => multio_write_field_buffer
         procedure, private, pass :: write_field_float_1d  => multio_write_field_float_1d
         procedure, private, pass :: write_field_double_1d => multio_write_field_double_1d
         procedure, private, pass :: write_field_float_2d  => multio_write_field_float_2d
         procedure, private, pass :: write_field_double_2d => multio_write_field_double_2d
-        generic,   public        :: write_field => write_field_buffer,    &
-                                                &  write_field_float_1d,  &
+        generic,   public        :: write_field => write_field_float_1d,  &
                                                 &  write_field_float_2d,  &
                                                 &  write_field_double_1d, & 
-                                                &  write_field_double_2d
+                                                &  write_field_double_2d!, &
+                                                !   write_field_buffer
 
         ! Utils
         procedure, public,  pass :: field_accepted => multio_field_accepted
@@ -96,7 +99,6 @@ contains
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
-                implicit none
                 type(c_ptr),        intent(out) :: handle
                 type(c_ptr), value, intent(in)  :: cc
                 integer(c_int) :: err
@@ -134,6 +136,7 @@ contains
         interface
             function c_multio_new_handle_default(handle) result(err) &
                     bind(c, name='multio_new_handle')
+                use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
                 type(c_ptr), intent(out) :: handle
@@ -163,6 +166,7 @@ contains
     !!
     function multio_delete_handle(handle) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_utils_mod, only: failure_info_list
     implicit none
         ! Dummy arguments
         class(multio_handle), intent(inout) :: handle
@@ -194,6 +198,77 @@ contains
         ! Exit point
         return
     end function multio_delete_handle
+
+
+    !>
+    !! @brief set the failure handler to multio
+    !!
+    !! @param [in,out] handle - handler function to be called as failure handler
+    !! @param [in,out] handle - configuration context
+    !!
+    !! @return error code 
+    !!
+    function multio_handle_set_failure_handler( handle, handler, context) result(err)
+        use :: multio_utils_mod, only: int64
+        use :: iso_c_binding, only: c_int
+        use :: iso_c_binding, only: c_null_ptr
+        use :: iso_c_binding, only: c_funloc
+        use :: multio_utils_mod, only: handler
+        use :: multio_utils_mod, only: multio_failure_info
+        use :: multio_utils_mod, only: failure_handler_t
+        use :: multio_utils_mod, only: failure_info_list, failure_handler_wrapper 
+    implicit none
+        ! Dummy arguments
+        class(multio_handle), intent(inout) :: handle
+        integer(int64),       intent(inout) :: context
+        ! Function result
+        integer :: err
+        ! Local variabels
+        integer(kind=c_int) :: c_err
+        type(c_ptr) :: new_id_loc
+        integer(c_int), pointer :: old_id => null()
+        procedure(failure_handler_t), pointer :: handler_fn
+        ! Private interface to the c API
+        interface
+            subroutine handler(ctx, err, info)
+                import :: multio_failure_info
+            implicit none
+                integer, parameter :: int64 = selected_int_kind(15)
+                integer(int64), intent(inout) :: ctx
+                integer, intent(in) :: err
+                class(multio_failure_info), intent(in) :: info
+            end subroutine handler
+            function c_multio_handle_set_failure_handler(mio, handler, context) result(err) &
+                bind(c, name='multio_handle_set_failure_handler')
+                use, intrinsic :: iso_c_binding, only: c_ptr
+                use, intrinsic :: iso_c_binding, only: c_funptr
+                use, intrinsic :: iso_c_binding, only: c_int
+            implicit none
+                type(c_ptr),    value, intent(in) :: mio
+                type(c_funptr), value, intent(in) :: handler
+                type(c_ptr),    value, intent(in) :: context
+                integer(c_int) :: err
+            end function c_multio_handle_set_failure_handler
+        end interface
+        ! Implementation
+        handler_fn => handler
+
+        if(associated(handle%failure_id)) then
+            old_id => handle%failure_id
+        end if
+
+        new_id_loc = failure_info_list%add(handler_fn, context)
+        call c_f_pointer(new_id_loc, handle%failure_id)
+        c_err = c_multio_handle_set_failure_handler(handle%impl, c_funloc(failure_handler_wrapper), new_id_loc)
+
+        if(associated(old_id)) then
+            call failure_info_list%remove(old_id)
+        end if
+        ! Setting return value
+        err = int(c_err,kind(err))
+        ! Exit point        
+        return
+    end function multio_handle_set_failure_handler
 
 
     !>
@@ -284,6 +359,7 @@ contains
     !!
     function multio_flush(handle, metadata) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
         class(multio_handle),   intent(inout) :: handle
@@ -325,6 +401,7 @@ contains
     !!
     function multio_notify(handle, metadata) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
         class(multio_handle),   intent(inout) :: handle
@@ -369,6 +446,7 @@ contains
     function multio_write_domain(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
         class(multio_handle),           intent(inout) :: handle
@@ -419,11 +497,13 @@ contains
     function multio_write_mask_float_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                intent(inout) :: handle
-        class(multio_metadata),              intent(in)    :: metadata
-        real(kind=sp), dimension(:), target, intent(in)    :: data
+        class(multio_handle),                     intent(inout) :: handle
+        class(multio_metadata),                   intent(in)    :: metadata
+        real(kind=c_float), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -469,11 +549,13 @@ contains
     function multio_write_mask_float_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                  intent(inout) :: handle
-        class(multio_metadata),                intent(in)    :: metadata
-        real(kind=sp), dimension(:,:), target, intent(in)    :: data
+        class(multio_handle),                       intent(inout) :: handle
+        class(multio_metadata),                     intent(in)    :: metadata
+        real(kind=c_float), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -519,11 +601,13 @@ contains
     function multio_write_mask_double_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                intent(inout) :: handle
-        class(multio_metadata),              intent(in)    :: metadata
-        real(kind=dp), dimension(:), target, intent(in)    :: data
+        class(multio_handle),                      intent(inout) :: handle
+        class(multio_metadata),                    intent(in)    :: metadata
+        real(kind=c_double), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -569,11 +653,13 @@ contains
     function multio_write_mask_double_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                  intent(inout) :: handle
-        class(multio_metadata),                intent(in)    :: metadata
-        real(kind=dp), dimension(:,:), target, intent(in)    :: data
+        class(multio_handle),                        intent(inout) :: handle
+        class(multio_metadata),                      intent(in)    :: metadata
+        real(kind=c_double), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -615,15 +701,18 @@ contains
     !! @see multio_write_field_float_2d
     !! @see multio_write_field_double_1d
     !! @see multio_write_field_double_2d
+    !! @see multio_write_field_buffer
     !!
     function multio_write_field_float_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                intent(inout) :: handle
-        class(multio_metadata),              intent(in)    :: metadata
-        real(kind=sp), dimension(:), target, intent(in)    :: data
+        class(multio_handle),                     intent(inout) :: handle
+        class(multio_metadata),                   intent(in)    :: metadata
+        real(kind=c_float), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -665,15 +754,18 @@ contains
     !! @see multio_write_field_float_1d
     !! @see multio_write_field_double_1d
     !! @see multio_write_field_double_2d
+    !! @see multio_write_field_buffer
     !!
     function multio_write_field_float_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                  intent(inout) :: handle
-        class(multio_metadata),                intent(in)    :: metadata
-        real(kind=sp), dimension(:,:), target, intent(in)    :: data
+        class(multio_handle),                       intent(inout) :: handle
+        class(multio_metadata),                     intent(in)    :: metadata
+        real(kind=c_float), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -715,15 +807,18 @@ contains
     !! @see multio_write_field_float_1d
     !! @see multio_write_field_float_2d
     !! @see multio_write_field_double_2d
+    !! @see multio_write_field_buffer
     !!
     function multio_write_field_double_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                intent(inout) :: handle
-        class(multio_metadata),              intent(in)    :: metadata
-        real(kind=dp), dimension(:), target, intent(in)    :: data
+        class(multio_handle),                      intent(inout) :: handle
+        class(multio_metadata),                    intent(in)    :: metadata
+        real(kind=c_double), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -765,15 +860,18 @@ contains
     !! @see multio_write_field_float_1d
     !! @see multio_write_field_float_2d
     !! @see multio_write_field_double_1d
+    !! @see multio_write_field_buffer
     !!
     function multio_write_field_double_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
-        class(multio_handle),                  intent(inout) :: handle
-        class(multio_metadata),                intent(in)    :: metadata
-        real(kind=dp), dimension(:,:), target, intent(in)    :: data
+        class(multio_handle),                        intent(inout) :: handle
+        class(multio_metadata),                      intent(in)    :: metadata
+        real(kind=c_double), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
         ! Local variables
@@ -801,5 +899,107 @@ contains
         ! Exit point
         return
     end function multio_write_field_double_2d
+
+
+    !>
+    !! @brief send a bufferend field (data are already packed in a eckit::buffer)
+    !!
+    !! @param [in,out] handle   - handle passed object pointer
+    !! @param [in]     metadata - metadta to be sent with the field
+    !! @param [in]     data     - field data
+    !!
+    !! @return error code 
+    !!
+    !! @see multio_write_field_float_1d
+    !! @see multio_write_field_float_2d
+    !! @see multio_write_field_double_1d
+    !! @see multio_write_field_double_1d
+    !!
+    function multio_write_field_buffer(handle, metadata, data) result(err)
+        use :: multio_metadata_mod, only: multio_metadata
+        use :: multio_data_mod,     only: multio_data
+        use, intrinsic :: iso_c_binding, only: c_int
+        use, intrinsic :: iso_c_binding, only: c_loc
+    implicit none
+        ! Dummy arguments
+        class(multio_handle),       intent(inout) :: handle
+        class(multio_metadata),     intent(in)    :: metadata
+        class(multio_data), target, intent(in)    :: data
+        ! Function rsult
+        integer :: err
+        ! Local variables
+        integer(kind=c_int) c_err
+        integer(kind=c_int) c_byte_size
+        ! Private interface
+        interface
+            function c_multio_write_field_buffer(handle, metadata, data, byte_size) result(err) &
+                bind(c, name='multio_write_field_buffer')
+                use, intrinsic :: iso_c_binding, only: c_ptr
+                use, intrinsic :: iso_c_binding, only: c_int
+            implicit none
+                type(c_ptr),         value, intent(in) :: handle
+                type(c_ptr),         value, intent(in) :: metadata
+                type(c_ptr),         value, intent(in) :: data
+                integer(kind=c_int), value, intent(in) :: byte_size
+                integer(c_int) :: err
+            end function c_multio_write_field_buffer
+        end interface
+        ! Implementation
+        c_byte_size = int(data%byte_size(),c_int)
+        c_err = c_multio_write_field_buffer(handle%impl, metadata%impl, c_loc(data), c_byte_size)
+        ! Setting return value
+        err = int(c_err,kind(err))
+        ! Exit point
+        return
+    end function multio_write_field_buffer
+
+
+    !>
+    !! @brief set field accepted flag
+    !!
+    !! @param [in,out] handle    - handle passed object pointer
+    !! @param [in]     metadata  - metadta to be sent with the field
+    !! @param [in]     set_value - flag 
+    !!
+    !! @return error code 
+    !!
+    !!
+    function multio_field_accepted(handle, metadata, set_value) result(err)
+        use, intrinsic :: iso_c_binding, only: c_int
+        use, intrinsic :: iso_c_binding, only: c_bool
+        use :: multio_metadata_mod, only: multio_metadata
+    implicit none
+        ! Dummy arguments
+        class(multio_handle),   intent(inout) :: handle
+        class(multio_metadata), intent(in)    :: metadata
+        logical,                intent(out)   :: set_value
+        ! Function result
+        integer :: err
+        ! Local variables
+        character(:), allocatable, target :: nullified_field
+        integer(kind=c_int) :: c_err
+        logical(kind=c_bool) :: c_set_value
+        ! Private interface to the c API
+        interface
+            function c_multio_field_accepted(handle, metadata, set_value) result(err) &
+                bind(c, name='multio_field_accepted')
+                use, intrinsic :: iso_c_binding, only: c_ptr
+                use, intrinsic :: iso_c_binding, only: c_bool
+                use, intrinsic :: iso_c_binding, only: c_int
+            implicit none
+                type(c_ptr), intent(in), value :: handle
+                type(c_ptr), intent(in), value :: metadata
+                logical(c_bool), intent(out) :: set_value
+                integer(c_int) :: err
+            end function c_multio_field_accepted
+        end interface
+        ! Implementation
+        c_set_value = logical(set_value,c_bool)
+        c_err = c_multio_field_accepted(handle%impl, metadata%impl, c_set_value)
+        ! Setting return value
+        err = int(c_err,kind(err))
+        ! Exit point
+        return
+    end function multio_field_accepted
 
 end module multio_handle_mod

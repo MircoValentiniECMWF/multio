@@ -1,5 +1,6 @@
 module multio_metadata_mod
-    use, intrinsic :: iso_C_binding, only: c_ptr
+    use, intrinsic :: iso_c_binding, only: c_ptr
+    use, intrinsic :: iso_c_binding, only: c_null_ptr
 implicit none
 
     ! Default visibility of the module
@@ -125,6 +126,7 @@ contains
     !! @see multio_metadata_set_string
     !!
     function multio_metadata_set_int(metadata, key, value) result(err)
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
@@ -181,7 +183,9 @@ contains
     !!
     function multio_metadata_set_long(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use, intrinsic :: iso_c_binding, only: c_long
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
@@ -237,7 +241,9 @@ contains
     !!
     function multio_metadata_set_longlong(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use, intrinsic :: iso_c_binding, only: c_long_long
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
@@ -295,6 +301,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_float
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
@@ -352,6 +359,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_double
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
@@ -369,6 +377,7 @@ contains
                     bind(c, name='multio_metadata_set_double')
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
+                use, intrinsic :: iso_c_binding, only: c_double
             implicit none
                 type(c_ptr),    value, intent(in) :: metadata
                 type(c_ptr),    value, intent(in) :: key
@@ -408,6 +417,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_bool
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
@@ -435,7 +445,7 @@ contains
             end function c_multio_metadata_set_bool
         end interface
         ! Initialization and allocation
-        c_value = logical(value,c_value)
+        c_value = logical(value,kind(value))
         nullified_key = trim(key) // c_null_char
         ! Call the c API
         c_err = c_multio_metadata_set_bool(metadata%impl, c_loc(nullified_key), value)
@@ -466,6 +476,7 @@ contains
     function multio_metadata_set_string(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
+        use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
     implicit none
         ! Dummy arguments
@@ -505,4 +516,4 @@ contains
     end function multio_metadata_set_string
 
 
-module multio_metadata_mod
+end module multio_metadata_mod

@@ -1,6 +1,8 @@
 module multio_config
 
-    character(*), parameter :: multio_version_str = "@multio_VERSION_STR@"
-    character(*), parameter :: multio_git_sha1_str = "@multio_GIT_SHA1@"
+implicit none 
 
-end module
+    character(len=*), parameter :: multio_version_str = "@multio_VERSION_STR@"
+    character(len=*), parameter :: multio_git_sha1_str = "@multio_GIT_SHA1@"
+
+end module multio_config

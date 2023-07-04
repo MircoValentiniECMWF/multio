@@ -107,7 +107,8 @@ int wrapApiFunction(FN f) {
         MultioErrorValues error = getNestedErrorValue(e);
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, error);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << oss.str() << std::endl;
             std::cout << oss.str() << std::endl;
@@ -120,7 +121,8 @@ int wrapApiFunction(FN f) {
         g_current_error_str = oss.str();
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, MULTIO_ERROR_ECKIT_EXCEPTION);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << oss.str() << std::endl;
             std::cout << oss.str() << std::endl;
@@ -133,7 +135,8 @@ int wrapApiFunction(FN f) {
         g_current_error_str = oss.str();
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, MULTIO_ERROR_GENERAL_EXCEPTION);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << oss.str() << std::endl;
             std::cout << oss.str() << std::endl;
@@ -144,7 +147,8 @@ int wrapApiFunction(FN f) {
         g_current_error_str = "Caugth unkown exception on C-C++ API boundary";
         if (g_failure_handler) {
             g_failure_handler(g_failure_handler_context, MULTIO_ERROR_UNKNOWN_EXCEPTION);
-        } else {
+        }
+        else {
             // Print to cerr and cout to make sure the user knows his problem
             std::cerr << g_current_error_str << std::endl;
             std::cout << g_current_error_str << std::endl;
@@ -171,6 +175,9 @@ struct multio_handle_t : public multio::server::MultioClient {
 struct multio_metadata_t : public multio::message::Metadata {
     using multio::message::Metadata::Metadata;
 };
+
+struct multio_data_t : public eckit::Buffer {};
+
 
 int multio_initialise() {
     return wrapApiFunction([] {
@@ -413,6 +420,28 @@ int multio_write_field_double(multio_handle_t* mio, multio_metadata_t* md, const
     });
 }
 
+int multio_write_field_buffer(multio_handle_t* mio, multio_metadata_t* md, multio_data_t* d, int byte_size) {
+    return wrapApiFunction([mio, md, d, byte_size]() {
+        ASSERT(mio);
+        ASSERT(md);
+        ASSERT(d);
+        if (byte_size == 4) {
+            md->set("precision", "single");
+        }
+        else if (byte_size == 8) {
+            md->set("precision", "double");
+        }
+        else {
+            ASSERT(false);
+        }
+
+        eckit::Buffer* tmp = reinterpret_cast<eckit::Buffer*>(d);
+
+        mio->dispatch(*md, std::move(*tmp), Message::Tag::Field);
+    });
+}
+
+
 int multio_new_metadata(multio_metadata_t** md) {
     return wrapApiFunction([md]() { (*md) = new multio_metadata_t{}; });
 }
@@ -491,6 +520,92 @@ int multio_metadata_set_double(multio_metadata_t* md, const char* key, double va
         md->set(key, static_cast<double>(value));
     });
 }
+
+
+int multio_data_new(multio_data_t** d) {
+    return wrapApiFunction([d]() {
+        (*d) = new multio_data_t();
+        return 0;
+    });
+};
+
+int multio_data_delete(multio_data_t* d) {
+    return wrapApiFunction([d]() {
+        ASSERT(d);
+        delete d;
+        return 0;
+    });
+}
+
+int multio_data_zero(multio_data_t* d) {
+    return wrapApiFunction([d]() {
+        d->zero();
+        return 0;
+    });
+}
+
+int multio_data_resize(multio_data_t* d, int new_size) {
+    return wrapApiFunction([d, new_size]() {
+        d->resize(new_size);
+        return 0;
+    });
+}
+
+int multio_data_size(multio_data_t* d, int* size) {
+    return wrapApiFunction([d, size]() {
+        *size = d->size();
+        return 0;
+    });
+}
+
+int multio_data_set_float_scalar(multio_data_t* d, float* value, int pos) {
+    return wrapApiFunction([d, value, pos]() {
+        ASSERT(value);
+        ASSERT(pos >= 0);
+        ASSERT(pos * sizeof(float) < d->size());
+        float* val = static_cast<float*>(d->data());
+        val[pos] = *value;
+        return 0;
+    });
+}
+
+int multio_data_set_double_scalar(multio_data_t* d, double* value, int pos) {
+    return wrapApiFunction([d, value, pos]() {
+        ASSERT(value);
+        ASSERT(pos >= 0);
+        ASSERT(pos * sizeof(double) < d->size());
+        double* val = static_cast<double*>(d->data());
+        val[pos] = *value;
+        return 0;
+    });
+}
+
+int multio_data_set_float_chunk(multio_data_t* d, float* value, int pos, int size) {
+    return wrapApiFunction([d, value, pos, size]() {
+        ASSERT(value);
+        ASSERT(pos >= 0);
+        ASSERT(pos * sizeof(float) < d->size());
+        float* val = static_cast<float*>(d->data());
+        for (int i = pos; i < pos + size; ++i) {
+            val[i] = value[i - pos];
+        }
+        return 0;
+    });
+}
+
+int multio_data_set_double_chunk(multio_data_t* d, double* value, int pos, int size) {
+    return wrapApiFunction([d, value, pos, size]() {
+        ASSERT(value);
+        ASSERT(pos >= 0);
+        ASSERT(pos * sizeof(double) < d->size());
+        double* val = static_cast<double*>(d->data());
+        for (int i = pos; i < pos + size; ++i) {
+            val[i] = value[i - pos];
+        }
+        return 0;
+    });
+}
+
 
 int multio_field_accepted(multio_handle_t* mio, const multio_metadata_t* md, bool* accepted) {
     return wrapApiFunction([mio, md, accepted]() {

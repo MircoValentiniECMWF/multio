@@ -35,11 +35,22 @@ list( APPEND multio_action_plugins
     multio-action-transport
 )
 
+
 if( HAVE_MIR )
     list( APPEND multio_action_plugins
         multio-action-interpolate
     )
 endif()
+
+
+list( APPEND multio_fapi_srcs
+multio_configuration_mod.F90
+multio_handle_mod.F90
+multio_data_mod.F90
+multio_metadata_mod.F90
+multio_utils_mod.F90
+multio_new_api.F90
+)
 
 
 ecbuild_add_library(
@@ -78,6 +89,24 @@ ecbuild_add_library(
         multio-api
 )
 
+
+
+ecbuild_add_library(
+
+    TARGET multio-new-fapi
+
+    CONDITION HAVE_FORTRAN
+
+    SOURCES
+        ${multio_fapi_srcs}
+        ${CMAKE_CURRENT_BINARY_DIR}/multio_config.f90
+
+    PUBLIC_INCLUDES
+        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/module>
+
+    PUBLIC_LIBS
+        multio-api
+)
 
 ecbuild_add_library(
 
