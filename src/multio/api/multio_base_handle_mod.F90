@@ -203,7 +203,7 @@ contains
         use :: iso_c_binding, only: c_null_ptr
         use :: iso_c_binding, only: c_funloc
         use :: iso_c_binding, only: c_f_pointer
-        use :: multio_error_handling_mod, only: handler
+        ! use :: multio_error_handling_mod, only: handler
         use :: multio_error_handling_mod, only: multio_failure_info
         use :: multio_error_handling_mod, only: failure_handler_t
         use :: multio_error_handling_mod, only: failure_info_list
