@@ -198,37 +198,27 @@ contains
     !! @return error code
     !!
     function multio_base_handle_set_failure_handler( handle, handler, context) result(err)
-        use :: multio_constants_mod, only: int64
-        use :: iso_c_binding, only: c_int
-        use :: iso_c_binding, only: c_null_ptr
-        use :: iso_c_binding, only: c_funloc
-        use :: iso_c_binding, only: c_f_pointer
-        ! use :: multio_error_handling_mod, only: handler
-        use :: multio_error_handling_mod, only: multio_failure_info
+        use, intrinsic :: iso_fortran_env, only: int64
+        use, intrinsic :: iso_c_binding, only: c_int
+        use, intrinsic :: iso_c_binding, only: c_null_ptr
+        use, intrinsic :: iso_c_binding, only: c_funloc
+        use, intrinsic :: iso_c_binding, only: c_f_pointer
         use :: multio_error_handling_mod, only: failure_handler_t
         use :: multio_error_handling_mod, only: failure_info_list
         use :: multio_error_handling_mod, only: failure_handler_wrapper
     implicit none
         ! Dummy arguments
-        class(multio_base_handle), intent(inout) :: handle
-        integer(int64),            intent(inout) :: context
+        class(multio_base_handle),             intent(inout) :: handle
+        procedure(failure_handler_t), pointer, intent(in)    :: handler
+        integer(int64),                        intent(inout) :: context
         ! Function result
         integer :: err
         ! Local variabels
         integer(kind=c_int) :: c_err
         type(c_ptr) :: new_id_loc
-        integer(c_int), pointer :: old_id => null()
-        procedure(failure_handler_t), pointer :: handler_fn
+        integer(c_int), pointer :: old_id
         ! Private interface to the c API
         interface
-            subroutine handler(ctx, err, info)
-                import :: multio_failure_info
-            implicit none
-                integer, parameter :: int64 = selected_int_kind(15)
-                integer(int64), intent(inout) :: ctx
-                integer, intent(in) :: err
-                class(multio_failure_info), intent(in) :: info
-            end subroutine handler
             function c_multio_handle_set_failure_handler(mio, handler, context) result(err) &
                 bind(c, name='multio_handle_set_failure_handler')
                 use, intrinsic :: iso_c_binding, only: c_ptr
@@ -241,14 +231,15 @@ contains
                 integer(c_int) :: err
             end function c_multio_handle_set_failure_handler
         end interface
-        ! Implementation
-        handler_fn => handler
+        ! Initialization
+        new_id_loc = c_null_ptr
+        old_id => null()
         ! Search for old error handlers
         if(associated(handle%failure_id)) then
             old_id => handle%failure_id
         endif
         ! Append the new error handler
-        new_id_loc = failure_info_list%add(handler_fn, context)
+        new_id_loc = failure_info_list%add(handler, context)
         call c_f_pointer(new_id_loc, handle%failure_id)
         c_err = c_multio_handle_set_failure_handler(handle%c_ptr(), c_funloc(failure_handler_wrapper), new_id_loc)
         ! Revo the old error handler if exists

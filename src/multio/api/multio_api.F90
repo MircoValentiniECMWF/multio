@@ -49,6 +49,6 @@ implicit none
     public :: multio_error_string
 
     ! Public error handling
-    public :: multio_failure_info 
+    public :: multio_failure_info
 
 end module multio_api

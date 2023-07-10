@@ -2,7 +2,7 @@ module multio_error_handling_mod
     use, intrinsic :: iso_c_binding, only: c_int
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_null_ptr
-   use, intrinsic :: iso_fortran_env, only: int64
+    use, intrinsic :: iso_fortran_env, only: int64
 implicit none
 
     ! Default visibility
@@ -57,26 +57,12 @@ implicit none
     type(multio_fort_failure_info_list), save :: failure_info_list
 
 
-    !> Failure handler
-    ! integer(int64), save :: failure_handler_context
-    ! procedure(failure_handler_t), pointer, save :: failure_handler_fn
-
-
     ! Whitelist of public symbols
-    public :: multio_failure_info
-    public :: multio_fort_failure_info_node
-    public :: multio_fort_failure_info_list
-
     public :: failure_info_list
 
     public :: failure_handler_t
-    ! public :: failure_handler_context
-    ! public :: failure_handler_fn
-
-    public :: multio_fort_failure_call
-    public :: multio_fort_failure_add
+    public :: multio_failure_info
     public :: failure_handler_wrapper
-    public :: multio_fort_failure_remove
 
 contains
 
@@ -127,7 +113,7 @@ contains
     function multio_fort_failure_add(ffi, handler_fn, context) result(new_id_loc)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_ptr
-    use :: multio_constants_mod, only: int64
+        use, intrinsic :: iso_fortran_env, only: int64
     implicit none
         ! Dummy arguments
         class(multio_fort_failure_info_list),  intent(inout) :: ffi
@@ -220,7 +206,7 @@ contains
     !! @return error code
     !!
     subroutine failure_handler_wrapper(context_id, c_error, info) &
-                bind(c)
+                bind(c, name='failure_handler_wrapper')
         use, intrinsic :: iso_c_binding, only: c_ptr
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_f_pointer

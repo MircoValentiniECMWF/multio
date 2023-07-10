@@ -102,7 +102,7 @@ contains
     !! @param [in,out] handle   - handle passed object pointer
     !! @param [in]     metadata - metadta to be sent with the notification
     !!
-    !! @return error code 
+    !! @return error code
     !!
     !! @see multio_handle_flush
     !!

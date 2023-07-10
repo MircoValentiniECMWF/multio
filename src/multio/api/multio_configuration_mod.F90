@@ -1,5 +1,3 @@
-#include "multio_debug_fapi.h"
-
 module multio_configuration_mod
     use, intrinsic :: iso_c_binding, only: c_int
     use, intrinsic :: iso_c_binding, only: c_ptr
@@ -21,7 +19,6 @@ implicit none
         generic,   public       :: new => new_default, new_from_filename
 
         procedure, public, pass :: delete                       => multio_delete_configuration
-        ! procedure, public, pass :: mpi_client_id                => multio_conf_mpi_client_id
         procedure, public, pass :: set_failure_handler          => multio_conf_set_failure_handler
 
         procedure, public, pass :: set_path                     => multio_conf_set_path
@@ -193,19 +190,18 @@ contains
     !! @return error code
     !!
     function multio_conf_set_failure_handler( cc, handler, context) result(err)
-        use :: multio_constants_mod, only: int64
-        use :: iso_c_binding, only: c_int
-        use :: iso_c_binding, only: c_null_ptr
-        use :: iso_c_binding, only: c_funloc
-        use :: iso_c_binding, only: c_f_pointer
-        use :: multio_error_handling_mod, only: multio_failure_info
+        use, intrinsic :: iso_fortran_env, only: int64
+        use, intrinsic :: iso_c_binding, only: c_int
+        use, intrinsic :: iso_c_binding, only: c_null_ptr
+        use, intrinsic :: iso_c_binding, only: c_funloc
+        use, intrinsic :: iso_c_binding, only: c_f_pointer
         use :: multio_error_handling_mod, only: failure_handler_t
         use :: multio_error_handling_mod, only: failure_info_list
         use :: multio_error_handling_mod, only: failure_handler_wrapper
     implicit none
         ! Dummy arguments
         class(multio_configuration),           intent(inout) :: cc
-        !procedure(failure_handler_t), pointer, intent(in)    :: handler
+        procedure(failure_handler_t), pointer, intent(in)    :: handler
         integer(int64),                        intent(inout) :: context
         ! Function result
         integer :: err
@@ -213,17 +209,8 @@ contains
         integer(kind=c_int) :: c_err
         type(c_ptr) :: new_id_loc
         integer(c_int), pointer :: old_id => null()
-        procedure(failure_handler_t), pointer :: handler_fn
         ! Private interface to the c API
         interface
-            subroutine handler(ctx, err, info)
-                import :: multio_failure_info
-            implicit none
-                integer, parameter :: int64 = selected_int_kind(15)
-                integer(int64), intent(inout) :: ctx
-                integer, intent(in) :: err
-                class(multio_failure_info), intent(in) :: info
-            end subroutine handler
             function c_multio_config_set_failure_handler(mio, handler, context) result(err) &
                 bind(c, name='multio_config_set_failure_handler')
                 use, intrinsic :: iso_c_binding, only: c_ptr
@@ -236,15 +223,15 @@ contains
                 integer(c_int) :: err
             end function c_multio_config_set_failure_handler
         end interface
-        ! Implementation
-        handler_fn => handler
+        ! Initialization
+        new_id_loc = c_null_ptr
+        old_id => null()
         ! Search for old error handlers
         if(associated(cc%failure_id)) then
             old_id => cc%failure_id
         endif
         ! Append the new error handler
-        new_id_loc = failure_info_list%add(handler_fn, context)
-        ! new_id_loc = failure_info_list%add(handler, context)
+        new_id_loc = failure_info_list%add(handler, context)
         call c_f_pointer(new_id_loc, cc%failure_id)
         c_err = c_multio_config_set_failure_handler(cc%c_ptr(), c_funloc(failure_handler_wrapper), new_id_loc)
         ! Revo the old error handler if exists
@@ -351,57 +338,6 @@ contains
         ! Exit point
         return
     end function multio_conf_mpi_allow_world_default_comm
-
-
-    !>
-    !! @brief set the mpi client id
-    !!
-    !! @param [in,out] cc        - handle passed object pointer
-    !! @param [in]     clien_idt -???
-    !!
-    !! @return error code
-    !!
-    !! @see multio_conf_mpi_return_server_comm
-    !! @see multio_conf_mpi_return_client_comm
-    !! @see multio_conf_mpi_parent_comm
-    !! @see multio_conf_mpi_allow_world_default_comm
-    !!
-    !! function multio_conf_mpi_client_id(cc, client_id) result(err)
-    !!     use, intrinsic :: iso_c_binding, only: c_loc
-    !!     use, intrinsic :: iso_c_binding, only: c_int
-    !!     use, intrinsic :: iso_c_binding, only: c_char
-    !!     use, intrinsic :: iso_c_binding, only: c_null_char
-    !! implicit none
-    !!     ! Dummy arguments
-    !!     class(multio_configuration), intent(inout) :: cc
-    !!     character(len=*),            intent(in)    :: client_id
-    !!     ! Function Result
-    !!     integer :: err
-    !!     ! Local variables
-    !!     integer(kind=c_int) :: c_err
-    !!     character(:,kind=c_char), allocatable, target :: nullified_client_id
-    !!     ! Private interface to the c API
-    !!     interface
-    !!         function c_multio_conf_mpi_client_id(cc, client_id) result(err) &
-    !!             bind(c, name='multio_conf_mpi_client_id')
-    !!             use, intrinsic :: iso_c_binding, only: c_ptr
-    !!             use, intrinsic :: iso_c_binding, only: c_int
-    !!         implicit none
-    !!             type(c_ptr), value, intent(in) :: cc
-    !!             type(c_ptr), value, intent(in) :: client_id
-    !!             integer(c_int) :: err
-    !!         end function c_multio_conf_mpi_client_id
-    !!     end interface
-    !!     ! Initialization and allocation
-    !!     nullified_client_id = trim(client_id) // c_null_char
-    !!     ! Call the c API
-    !!     c_err = c_multio_conf_mpi_client_id(cc%impl, c_loc(nullified_client_id))
-    !!     ! Output cast and cleanup
-    !!     if (allocated(nullified_client_id)) deallocate(nullified_client_id)
-    !!     err = int(c_err,kind(err))
-    !!     ! Exit point
-    !!     return
-    !! end function multio_conf_mpi_client_id
 
 
     !>

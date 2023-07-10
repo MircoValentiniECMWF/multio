@@ -70,7 +70,7 @@ list( APPEND multio_fapi_srcs
     multio_data_mod.F90
     multio_metadata_mod.F90
     multio_utils_mod.F90
-    multio_new_api.F90
+    multio_api.F90
 )
 
 ecbuild_add_library(
@@ -90,36 +90,3 @@ ecbuild_add_library(
     PUBLIC_LIBS
         multio-api
 )
-
-#ecbuild_add_library(
-#
-#    TARGET multio-fapi
-#
-#    CONDITION HAVE_FORTRAN
-#
-#    SOURCES
-#        multio_api.f90
-#        ${CMAKE_CURRENT_BINARY_DIR}/multio_config.f90
-#
-#    PUBLIC_INCLUDES
-#        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/module>
-#
-#    PUBLIC_LIBS
-#        multio-api
-#)
-
-
-#ecbuild_add_library(
-#
-#    TARGET multio-dummy-fapi
-#
-#    CONDITION HAVE_FORTRAN
-#
-#    SOURCES
-#        multio_dummy_api.f90
-#
-#    PUBLIC_INCLUDES
-#        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/module>
-#
-#    PUBLIC_LIBS
-#)
