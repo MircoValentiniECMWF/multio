@@ -76,11 +76,14 @@ struct multio_handle_t : public multio::server::MultioClient {
     std::unique_ptr<multio_failure_context_t> failureContext;
 };
 
+struct multio_data_t : public eckit::Buffer {
+    multio_handle_t* mio;
+};
+
 struct multio_metadata_t : public multio::message::Metadata {
     using multio::message::Metadata::Metadata;
     multio_handle_t* mio;
 };
-
 
 }  // extern "C"
 
@@ -225,6 +228,10 @@ int wrapApiFunction(FN&& f, multio_metadata_t* md) {
     return wrapApiFunction(std::forward<FN>(f), (md && md->mio) ? md->mio->failureContext.get() : nullptr);
 }
 
+template <typename FN>
+int wrapApiFunction(FN&& f, multio_data_t* d) {
+    return wrapApiFunction(std::forward<FN>(f), (d && d->mio) ? d->mio->failureContext.get() : nullptr);
+}
 
 }  // namespace
 
@@ -520,6 +527,29 @@ int multio_write_field_double(multio_handle_t* mio, multio_metadata_t* md, const
         mio);
 }
 
+int multio_write_field_buffer(multio_handle_t* mio, multio_metadata_t* md, multio_data_t* d, int byte_size) {
+    return wrapApiFunction(
+        [mio, md, d, byte_size]() {
+            ASSERT(mio);
+            ASSERT(md);
+            ASSERT(d);
+            if (byte_size == 4) {
+                md->set("precision", "single");
+            }
+            else if (byte_size == 8) {
+                md->set("precision", "double");
+            }
+            else {
+                ASSERT(false);
+            }
+
+            eckit::Buffer* tmp = reinterpret_cast<eckit::Buffer*>(d);
+
+            mio->dispatch(*md, std::move(*tmp), Message::Tag::Field);
+        },
+        mio);
+}
+
 int multio_new_metadata(multio_metadata_t** md, multio_handle_t* mio) {
     return wrapApiFunction([md]() { (*md) = new multio_metadata_t{}; }, mio);
 }
@@ -614,6 +644,110 @@ int multio_metadata_set_double(multio_metadata_t* md, const char* key, double va
         },
         md);
 }
+
+
+int multio_data_new(multio_data_t** d, multio_handle_t* mio) {
+    return wrapApiFunction(
+        [d]() {
+            (*d) = new multio_data_t();
+            return 0;
+        },
+        mio);
+};
+
+int multio_data_delete(multio_data_t* d) {
+    return wrapApiFunction(
+        [d]() {
+            ASSERT(d);
+            delete d;
+            return 0;
+        },
+        d);
+}
+
+int multio_data_zero(multio_data_t* d) {
+    return wrapApiFunction(
+        [d]() {
+            d->zero();
+            return 0;
+        },
+        d);
+}
+
+int multio_data_resize(multio_data_t* d, int new_size) {
+    return wrapApiFunction(
+        [d, new_size]() {
+            d->resize(new_size);
+            return 0;
+        },
+        d);
+}
+
+int multio_data_size(multio_data_t* d, int* size) {
+    return wrapApiFunction(
+        [d, size]() {
+            *size = d->size();
+            return 0;
+        },
+        d);
+}
+
+int multio_data_set_float_scalar(multio_data_t* d, float* value, int pos) {
+    return wrapApiFunction(
+        [d, value, pos]() {
+            ASSERT(value);
+            ASSERT(pos >= 0);
+            ASSERT(pos * sizeof(float) < d->size());
+            float* val = static_cast<float*>(d->data());
+            val[pos] = *value;
+            return 0;
+        },
+        d);
+}
+
+int multio_data_set_double_scalar(multio_data_t* d, double* value, int pos) {
+    return wrapApiFunction(
+        [d, value, pos]() {
+            ASSERT(value);
+            ASSERT(pos >= 0);
+            ASSERT(pos * sizeof(double) < d->size());
+            double* val = static_cast<double*>(d->data());
+            val[pos] = *value;
+            return 0;
+        },
+        d);
+}
+
+int multio_data_set_float_chunk(multio_data_t* d, float* value, int pos, int size) {
+    return wrapApiFunction(
+        [d, value, pos, size]() {
+            ASSERT(value);
+            ASSERT(pos >= 0);
+            ASSERT(pos * sizeof(float) < d->size());
+            float* val = static_cast<float*>(d->data());
+            for (int i = pos; i < pos + size; ++i) {
+                val[i] = value[i - pos];
+            }
+            return 0;
+        },
+        d);
+}
+
+int multio_data_set_double_chunk(multio_data_t* d, double* value, int pos, int size) {
+    return wrapApiFunction(
+        [d, value, pos, size]() {
+            ASSERT(value);
+            ASSERT(pos >= 0);
+            ASSERT(pos * sizeof(double) < d->size());
+            double* val = static_cast<double*>(d->data());
+            for (int i = pos; i < pos + size; ++i) {
+                val[i] = value[i - pos];
+            }
+            return 0;
+        },
+        d);
+}
+
 
 int multio_field_accepted(multio_handle_t* mio, const multio_metadata_t* md, bool* accepted) {
     return wrapApiFunction(

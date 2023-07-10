@@ -110,7 +110,7 @@ subroutine init(mio, rank, server_count, client_count)
 
     type(multio_configuration) :: cc
     ! for tests
-    logical(c_bool) :: is_active
+    logical :: is_active
 
 
     write(0,*) "Init..."
@@ -119,13 +119,13 @@ subroutine init(mio, rank, server_count, client_count)
 
     cerr = cc%set_failure_handler(multio_custom_error_handler, mio_parent_comm)
     if (cerr /= MULTIO_SUCCESS) then
-         write(error_unit, *) 'setting multio failure handler failed: ',multio_error_string(cerr)
-         ERROR STOP "MULTIO_ERROR"
+        write(error_unit, *) 'setting multio failure handler failed: ',multio_error_string(cerr)
+        ERROR STOP "MULTIO_ERROR"
     end if
 
 
 
-    cerr = cc%mpi_allow_world_default_comm(.FALSE._1)
+    cerr = cc%mpi_allow_world_default_comm(.FALSE.)
     if (cerr /= MULTIO_SUCCESS) ERROR STOP "Error setting default multio mpi allow_world_default_comm"
 
     ! color_client = 777
@@ -318,7 +318,7 @@ subroutine set_domains(mio, rank, client_count)
         if (cerr /= MULTIO_SUCCESS) ERROR STOP 11
         cerr = md%set_string("representation", "structured")
         if (cerr /= MULTIO_SUCCESS) ERROR STOP 12
-        cerr = md%set_bool("toAllServers", .TRUE._1)
+        cerr = md%set_bool("toAllServers", .TRUE.)
         if (cerr /= MULTIO_SUCCESS) ERROR STOP 14
 
         cerr = mio%write_domain(md, buffer)
@@ -368,14 +368,14 @@ subroutine write_fields(mio, rank, client_count, nemo_parameters, grib_param_id,
     cerr = md%set_int("step", step)
     if (cerr /= MULTIO_SUCCESS) ERROR STOP 23
 
-    cerr = md%set_double("missingValue", 0.0_8)
+    cerr = md%set_real("missingValue", 0.0_8)
     if (cerr /= MULTIO_SUCCESS) ERROR STOP 31
-    cerr = md%set_bool("bitmapPresent", .FALSE._1)
+    cerr = md%set_bool("bitmapPresent", .FALSE.)
     if (cerr /= MULTIO_SUCCESS) ERROR STOP 32
     cerr = md%set_int("bitsPerValue", 16)
     if (cerr /= MULTIO_SUCCESS) ERROR STOP 33
 
-    cerr = md%set_bool("toAllServers", .FALSE._1)
+    cerr = md%set_bool("toAllServers", .FALSE.)
     if (cerr /= MULTIO_SUCCESS) ERROR STOP 34
 
     do i=1, size(nemo_parameters)
