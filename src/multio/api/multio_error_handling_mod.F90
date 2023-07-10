@@ -58,8 +58,8 @@ implicit none
 
 
     !> Failure handler
-    integer(int64), save :: failure_handler_context
-    procedure(failure_handler_t), pointer, save :: failure_handler_fn
+    ! integer(int64), save :: failure_handler_context
+    ! procedure(failure_handler_t), pointer, save :: failure_handler_fn
 
 
     ! Whitelist of public symbols
@@ -70,8 +70,8 @@ implicit none
     public :: failure_info_list
 
     public :: failure_handler_t
-    public :: failure_handler_context
-    public :: failure_handler_fn
+    ! public :: failure_handler_context
+    ! public :: failure_handler_fn
 
     public :: multio_fort_failure_call
     public :: multio_fort_failure_add
@@ -96,13 +96,12 @@ contains
         ! Dummy arguments
         class(multio_fort_failure_info_list), intent(inout) :: ffi
         integer(c_int),                       intent(in)    :: id
-        integer,                              intent(out)   :: err
+        integer,                              intent(in)    :: err
         class(multio_failure_info),           intent(in)    :: info
         ! Local variables
         type(multio_fort_failure_info_node), pointer :: node
         ! Implementation
         node => ffi%head
-        err = 0
         do while(associated(node))
             if (node%id .eq. id) then
                 call node%handler_fn(node%context, err, info)
@@ -227,9 +226,9 @@ contains
         use, intrinsic :: iso_c_binding, only: c_f_pointer
     implicit none
         ! Dummy arguments
-        type(c_ptr),    value, intent(in)    :: context_id
-        integer(c_int),        intent(inout) :: c_error
-        type(c_ptr),    value, intent(in)    :: info
+        type(c_ptr),    value, intent(in) :: context_id
+        integer(c_int), value, intent(in) :: c_error
+        type(c_ptr),    value, intent(in) :: info
         ! Local variables
         type(multio_failure_info) :: finfo
         integer(c_int), pointer :: id
@@ -237,9 +236,8 @@ contains
         ! Implementation
         call c_f_pointer( context_id, id )
         finfo%impl = info
+        err = int(c_error,kind(err))
         call failure_info_list%callHandler(id, err, finfo)
-        ! Output cast and cleanup
-        c_error = int(err,c_int)
         ! Exit point
         return
     end subroutine failure_handler_wrapper
