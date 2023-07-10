@@ -54,20 +54,29 @@ contains
         use :: multio_configuration_mod, only: multio_configuration
         use, intrinsic :: iso_c_binding, only: c_int
     implicit none
-        class(multio_configuration), intent(in) :: cc
+        ! Dummy arguments
+        class(multio_configuration), intent(inout) :: cc
+        ! Function result
         integer :: err
+        ! Local variables
         integer(kind=c_int) :: c_err
+        ! Private interfaces
         interface
             function c_multio_start_server(cc) result(err) &
                 bind(c, name='multio_start_server')
-                use, intrinsic :: iso_c_binding
+                use, intrinsic :: iso_c_binding, only: c_ptr
+                use, intrinsic :: iso_c_binding, only: c_int
             implicit none
-                type(c_ptr), intent(in), value :: cc
+                type(c_ptr), value, intent(in) :: cc
                 integer(c_int) :: err
             end function c_multio_start_server
         end interface
-        c_err = c_multio_start_server(cc%impl)
+        ! Implementation
+        c_err = c_multio_start_server(cc%c_ptr())
+        ! Cast output values
         err = int(c_err,kind(err))
+        ! Exit point
+        return
     end function multio_start_server
 
     !>

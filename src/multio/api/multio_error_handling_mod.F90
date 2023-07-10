@@ -117,7 +117,7 @@ contains
     implicit none
         ! Dummy arguments
         class(multio_fort_failure_info_list),  intent(inout) :: ffi
-        procedure(failure_handler_t), pointer, intent(in)    :: handler_fn
+        procedure(failure_handler_t)                         :: handler_fn
         integer(int64),                        intent(in)    :: context
         ! Function result
         type(c_ptr) :: new_id_loc

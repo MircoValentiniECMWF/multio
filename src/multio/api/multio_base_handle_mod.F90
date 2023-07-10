@@ -73,7 +73,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_int
     implicit none
         ! Dummy arguments
-        class(multio_base_handle),        intent(inout) :: handle
+        class(multio_base_handle),   intent(inout) :: handle
         class(multio_configuration), intent(inout) :: cc
         ! Function result
         integer :: err
@@ -92,8 +92,7 @@ contains
             end function c_multio_new_handle
         end interface
         ! Implementation
-        handle%failure_id => cc%failure_id
-        cc%failure_id => null()
+        handle%failure_id => cc%move_failure_id()
         c_err = c_multio_new_handle(handle%impl, cc%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
@@ -208,9 +207,9 @@ contains
         use :: multio_error_handling_mod, only: failure_handler_wrapper
     implicit none
         ! Dummy arguments
-        class(multio_base_handle),             intent(inout) :: handle
-        procedure(failure_handler_t), pointer, intent(in)    :: handler
-        integer(int64),                        intent(inout) :: context
+        class(multio_base_handle),    intent(inout) :: handle
+        procedure(failure_handler_t)                :: handler
+        integer(int64),               intent(inout) :: context
         ! Function result
         integer :: err
         ! Local variabels

@@ -10,6 +10,10 @@ implicit none
     !>
     !! @class datatype used to wrap the functionalities of a multio_configuration object
     type :: multio_configuration
+        ! Default visibility
+        private
+
+        ! Members
         type(c_ptr) :: impl = c_null_ptr
         integer(c_int), pointer :: failure_id => null()
     contains
@@ -21,6 +25,7 @@ implicit none
         procedure, public, pass :: delete                       => multio_delete_configuration
         procedure, public, pass :: set_failure_handler          => multio_conf_set_failure_handler
 
+        procedure, public, pass :: move_failure_id              => multio_conf_move_failure_id
         procedure, public, pass :: set_path                     => multio_conf_set_path
         procedure, public, pass :: mpi_allow_world_default_comm => multio_conf_mpi_allow_world_default_comm
         procedure, public, pass :: mpi_parent_comm              => multio_conf_mpi_parent_comm
@@ -32,6 +37,28 @@ implicit none
     public :: multio_configuration
 
 contains
+
+    !>
+    !! @brief get the failure id from the configuration context
+    !!
+    !! @param [in,out] cc - handle passed object pointer
+    !!
+    !! @return pointer failure id
+    !!
+    function multio_conf_move_failure_id( cc ) result(pfid)
+        use, intrinsic :: iso_c_binding, only: c_int
+    implicit none
+        ! Dummy arguments
+        class(multio_configuration), target, intent(inout) :: cc
+        ! Function result
+        integer(c_int), pointer :: pfid
+        ! Implementation
+        pfid => cc%failure_id
+        cc%failure_id => null()
+        ! Exit point
+        return
+    end function multio_conf_move_failure_id
+
 
     !>
     !! @brief extract the c pointer of the configuration object
@@ -52,6 +79,7 @@ contains
         ! Exit point
         return
     end function multio_configuration_c_ptr
+
 
     !>
     !! @brief crate a new configuration object
@@ -200,15 +228,15 @@ contains
         use :: multio_error_handling_mod, only: failure_handler_wrapper
     implicit none
         ! Dummy arguments
-        class(multio_configuration),           intent(inout) :: cc
-        procedure(failure_handler_t), pointer, intent(in)    :: handler
-        integer(int64),                        intent(inout) :: context
+        class(multio_configuration),  intent(inout) :: cc
+        procedure(failure_handler_t)                :: handler
+        integer(int64),               intent(inout) :: context
         ! Function result
         integer :: err
         ! Local variabels
         integer(kind=c_int) :: c_err
         type(c_ptr) :: new_id_loc
-        integer(c_int), pointer :: old_id => null()
+        integer(c_int), pointer :: old_id
         ! Private interface to the c API
         interface
             function c_multio_config_set_failure_handler(mio, handler, context) result(err) &
