@@ -5,7 +5,14 @@
 #define __xstr__(x) #x
 #define __str__(x) __xstr__(x)
 
+#if defined(DEBUG_FAPI)
 #define __MULTIO_DEBUG_API__
+#endif
+
+#if defined(DUMMY_FAPI)
+#define __MULTIO_DUMMY_API__
+#endif
+
 
 #if defined(__MULTIO_DEBUG_API__)
 #define __use_debug__ use ::multio_debug_

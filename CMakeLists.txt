@@ -34,6 +34,16 @@ endif()
 
 ### fdb5 plugin
 
+ecbuild_add_option( FEATURE DEBUG_FAPI
+                    DEFAULT ON
+                    DESCRIPTION "Enable debug of the fortran api")
+
+
+ecbuild_add_option( FEATURE DUMMY_FAPI
+                    DEFAULT OFF
+                    DESCRIPTION "Enable dummy api for the fortran api")
+
+
 ecbuild_add_option( FEATURE FDB5
                     DEFAULT ON
                     DESCRIPTION "Send data to FDB5"
@@ -68,6 +78,16 @@ if( HAVE_FORTRAN )
   ecbuild_enable_fortran( REQUIRED MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/module)
   ecbuild_find_package( NAME fckit   VERSION 0.10.0   REQUIRED )
   find_package( MPI COMPONENTS Fortran) # Add explicit mpi for errorcodes -- isn't there a better way?
+  check_fortran_compiler_flag("-ffree-line-length-none" _flag_accepted)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none")
+  if(_flag_accepted)
+  endif()
+  if (DEBUG_FAPI)
+    add_compile_definitions(DEBUG_FAPI)
+  endif()
+  if (DUMMY_FAPI)
+    add_compile_definitions(DUMMY_FAPI)
+  endif()
 endif()
 
 
@@ -90,6 +110,8 @@ ecbuild_add_option( FEATURE SANDBOX
 set( MULTIO_CONFIG_DIR     share/multio/config )
 set( MULTIO_INCLUDE_DIRS   ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src )
 set( MULTIO_LIBRARIES      multio )
+
+
 
 get_directory_property( MULTIO_DEFINITIONS COMPILE_DEFINITIONS )
 
