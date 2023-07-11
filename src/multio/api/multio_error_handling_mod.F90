@@ -1,3 +1,6 @@
+#include "multio_debug_fapi.h"
+
+#define __module_name__ multio_error_handling_mod
 module multio_error_handling_mod
     use, intrinsic :: iso_c_binding, only: c_int
     use, intrinsic :: iso_c_binding, only: c_ptr
@@ -76,6 +79,8 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_fort_failure_call
+#define __proc_type__ subroutine
     subroutine multio_fort_failure_call(ffi, id, err, info)
         use, intrinsic :: iso_c_binding, only: c_int
     implicit none
@@ -86,6 +91,8 @@ contains
         class(multio_failure_info),           intent(in)    :: info
         ! Local variables
         type(multio_fort_failure_info_node), pointer :: node
+        ! Logging
+        __multio_fapi_enter__()
         ! Implementation
         node => ffi%head
         do while(associated(node))
@@ -96,9 +103,13 @@ contains
                 node => node%next
             endif
         enddo
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end subroutine multio_fort_failure_call
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -110,6 +121,8 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_fort_failure_add
+#define __proc_type__ function
     function multio_fort_failure_add(ffi, handler_fn, context) result(new_id_loc)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_ptr
@@ -123,6 +136,8 @@ contains
         type(c_ptr) :: new_id_loc
         ! Local variables
         class(multio_fort_failure_info_node), pointer :: new_node
+        ! Logging
+        __multio_fapi_enter__()
         ! Implementation
         ffi%lastId = ffi%lastId + 1
         ffi%count = ffi%count + 1
@@ -142,9 +157,13 @@ contains
             ffi%tail%next => new_node
         endif
         ffi%tail => new_node
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_fort_failure_add
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -155,6 +174,8 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_fort_failure_remove
+#define __proc_type__ subroutine
     subroutine multio_fort_failure_remove(ffi, id)
         use, intrinsic :: iso_c_binding, only: c_int
     implicit none
@@ -164,6 +185,8 @@ contains
         ! Local variables
         type(multio_fort_failure_info_node), pointer :: node
         type(multio_fort_failure_info_node), pointer :: node_prev
+        ! Logging
+        __multio_fapi_enter__()
         ! Initialization
         node_prev => null()
         node => ffi%head
@@ -191,9 +214,13 @@ contains
                 node => node%next
             endif
         enddo
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end subroutine multio_fort_failure_remove
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -205,6 +232,8 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ failure_handler_wrapper
+#define __proc_type__ subroutine
     subroutine failure_handler_wrapper(context_id, c_error, info) &
                 bind(c, name='failure_handler_wrapper')
         use, intrinsic :: iso_c_binding, only: c_ptr
@@ -219,13 +248,20 @@ contains
         type(multio_failure_info) :: finfo
         integer(c_int), pointer :: id
         integer :: err
+        ! Logging
+        __multio_fapi_enter__()
         ! Implementation
         call c_f_pointer( context_id, id )
         finfo%impl = info
         err = int(c_error,kind(err))
         call failure_info_list%callHandler(id, err, finfo)
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end subroutine failure_handler_wrapper
+#undef __proc_type__
+#undef __proc_name__
 
 end module multio_error_handling_mod
+#undef __module_name__

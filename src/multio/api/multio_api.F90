@@ -1,3 +1,5 @@
+#include "multio_debug_fapi.h"
+
 module multio_api
 
     ! Constants

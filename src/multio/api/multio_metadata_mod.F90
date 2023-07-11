@@ -1,3 +1,6 @@
+#include "multio_debug_fapi.h"
+
+#define __module_name__ multio_metadata_mod
 module multio_metadata_mod
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_null_ptr
@@ -67,18 +70,32 @@ contains
     !!
     !! @return c pointer to the metadata object
     !!
+#define __proc_name__ multio_metadata_c_ptr
+#define __proc_type__ function
     function multio_metadata_c_ptr( metadata ) result(loc)
         use, intrinsic :: iso_c_binding, only: c_ptr
+        use, intrinsic :: iso_c_binding, only: c_null_ptr
     implicit none
         ! Dummy arguments
         class(multio_metadata), target, intent(inout) :: metadata
         ! Function result
         type(c_ptr) :: loc
+        ! Logging
+        __multio_fapi_enter__()
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         loc = metadata%impl
+#else
+        loc = c_null_ptr
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_c_ptr
+#undef __proc_type__
+#undef __proc_name__
+
 
     !>
     !! @brief crate a new metadata object
@@ -90,8 +107,11 @@ contains
     !!
     !! @see multio_delete_metadata
     !!
+#define __proc_name__ multio_new_metadata
+#define __proc_type__ function
     function multio_new_metadata(metadata, handle) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_base_handle_mod, only: multio_base_handle
     implicit none
         ! Dummy arguments
@@ -113,13 +133,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_new_metadata
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_new_metadata(metadata%impl, handle%c_ptr() )
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_new_metadata
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -131,8 +161,11 @@ contains
     !!
     !! @see multio_new_metadata
     !!
+#define __proc_name__ multio_delete_metadata
+#define __proc_type__ function
     function multio_delete_metadata(metadata) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -151,14 +184,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_delete_metadata
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_delete_metadata(metadata%c_ptr())
         ! Output cast and cleanup
         metadata%impl = c_null_ptr
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_delete_metadata
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -180,11 +223,14 @@ contains
     !! @see multio_metadata_set_f_bool
     !! @see multio_metadata_set_c_bool
     !!
+#define __proc_name__ multio_metadata_set_string
+#define __proc_type__ function
     function multio_metadata_set_string(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -209,6 +255,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_string
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "string", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         nullified_value = trim(value) // c_null_char
@@ -218,9 +270,14 @@ contains
         if (allocated(nullified_key)) deallocate(nullified_key)
         if (allocated(nullified_value)) deallocate(nullified_value)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_string
+#undef __proc_type__
+#undef __proc_name__
 
 
 
@@ -242,12 +299,15 @@ contains
     !! @see multio_metadata_set_f_bool
     !! @see multio_metadata_set_c_bool
     !!
+#define __proc_name__ multio_metadata_set_int8
+#define __proc_type__ function
     function multio_metadata_set_int8(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
         use, intrinsic :: iso_fortran_env, only: int8
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -272,6 +332,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_int
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "int8", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         c_value = int(value,c_int)
@@ -280,9 +346,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_int8
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -303,12 +374,15 @@ contains
     !! @see multio_metadata_set_f_bool
     !! @see multio_metadata_set_c_bool
     !!
+#define __proc_name__ multio_metadata_set_int16
+#define __proc_type__ function
     function multio_metadata_set_int16(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
         use, intrinsic :: iso_fortran_env, only: int16
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -333,6 +407,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_int
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "int16", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         c_value = int(value,c_int)
@@ -341,9 +421,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_int16
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -364,12 +449,15 @@ contains
     !! @see multio_metadata_set_f_bool
     !! @see multio_metadata_set_c_bool
     !!
+#define __proc_name__ multio_metadata_set_int32
+#define __proc_type__ function
     function multio_metadata_set_int32(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
         use, intrinsic :: iso_fortran_env, only: int32
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -394,6 +482,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_int
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "int32", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         c_value = int(value,c_int)
@@ -402,9 +496,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_int32
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -425,6 +524,8 @@ contains
     !! @see multio_metadata_set_f_bool
     !! @see multio_metadata_set_c_bool
     !!
+#define __proc_name__ multio_metadata_set_int64
+#define __proc_type__ function
     function multio_metadata_set_int64(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
@@ -432,6 +533,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
         use, intrinsic :: iso_fortran_env, only: int64
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -457,6 +559,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_long
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "int64", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         c_value = int(value,c_int)
@@ -465,9 +573,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_int64
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -488,6 +601,8 @@ contains
     !! @see multio_metadata_set_f_bool
     !! @see multio_metadata_set_c_bool
     !!
+#define __proc_name__ multio_metadata_set_real32
+#define __proc_type__ function
     function multio_metadata_set_real32(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_int
@@ -496,6 +611,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
         use, intrinsic :: iso_fortran_env, only: real32
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -521,6 +637,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_float
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "real32", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         c_value = real(value,c_float)
@@ -529,9 +651,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_real32
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -552,6 +679,8 @@ contains
     !! @see multio_metadata_set_f_bool
     !! @see multio_metadata_set_c_bool
     !!
+#define __proc_name__ multio_metadata_set_real64
+#define __proc_type__ function
     function multio_metadata_set_real64(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_double
@@ -559,6 +688,7 @@ contains
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
         use, intrinsic :: iso_fortran_env, only: real64
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -584,6 +714,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_double
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "real64", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         c_value = real(value,c_double)
@@ -592,9 +728,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_real64
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -614,12 +755,15 @@ contains
     !! @see multio_metadata_set_real32
     !! @see multio_metadata_set_fbool
     !!
+#define __proc_name__ multio_metadata_set_fbool
+#define __proc_type__ function
     function multio_metadata_set_fbool(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_bool
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -645,6 +789,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_bool
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "fbool", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         c_value = logical(value,kind(value))
         nullified_key = trim(key) // c_null_char
@@ -653,9 +803,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_fbool
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -676,12 +831,15 @@ contains
     !! @see multio_metadata_set_real64
     !! @see multio_metadata_set_fbool
     !!
+#define __proc_name__ multio_metadata_set_cbool
+#define __proc_type__ function
     function multio_metadata_set_cbool(metadata, key, value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_bool
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_null_char
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_metadata), intent(inout) :: metadata
@@ -706,6 +864,12 @@ contains
                 integer(c_int) :: err
             end function c_multio_metadata_set_bool
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        __multio_fapi_log_kv__(key, "cbool", value )
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_key = trim(key) // c_null_char
         ! Call the c API
@@ -713,8 +877,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_key)) deallocate(nullified_key)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_metadata_set_cbool
+#undef __proc_type__
+#undef __proc_name__
 
 end module multio_metadata_mod
+#undef __module_name__

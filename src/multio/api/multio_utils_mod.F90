@@ -1,3 +1,6 @@
+#include "multio_debug_fapi.h"
+
+#define __module_name__ multio_utils_mod
 module multio_utils_mod
 implicit none
 
@@ -18,8 +21,11 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_initialise
+#define __proc_type__ function
     function multio_initialise() result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Function result
         integer :: err
@@ -34,13 +40,19 @@ contains
                 integer(c_int) :: err
             end function c_multio_initialise
         end interface
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_err = c_multio_initialise()
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
         ! Exit point
         return
     end function multio_initialise
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -50,9 +62,12 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_start_server
+#define __proc_type__ function
     function multio_start_server(cc) result(err)
-        use :: multio_configuration_mod, only: multio_configuration
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
+        use :: multio_configuration_mod, only: multio_configuration
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -71,13 +86,20 @@ contains
                 integer(c_int) :: err
             end function c_multio_start_server
         end interface
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_err = c_multio_start_server(cc%c_ptr())
         ! Cast output values
         err = int(c_err,kind(err))
+#endif
         ! Exit point
         return
     end function multio_start_server
+#undef __proc_type__
+#undef __proc_name__
+
 
     !>
     !! @brief remove a failure handler to the list of failure handler list
@@ -87,6 +109,8 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ fortranise_cstr
+#define __proc_type__ function
     function fortranise_cstr(cstr) result(fstr)
         use, intrinsic :: iso_c_binding, only: c_ptr
         use, intrinsic :: iso_c_binding, only: c_char
@@ -118,6 +142,8 @@ contains
         ! Exit point
         return
     end function fortranise_cstr
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -127,6 +153,8 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_version
+#define __proc_type__ function
     function multio_version(version_str) result(err)
         use, intrinsic :: iso_c_binding, only: c_ptr
         use :: multio_constants_mod, only: MULTIO_SUCCESS
@@ -148,12 +176,16 @@ contains
                 integer(c_int) :: err
             end function
         end interface
+        ! Initialization
+        err = MULTIO_SUCCESS
         ! Implementation
         err = c_multio_version(tmp_str)
         if (err == MULTIO_SUCCESS) version_str = fortranise_cstr(tmp_str)
         ! Exit point
         return
     end function multio_version
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -163,6 +195,8 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_vcs_version
+#define __proc_type__ function
     function multio_vcs_version(git_sha1) result(err)
         use, intrinsic :: iso_c_binding, only: c_ptr
         use, intrinsic :: iso_c_binding, only: c_int
@@ -186,6 +220,8 @@ contains
                 integer(c_int) :: err
             end function c_multio_vcs_version
         end interface
+        ! Initialization
+        err = MULTIO_SUCCESS
         ! Implementation
         c_err = c_multio_vcs_version(tmp_str)
         if (err == MULTIO_SUCCESS) git_sha1 = fortranise_cstr(tmp_str)
@@ -194,6 +230,9 @@ contains
         ! Exit point
         return
     end function multio_vcs_version
+#undef __proc_type__
+#undef __proc_name__
+
 
     !>
     !! @brief return the version of multio
@@ -203,6 +242,8 @@ contains
     !!
     !! @return error string associated to err
     !!
+#define __proc_name__ multio_error_string
+#define __proc_type__ function
     function multio_error_string(err, info) result(error_string)
         use, intrinsic :: iso_c_binding, only: c_int
         use :: multio_error_handling_mod, only: multio_failure_info
@@ -244,5 +285,8 @@ contains
         ! Exit point
         return
     end function multio_error_string
+#undef __proc_type__
+#undef __proc_name__
 
 end module multio_utils_mod
+#undef __module_name__

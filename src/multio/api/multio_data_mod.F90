@@ -1,3 +1,6 @@
+#include "multio_debug_fapi.h"
+
+#define __module_name__ multio_handle_mod
 module multio_data_mod
 
     use, intrinsic :: iso_c_binding, only: c_null_ptr
@@ -50,18 +53,31 @@ contains
     !!
     !! @return c pointer to the data object
     !!
+#define __proc_name__ multio_data_c_ptr
+#define __proc_type__ function
     function multio_data_c_ptr( data ) result(loc)
         use, intrinsic :: iso_c_binding, only: c_ptr
+        use, intrinsic :: iso_c_binding, only: c_null_ptr
     implicit none
         ! Dummy arguments
         class(multio_data), target, intent(inout) :: data
         ! Function result
         type(c_ptr) :: loc
+        ! Logging
+        __multio_fapi_enter__()
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         loc = data%impl
+#else
+        loc = c_null_ptr
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_c_ptr
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -74,8 +90,11 @@ contains
     !!
     !! @see multio_data_delete
     !!
+#define __proc_name__ multio_data_new
+#define __proc_type__ function
     function multio_data_new(data, handle, byte_size) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_base_handle_mod, only: multio_base_handle
     implicit none
         ! Dummy arguments
@@ -98,14 +117,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_new
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
         ! Call the c API
         data%byte_size_ = int(byte_size,c_int)
+#if !defined(__MULTIO_DUMMY_API__)
         c_err = c_multio_data_new(data%impl, handle%c_ptr())
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_new
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -117,9 +146,12 @@ contains
     !!
     !! @see multio_data_new
     !!
+#define __proc_name__ multio_data_delete
+#define __proc_type__ function
     function multio_data_delete(data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_null_ptr
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data), intent(inout) :: data
@@ -138,15 +170,25 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_delete
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_data_delete(data%c_ptr())
         data%impl = c_null_ptr
         data%byte_size_ = 0_c_int
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_delete
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -156,8 +198,11 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_data_zero
+#define __proc_type__ function
     function multio_data_zero(data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data), intent(inout) :: data
@@ -176,13 +221,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_zero
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_data_zero(data%c_ptr())
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_zero
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -194,8 +249,11 @@ contains
     !! @return error code
     !!
     !!
+#define __proc_name__ multio_data_resize
+#define __proc_type__ function
     function multio_data_resize(data,new_size) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data), intent(inout) :: data
@@ -217,14 +275,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_resize
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_size = int(new_size,c_int)
         c_err = c_multio_data_resize(data%c_ptr(), c_size)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_resize
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -235,9 +303,12 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_data_size
+#define __proc_type__ function
     function multio_data_size(data,size) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data), intent(inout) :: data
@@ -259,14 +330,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_size
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_data_size(data%c_ptr(), c_loc(c_size))
         ! Output cast and cleanup
         size = int(c_size,kind(size))
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_size
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -277,17 +358,26 @@ contains
     !!
     !! @return byte_size of the datatype
     !!
+#define __proc_name__ multio_data_byte_size
+#define __proc_type__ function
     function multio_data_byte_size(data) result(byte_size)
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data), intent(in) :: data
         ! Function Result
         integer :: byte_size
+        ! Logging
+        __multio_fapi_enter__()
         ! Implementation
         byte_size = int(data%byte_size_,kind(byte_size))
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_byte_size
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -299,10 +389,13 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_data_set_float_scalar
+#define __proc_type__ function
     function multio_data_set_float_scalar(data, value, pos) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data),         intent(inout) :: data
@@ -326,17 +419,27 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_set_float_scalar
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_pos = int(pos,kind(c_pos))
         c_err = c_multio_data_set_float_scalar(data%c_ptr(), c_loc(value), pos)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_set_float_scalar
+#undef __proc_type__
+#undef __proc_name__
 
 
-   !>
+    !>
     !! @brief set a float chunk of elements in a predefined position
     !!
     !! @param [in,out] data  - handle passed object pointer
@@ -346,10 +449,13 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_data_set_float_chunk
+#define __proc_type__ function
     function multio_data_set_float_chunk(data, value, pos, size) result(err)
         use, intrinsic :: iso_c_binding, only: c_float
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data),                       intent(inout) :: data
@@ -376,18 +482,28 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_set_float_chunk
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_pos = int(pos,kind(c_pos))
         c_size = int(size,kind(c_size))
         c_err = c_multio_data_set_float_chunk(data%c_ptr(), c_loc(value), c_pos, c_size)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_set_float_chunk
+#undef __proc_type__
+#undef __proc_name__
 
 
-   !>
+    !>
     !! @brief set a double element in a predefined position
     !!
     !! @param [in,out] data  - handle passed object pointer
@@ -396,10 +512,13 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_data_set_double_scalar
+#define __proc_type__ function
     function multio_data_set_double_scalar(data, value, pos) result(err)
         use, intrinsic :: iso_c_binding, only: c_double
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data),          intent(inout) :: data
@@ -423,17 +542,27 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_set_double_scalar
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_pos = int(pos,kind(c_pos))
         c_err = c_multio_data_set_double_scalar(data%c_ptr(), c_loc(value), c_pos)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_set_double_scalar
+#undef __proc_type__
+#undef __proc_name__
 
 
-   !>
+    !>
     !! @brief set a double chunk of elements in a predefined position
     !!
     !! @param [in,out] data  - handle passed object pointer
@@ -443,10 +572,13 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_data_set_double_chunk
+#define __proc_type__ function
     function multio_data_set_double_chunk(data, value, pos, size) result(err)
         use, intrinsic :: iso_c_binding, only: c_double
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_data),                        intent(inout) :: data
@@ -473,14 +605,25 @@ contains
                 integer(c_int) :: err
             end function c_multio_data_set_double_chunk
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_pos  = int(pos,kind(c_pos))
         c_size = int(size,kind(c_size))
         c_err  = c_multio_data_set_double_chunk(data%c_ptr(), c_loc(value), c_pos, c_size)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_data_set_double_chunk
+#undef __proc_type__
+#undef __proc_name__
 
 end module multio_data_mod
+#undef __module_name__

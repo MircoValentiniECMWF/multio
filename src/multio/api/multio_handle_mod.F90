@@ -1,3 +1,6 @@
+#include "multio_debug_fapi.h"
+
+#define __module_name__ multio_handle_mod
 module multio_handle_mod
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_int
@@ -64,8 +67,11 @@ contains
     !!
     !! @see multio_handle_notify
     !!
+#define __proc_name__ multio_handle_flush
+#define __proc_type__ function
     function multio_handle_flush(handle, metadata) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -87,13 +93,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_flush
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_err = c_multio_flush(handle%c_ptr(), metadata%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_flush
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -106,8 +122,11 @@ contains
     !!
     !! @see multio_handle_flush
     !!
+#define __proc_name__ multio_handle_notify
+#define __proc_type__ function
     function multio_handle_notify(handle, metadata) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -129,13 +148,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_notify
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_err = c_multio_notify(handle%c_ptr(), metadata%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_notify
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -147,10 +176,12 @@ contains
     !!
     !! @return error code
     !!
-    !! @todo implement for different kinds
+#define __proc_name__ multio_handle_write_domain
+#define __proc_type__ function
     function multio_handle_write_domain(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -176,14 +207,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_domain
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err  = c_multio_write_domain(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_domain
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -199,10 +240,13 @@ contains
     !! @see multio_handle_write_mask_double_1d
     !! @see multio_handle_write_mask_double_2d
     !!
+#define __proc_name__ multio_handle_write_mask_float_1d
+#define __proc_type__ function
     function multio_handle_write_mask_float_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -228,14 +272,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_mask_float
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_mask_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_mask_float_1d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -251,10 +305,13 @@ contains
     !! @see multio_handle_write_mask_double_1d
     !! @see multio_handle_write_mask_double_2d
     !!
+#define __proc_name__ multio_handle_write_mask_float_2d
+#define __proc_type__ function
     function multio_handle_write_mask_float_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -280,14 +337,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_mask_float
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_mask_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_mask_float_2d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -303,10 +370,13 @@ contains
     !! @see multio_handle_write_mask_float_2d
     !! @see multio_handle_write_mask_double_2d
     !!
+#define __proc_name__ multio_handle_write_mask_double_1d
+#define __proc_type__ function
     function multio_handle_write_mask_double_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -332,14 +402,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_mask_double
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_mask_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_mask_double_1d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -355,10 +435,13 @@ contains
     !! @see multio_handle_write_mask_float_2d
     !! @see multio_handle_write_mask_double_1d
     !!
+#define __proc_name__ multio_handle_write_mask_double_2d
+#define __proc_type__ function
     function multio_handle_write_mask_double_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -384,14 +467,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_mask_double
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_mask_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_mask_double_2d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -408,10 +501,13 @@ contains
     !! @see multio_handle_write_field_double_2d
     !! @see multio_handle_write_field_buffer
     !!
+#define __proc_name__ multio_handle_write_field_float_1d
+#define __proc_type__ function
     function multio_handle_write_field_float_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -437,14 +533,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_field_float
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_field_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_field_float_1d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -461,10 +567,13 @@ contains
     !! @see multio_handle_write_field_double_2d
     !! @see multio_handle_write_field_buffer
     !!
+#define __proc_name__ multio_handle_write_field_float_2d
+#define __proc_type__ function
     function multio_handle_write_field_float_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -490,14 +599,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_field_float
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_field_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_field_float_2d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -514,10 +633,13 @@ contains
     !! @see multio_handle_write_field_double_2d
     !! @see multio_handle_write_field_buffer
     !!
+#define __proc_name__ multio_handle_write_field_double_1d
+#define __proc_type__ function
     function multio_handle_write_field_double_1d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -543,14 +665,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_field_double
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_field_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_field_double_1d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -567,10 +699,13 @@ contains
     !! @see multio_handle_write_field_double_1d
     !! @see multio_handle_write_field_buffer
     !!
+#define __proc_name__ multio_handle_write_field_double_2d
+#define __proc_type__ function
     function multio_handle_write_field_double_2d(handle, metadata, data) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -596,14 +731,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_field_double
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_size = int(size(data),c_int)
         c_err = c_multio_write_field_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_field_double_2d
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -620,10 +765,13 @@ contains
     !! @see multio_handle_write_field_double_1d
     !! @see multio_handle_write_field_double_1d
     !!
+#define __proc_name__ multio_handle_write_field_buffer
+#define __proc_type__ function
     function multio_handle_write_field_buffer(handle, metadata, data) result(err)
+        use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
         use :: multio_data_mod,     only: multio_data
-        use, intrinsic :: iso_c_binding, only: c_int
     implicit none
         ! Dummy arguments
         class(multio_handle),       intent(inout) :: handle
@@ -648,14 +796,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_write_field_buffer
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_byte_size = int(data%byte_size(),c_int)
         c_err = c_multio_write_field_buffer(handle%c_ptr(), metadata%c_ptr(), data%c_ptr(), c_byte_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_write_field_buffer
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -667,9 +825,12 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_handle_field_accepted
+#define __proc_type__ function
     function multio_handle_field_accepted(handle, metadata, set_value) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_bool
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_metadata_mod, only: multio_metadata
     implicit none
         ! Dummy arguments
@@ -696,13 +857,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_field_accepted
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_err = c_multio_field_accepted(handle%c_ptr(), metadata%c_ptr(), c_set_value)
         ! Setting return values
         set_value = logical(c_set_value,kind(set_value))
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_handle_field_accepted
+#undef __proc_type__
+#undef __proc_name__
 
 end module multio_handle_mod
+#undef __module_name__

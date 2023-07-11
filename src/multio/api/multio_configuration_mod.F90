@@ -1,3 +1,6 @@
+#include "multio_debug_fapi.h"
+
+#define __module_name__ multio_configuration_mod
 module multio_configuration_mod
     use, intrinsic :: iso_c_binding, only: c_int
     use, intrinsic :: iso_c_binding, only: c_ptr
@@ -45,6 +48,8 @@ contains
     !!
     !! @return pointer failure id
     !!
+#define __proc_name__ multio_conf_move_failure_id
+#define __proc_type__ function
     function multio_conf_move_failure_id( cc ) result(pfid)
         use, intrinsic :: iso_c_binding, only: c_int
     implicit none
@@ -52,12 +57,18 @@ contains
         class(multio_configuration), target, intent(inout) :: cc
         ! Function result
         integer(c_int), pointer :: pfid
+        ! Logging
+        __multio_fapi_enter__()
         ! Implementation
         pfid => cc%failure_id
         cc%failure_id => null()
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_conf_move_failure_id
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -67,18 +78,31 @@ contains
     !!
     !! @return c pointer to the configuration object
     !!
+#define __proc_name__ multio_configuration_c_ptr
+#define __proc_type__ function
     function multio_configuration_c_ptr( cc ) result(loc)
         use, intrinsic :: iso_c_binding, only: c_ptr
+        use, intrinsic :: iso_c_binding, only: c_null_ptr
     implicit none
         ! Dummy arguments
         class(multio_configuration), target, intent(inout) :: cc
         ! Function result
         type(c_ptr) :: loc
+        ! Logging
+        __multio_fapi_enter__()
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         loc = cc%impl
+#else
+        loc = c_null_ptr
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_configuration_c_ptr
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -91,8 +115,11 @@ contains
     !! @see multio_new_configuration_from_filename
     !! @see multio_delete_configuration
     !!
+#define __proc_name__ multio_new_configuration
+#define __proc_type__ function
     function multio_new_configuration(cc) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(out) :: cc
@@ -111,13 +138,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_new_configuration
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_new_configuration(cc%impl)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_new_configuration
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -131,11 +168,14 @@ contains
     !! @see multio_new_configuration
     !! @see multio_delete_configuration
     !!
+#define __proc_name__ multio_new_configuration_from_filename
+#define __proc_type__ function
     function multio_new_configuration_from_filename(cc, file_name) result(err)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -152,11 +192,16 @@ contains
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
-                type(c_ptr), intent(in), value :: file_name
-                type(c_ptr), intent(out) :: cc
+                type(c_ptr),        intent(out) :: cc
+                type(c_ptr), value, intent(in)  :: file_name
                 integer(c_int) :: err
             end function c_multio_new_configuration_from_filename
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_path = trim(file_name) // c_null_char
         ! Call the c API
@@ -164,9 +209,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_path)) deallocate(nullified_path)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_new_configuration_from_filename
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -179,8 +229,11 @@ contains
     !! @see multio_new_configuration
     !! @see multio_new_configuration_from_filename
     !!
+#define __proc_name__ multio_delete_configuration
+#define __proc_type__ function
     function multio_delete_configuration(cc) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -195,18 +248,28 @@ contains
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
-                type(c_ptr), intent(in), value :: cc
+                type(c_ptr), value, intent(in) :: cc
                 integer(c_int) :: err
             end function c_multio_delete_configuration
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_delete_configuration(cc%impl)
         cc%impl = c_null_ptr
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_delete_configuration
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -217,12 +280,15 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_conf_set_failure_handler
+#define __proc_type__ function
     function multio_conf_set_failure_handler( cc, handler, context) result(err)
         use, intrinsic :: iso_fortran_env, only: int64
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_null_ptr
         use, intrinsic :: iso_c_binding, only: c_funloc
         use, intrinsic :: iso_c_binding, only: c_f_pointer
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_error_handling_mod, only: failure_handler_t
         use :: multio_error_handling_mod, only: failure_info_list
         use :: multio_error_handling_mod, only: failure_handler_wrapper
@@ -251,6 +317,11 @@ contains
                 integer(c_int) :: err
             end function c_multio_config_set_failure_handler
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization
         new_id_loc = c_null_ptr
         old_id => null()
@@ -261,16 +332,22 @@ contains
         ! Append the new error handler
         new_id_loc = failure_info_list%add(handler, context)
         call c_f_pointer(new_id_loc, cc%failure_id)
-        c_err = c_multio_config_set_failure_handler(cc%c_ptr(), c_funloc(failure_handler_wrapper), new_id_loc)
+        c_err = c_multio_config_set_failure_handler(cc%c_ptr(), &
+              & c_funloc(failure_handler_wrapper), new_id_loc)
         ! Revo the old error handler if exists
         if(associated(old_id)) then
             call failure_info_list%remove(old_id)
         endif
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_conf_set_failure_handler
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -281,11 +358,14 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_conf_set_path
+#define __proc_type__ function
     function multio_conf_set_path(cc, path) result(err)
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_null_char
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -302,11 +382,16 @@ contains
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
-                type(c_ptr), intent(in), value :: path
-                type(c_ptr), intent(in), value :: cc
+                type(c_ptr), value, intent(in) :: path
+                type(c_ptr), value, intent(in) :: cc
                 integer(c_int) :: err
             end function c_multio_conf_set_path
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         nullified_path = trim(path) // c_null_char
         ! Call the c API
@@ -314,9 +399,14 @@ contains
         ! Output cast and cleanup
         if (allocated(nullified_path)) deallocate(nullified_path)
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_conf_set_path
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -332,9 +422,12 @@ contains
     !! @see multio_conf_mpi_parent_comm
     !! @see multio_conf_mpi_client_id
     !!
+#define __proc_name__ multio_conf_mpi_allow_world_default_comm
+#define __proc_type__ function
     function multio_conf_mpi_allow_world_default_comm(cc, allow) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_bool
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -357,15 +450,25 @@ contains
                 integer(c_int) :: err
             end function c_multio_conf_mpi_allow_world_default_comm
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Initialization and allocation
         c_allow = logical(allow,c_bool)
         ! Call the c API
         c_err = c_multio_conf_mpi_allow_world_default_comm(cc%impl, c_allow)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_conf_mpi_allow_world_default_comm
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -381,8 +484,11 @@ contains
     !! @see multio_conf_mpi_client_id
     !! @see multio_conf_mpi_allow_world_default_comm
     !!
+#define __proc_name__ multio_conf_mpi_parent_comm
+#define __proc_type__ function
     function multio_conf_mpi_parent_comm(cc, parent_comm) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -403,13 +509,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_conf_mpi_parent_comm
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_conf_mpi_parent_comm(cc%impl, parent_comm)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_conf_mpi_parent_comm
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -425,8 +541,11 @@ contains
     !! @see multio_conf_mpi_client_id
     !! @see multio_conf_mpi_allow_world_default_comm
     !!
+#define __proc_name__ multio_conf_mpi_return_client_comm
+#define __proc_type__ function
     function multio_conf_mpi_return_client_comm(cc, return_comm) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -447,13 +566,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_conf_mpi_return_client_comm
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_conf_mpi_return_client_comm(cc%impl, return_comm)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_conf_mpi_return_client_comm
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -469,8 +598,11 @@ contains
     !! @see multio_conf_mpi_client_id
     !! @see multio_conf_mpi_allow_world_default_comm
     !!
+#define __proc_name__ multio_conf_mpi_return_server_comm
+#define __proc_type__ function
     function multio_conf_mpi_return_server_comm(cc, return_comm) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
@@ -491,12 +623,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_conf_mpi_return_server_comm
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Call the c API
         c_err = c_multio_conf_mpi_return_server_comm(cc%impl, return_comm)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_conf_mpi_return_server_comm
+#undef __proc_type__
+#undef __proc_name__
 
 end module multio_configuration_mod
+#undef __module_name__

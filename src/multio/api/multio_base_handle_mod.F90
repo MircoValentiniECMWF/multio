@@ -1,3 +1,6 @@
+#include "multio_debug_fapi.h"
+
+#define __module_name__ multio_base_handle_mod
 module multio_base_handle_mod
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_int
@@ -42,18 +45,32 @@ contains
     !!
     !! @return c pointer to the handle object
     !!
+#define __proc_name__ multio_base_handle_c_ptr
+#define __proc_type__ function
     function multio_base_handle_c_ptr( handle ) result(loc)
         use, intrinsic :: iso_c_binding, only: c_ptr
+        use, intrinsic :: iso_c_binding, only: c_null_ptr
     implicit none
         ! Dummy arguments
         class(multio_base_handle), target, intent(inout) :: handle
         ! Function result
         type(c_ptr) :: loc
+        ! Logging
+        __multio_fapi_enter__()
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         loc = handle%impl
+#else
+        loc = c_null_ptr
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_base_handle_c_ptr
+#undef __proc_type__
+#undef __proc_name__
+
 
     !>
     !! @brief create a new multio handle from  a multio configuration
@@ -68,8 +85,11 @@ contains
     !! @see multio_base_handle_new_default
     !! @see multio_base_handle_delete
     !!
+#define __proc_name__ multio_base_handle_new
+#define __proc_type__ function
     function multio_base_handle_new(handle, cc) result(err)
         use :: multio_configuration_mod, only: multio_configuration
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use, intrinsic :: iso_c_binding, only: c_int
     implicit none
         ! Dummy arguments
@@ -91,14 +111,24 @@ contains
                 integer(c_int) :: err
             end function c_multio_new_handle
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         handle%failure_id => cc%move_failure_id()
         c_err = c_multio_new_handle(handle%impl, cc%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_base_handle_new
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -111,8 +141,11 @@ contains
     !! @see multio_base_handle_new
     !! @see multio_base_handle_delete
     !!
+#define __proc_name__ multio_base_handle_new_default
+#define __proc_type__ function
     function multio_base_handle_new_default(handle) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
@@ -131,13 +164,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_new_handle_default
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! implementation
         c_err = c_multio_new_handle_default(handle%impl)
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_base_handle_new_default
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -152,8 +195,11 @@ contains
     !! @see multio_base_handle_new
     !! @see multio_base_handle_new_default
     !!
+#define __proc_name__ multio_base_handle_delete
+#define __proc_type__ function
     function multio_base_handle_delete(handle) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_error_handling_mod, only: failure_info_list
     implicit none
         ! Dummy arguments
@@ -173,6 +219,11 @@ contains
                 integer(c_int) :: err
             end function c_multio_delete_handle
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! Implementation
         c_err = c_multio_delete_handle(handle%c_ptr())
         handle%impl = c_null_ptr
@@ -183,9 +234,14 @@ contains
         end if
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_base_handle_delete
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -196,12 +252,15 @@ contains
     !!
     !! @return error code
     !!
+#define __proc_name__ multio_base_handle_set_failure_handler
+#define __proc_type__ function
     function multio_base_handle_set_failure_handler( handle, handler, context) result(err)
         use, intrinsic :: iso_fortran_env, only: int64
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_null_ptr
         use, intrinsic :: iso_c_binding, only: c_funloc
         use, intrinsic :: iso_c_binding, only: c_f_pointer
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
         use :: multio_error_handling_mod, only: failure_handler_t
         use :: multio_error_handling_mod, only: failure_info_list
         use :: multio_error_handling_mod, only: failure_handler_wrapper
@@ -230,7 +289,11 @@ contains
                 integer(c_int) :: err
             end function c_multio_handle_set_failure_handler
         end interface
+        ! Logging
+        __multio_fapi_enter__()
         ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         new_id_loc = c_null_ptr
         old_id => null()
         ! Search for old error handlers
@@ -247,9 +310,14 @@ contains
         endif
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_base_handle_set_failure_handler
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -261,8 +329,11 @@ contains
     !!
     !! @see multio_base_handle_close_connections
     !!
+#define __proc_name__ multio_base_handle_open_connections
+#define __proc_type__ function
     function multio_base_handle_open_connections(handle) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
@@ -281,13 +352,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_open_connections
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! implementation
         c_err = c_multio_open_connections(handle%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_base_handle_open_connections
+#undef __proc_type__
+#undef __proc_name__
 
 
     !>
@@ -299,8 +380,11 @@ contains
     !!
     !! @see multio_base_handle_open_connections
     !!
+#define __proc_name__ multio_base_handle_close_connections
+#define __proc_type__ function
     function multio_base_handle_close_connections(handle) result(err)
         use, intrinsic :: iso_c_binding, only: c_int
+        use :: multio_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
@@ -319,12 +403,23 @@ contains
                 integer(c_int) :: err
             end function c_multio_close_connections
         end interface
+        ! Logging
+        __multio_fapi_enter__()
+        ! Initialization
+        err = MULTIO_SUCCESS
+#if !defined(__MULTIO_DUMMY_API__)
         ! implementation
         c_err = c_multio_close_connections(handle%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#endif
+        ! Logging
+        __multio_fapi_exit__()
         ! Exit point
         return
     end function multio_base_handle_close_connections
+#undef __proc_type__
+#undef __proc_name__
 
 end module multio_base_handle_mod
+#undef __module_name__
