@@ -19,6 +19,14 @@ if( HAVE_MAESTRO )
     )
 endif()
 
+if (DEBUG_FAPI)
+target_compile_definitions(multio-fapi DEBUG_FAPI=1)
+endif()
+
+if (DUMMY_FAPI)
+target_compile_definitions(multio-fapi DUMMY_FAPI=1)
+endif()
+
 # Action plugins
 
 list( APPEND multio_action_plugins
@@ -41,7 +49,7 @@ if( HAVE_MIR )
     )
 endif()
 
-
+add_compile_definitions(DEBUG_FAPI)
 ecbuild_add_library(
 
     TARGET multio-api
