@@ -50,6 +50,7 @@ if( HAVE_MIR )
 endif()
 
 add_compile_definitions(DEBUG_FAPI)
+add_compile_options(-ffree-line-length-none)
 ecbuild_add_library(
 
     TARGET multio-api
