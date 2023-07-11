@@ -1,3 +1,18 @@
+!> @file
+!! @brief Module that contains the definition of the error handler for multio
+!!
+!! This module exposes "failure_handler_wrapper", whichc is a procedure callable from c.
+!! This procedure internally loop through a list of failure handler and calls the one that
+!! correspond to the required id.
+!!
+!! @author Mirco Valentini
+!! @date   July 11, 2023
+!! @version 1.0
+!!
+!! @note The behaviour of this module depends on the "multio_debug_fapi.h"
+!!       that contains preprocessor macro.
+!!
+
 #include "multio_debug_fapi.h"
 
 #define __module_name__ multio_error_handling_mod

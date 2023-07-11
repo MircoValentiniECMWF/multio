@@ -1,3 +1,17 @@
+!> @file
+!! @brief Module that contains the definition of the data object used by multio
+!!
+!! This is a wrapper around eckit::buffer, with some utility to set data by chunk
+!! and the error handling from multio
+!!
+!! @author Mirco Valentini
+!! @date   July 11, 2023
+!! @version 1.0
+!!
+!! @note The behaviour of this module depends on the "multio_debug_fapi.h"
+!!       that contains preprocessor macro.
+!!
+
 #include "multio_debug_fapi.h"
 
 #define __module_name__ multio_handle_mod

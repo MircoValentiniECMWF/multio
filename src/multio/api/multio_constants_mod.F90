@@ -1,3 +1,16 @@
+!> @file
+!! @brief Module that contains the constants used by multio-fapi
+!!
+!!
+!! @author Mirco Valentini
+!! @date   July 11, 2023
+!! @version 1.0
+!!
+!! @note The behaviour of this module depends on the "multio_debug_fapi.h"
+!!       that contains preprocessor macro.
+!!
+
+
 #include "multio_debug_fapi.h"
 
 module multio_constants_mod

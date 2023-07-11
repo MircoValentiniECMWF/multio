@@ -1,3 +1,14 @@
+!> @file
+!! @brief Module that contains the definition of some utils needed by multio
+!!
+!! @author Mirco Valentini
+!! @date   July 11, 2023
+!! @version 1.0
+!!
+!! @note The behaviour of this module depends on the "multio_debug_fapi.h"
+!!       that contains preprocessor macro.
+!!
+
 #include "multio_debug_fapi.h"
 
 #define __module_name__ multio_utils_mod

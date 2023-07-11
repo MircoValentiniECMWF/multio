@@ -1,3 +1,16 @@
+!> @file
+!! @brief Module that contains definition of the metadata object used by multio
+!!
+!! Used to store key-values pairs.
+!!
+!! @author Mirco Valentini
+!! @date   July 11, 2023
+!! @version 1.0
+!!
+!! @note The behaviour of this module depends on the "multio_debug_fapi.h"
+!!       that contains preprocessor macro.
+!!
+
 #include "multio_debug_fapi.h"
 
 #define __module_name__ multio_metadata_mod
@@ -42,10 +55,7 @@ implicit none
         procedure, private, pass :: set_real64   => multio_metadata_set_real64
         generic,   public        :: set_real     => set_real32, set_real64
 
-        ! Not possible to overload integers with the same dimensions.
-        ! Depending on the architecture long can be 4 or 8 bytes.
-        ! int is usually 4 bytes and long_long is usually 8 bytes
-        !> @todo probably a better approach would be to use c_int8_t, c_int16_t, ..., c_int64_t
+
         generic, public :: set => set_string, &
                                &  set_int8,   &
                                &  set_int16,  &

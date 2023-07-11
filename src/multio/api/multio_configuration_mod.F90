@@ -1,3 +1,16 @@
+!> @file
+!! @brief Configuration for a multio-handle
+!!
+!! In this module a class needed to configure a multio-handle is defined
+!!
+!! @author Mirco Valentini
+!! @date   July 11, 2023
+!! @version 1.0
+!!
+!! @note The behaviour of this module depends on the "multio_debug_fapi.h"
+!!       that contains preprocessor macro.
+!!
+
 #include "multio_debug_fapi.h"
 
 #define __module_name__ multio_configuration_mod

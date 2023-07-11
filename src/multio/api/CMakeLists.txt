@@ -59,7 +59,6 @@ ecbuild_add_library(
 # Cannot use CONDITION for (ecbuild_)configure_file
 if( HAVE_FORTRAN )
     configure_file( multio_config.f90.in multio_config.f90 )
-    configure_file( multio_debug_fapi.h.in multio_debug_fapi.h )
 endif()
 
 list( APPEND multio_fapi_srcs
@@ -72,6 +71,7 @@ list( APPEND multio_fapi_srcs
     multio_metadata_mod.F90
     multio_utils_mod.F90
     multio_api.F90
+    multio_debug_fapi.h
 )
 
 ecbuild_add_library(
@@ -83,7 +83,6 @@ ecbuild_add_library(
     SOURCES
         ${multio_fapi_srcs}
         ${CMAKE_CURRENT_BINARY_DIR}/multio_config.f90
-        ${CMAKE_CURRENT_BINARY_DIR}/multio_debug_fapi.h
 
     PUBLIC_INCLUDES
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/module>

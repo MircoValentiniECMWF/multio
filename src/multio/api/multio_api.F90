@@ -1,3 +1,18 @@
+!> @file
+!! @brief Symbols exposed by the multio fortran api module
+!!
+!! This module just collect (from other modules) and expose all the public
+!! symbols of themultio fortran api.
+!!
+!! @author Mirco Valentini
+!! @date   July 11, 2023
+!! @version 1.0
+!!
+!! @note The behaviour of this module depends on the "multio_debug_fapi.h"
+!!       that contains preprocessor macro.
+!!
+
+
 #include "multio_debug_fapi.h"
 
 module multio_api
