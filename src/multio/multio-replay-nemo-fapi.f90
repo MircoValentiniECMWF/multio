@@ -119,8 +119,8 @@ subroutine init(mio, rank, server_count, client_count)
 
     cerr = cc%set_failure_handler(multio_custom_error_handler, mio_parent_comm)
     if (cerr /= MULTIO_SUCCESS) then
-         write(error_unit, *) 'setting multio failure handler failed: ',multio_error_string(cerr)
-         ERROR STOP "MULTIO_ERROR"
+        write(error_unit, *) 'setting multio failure handler failed: ',multio_error_string(cerr)
+        ERROR STOP "MULTIO_ERROR"
     end if
 
 

@@ -166,6 +166,7 @@ contains
             return
         end if
 
+        !!!! return
         ! ! Change context value
         ! context = 654321
 
@@ -176,7 +177,7 @@ contains
         !     return
         ! end if
 
-        err = cc%mpi_allow_world_default_comm( .FALSE._1 )
+        err = cc%mpi_allow_world_default_comm( .false. )
         if (err /= MULTIO_SUCCESS) then
             write(error_unit, *) 'multio_configuration%allowWorldAsDefault failed unexpectedly: ',multio_error_string(err)
             success = .false.
@@ -211,7 +212,6 @@ contains
             success = .false.
             return
         end if
-
 
         ! Create other handles and test behaviour
         context2 = 22
@@ -259,7 +259,7 @@ contains
         end if
 
         ! Trigger error on 2
-        err = cc2%mpi_allow_world_default_comm( .FALSE._1 )
+        err = cc2%mpi_allow_world_default_comm( .false. )
         err = mio2%new(cc2)
         if (err == MULTIO_SUCCESS) then
             write(error_unit, *) 'multio_new (2) succeeded unexpectedly with "0"'
@@ -291,7 +291,7 @@ contains
 
 
         ! Trigger error on 3
-        err = cc3%mpi_allow_world_default_comm( .FALSE._1 )
+        err = cc3%mpi_allow_world_default_comm( .FALSE. )
         err = mio3%new(cc3)
         if (err == MULTIO_SUCCESS) then
             write(error_unit, *) 'multio_new (3) succeeded unexpectedly with "0"'

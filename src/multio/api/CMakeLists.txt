@@ -61,6 +61,18 @@ if( HAVE_FORTRAN )
     configure_file( multio_config.f90.in multio_config.f90 )
 endif()
 
+list( APPEND multio_fapi_srcs
+    multio_constants_mod.F90
+    multio_error_handling_mod.F90
+    multio_configuration_mod.F90
+    multio_base_handle_mod.F90
+    multio_handle_mod.F90
+    multio_data_mod.F90
+    multio_metadata_mod.F90
+    multio_utils_mod.F90
+    multio_api.F90
+)
+
 ecbuild_add_library(
 
     TARGET multio-fapi
@@ -68,28 +80,13 @@ ecbuild_add_library(
     CONDITION HAVE_FORTRAN
 
     SOURCES
-        multio_api.f90
+        ${multio_fapi_srcs}
         ${CMAKE_CURRENT_BINARY_DIR}/multio_config.f90
 
     PUBLIC_INCLUDES
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/module>
+        $<BUILD_INTERFACE:${CMAKE_Fortran_MODULE_DIRECTORY}>
 
     PUBLIC_LIBS
         multio-api
-)
-
-
-ecbuild_add_library(
-
-    TARGET multio-dummy-fapi
-
-    CONDITION HAVE_FORTRAN
-
-    SOURCES
-        multio_dummy_api.f90
-
-    PUBLIC_INCLUDES
-        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/module>
-
-    PUBLIC_LIBS
 )

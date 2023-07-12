@@ -109,7 +109,7 @@ CASE("Create handle with default configuration without MPI splitting") {
     err = multio_new_configuration(&cc);
     std::unique_ptr<multio_configuration_t> configuration_deleter(cc);
     EXPECT(err == MULTIO_SUCCESS);
-    err = multio_conf_mpi_allow_world_default_comm(cc, false);
+    err = multio_mpi_allow_world_default_comm(cc, false);
     EXPECT(err == MULTIO_SUCCESS);
     err = multio_new_handle(&mdp, cc);
     std::unique_ptr<multio_handle_t> handle_deleter(mdp);
@@ -142,7 +142,7 @@ CASE("Create handle with configuration path without MPI splitting") {
     err = multio_new_configuration_from_filename(&cc, path.c_str());
     std::unique_ptr<multio_configuration_t> configuration_deleter(cc);
     EXPECT(err == MULTIO_SUCCESS);
-    err = multio_conf_mpi_allow_world_default_comm(cc, false);
+    err = multio_mpi_allow_world_default_comm(cc, false);
     EXPECT(err == MULTIO_SUCCESS);
     err = multio_new_handle(&mdp, cc);
     std::unique_ptr<multio_handle_t> handle_deleter(mdp);
@@ -158,7 +158,7 @@ CASE("Start server with default configuration") {
     err = multio_new_configuration(&cc);
     std::unique_ptr<multio_configuration_t> configuration_deleter(cc);
     EXPECT(err == MULTIO_SUCCESS);
-    err = multio_conf_mpi_allow_world_default_comm(cc, false);
+    err = multio_mpi_allow_world_default_comm(cc, false);
     EXPECT(err == MULTIO_SUCCESS);
     err = multio_start_server(cc);
     std::string errStr(multio_error_string(err));
