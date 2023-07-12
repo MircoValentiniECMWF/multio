@@ -1,7 +1,17 @@
+!> @file
+!!
+!! @brief Definition of the base functionalities of a multio_handle
+!!
+!! @note This module is separated from the "full" multio handle in
+!!       order to avoid circular deps.
+!!
+
 module multio_base_handle_mod
+
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_int
     use, intrinsic :: iso_c_binding, only: c_null_ptr
+
 implicit none
 
     ! Default symbols visibility
@@ -10,8 +20,16 @@ implicit none
     !>
     !! @class datatype used to wrap the functionalities of a multio_base_handle object
     type :: multio_base_handle
+
+        !! Default public visibility of members.
+        !! The derived class (multio_handle) needs to access members
+
+        !! Pointer to the opaque c object
         type(c_ptr) :: impl =  c_null_ptr
+
+        !! Pointer to the failure handler
         integer(c_int), pointer :: failure_id => null()
+
     contains
 
         ! General management
@@ -54,6 +72,7 @@ contains
         ! Exit point
         return
     end function multio_base_handle_c_ptr
+
 
     !>
     !! @brief create a new multio handle from  a multio configuration
@@ -204,7 +223,6 @@ contains
         use, intrinsic :: iso_c_binding, only: c_f_pointer
         use :: multio_error_handling_mod, only: failure_handler_t
         use :: multio_error_handling_mod, only: failure_info_list
-        use :: multio_error_handling_mod, only: failure_handler_wrapper
     implicit none
         ! Dummy arguments
         class(multio_base_handle),    intent(inout) :: handle
@@ -240,7 +258,7 @@ contains
         ! Append the new error handler
         new_id_loc = failure_info_list%add(handler, context)
         call c_f_pointer(new_id_loc, handle%failure_id)
-        c_err = c_multio_handle_set_failure_handler(handle%c_ptr(), c_funloc(failure_handler_wrapper), new_id_loc)
+        c_err = c_multio_handle_set_failure_handler(handle%c_ptr(), failure_info_list%c_wrapper(), new_id_loc)
         ! Revo the old error handler if exists
         if(associated(old_id)) then
             call failure_info_list%remove(old_id)

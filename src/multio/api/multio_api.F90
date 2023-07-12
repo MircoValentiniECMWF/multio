@@ -1,3 +1,8 @@
+!> @file
+!!
+!! @brief List of all the symbols exposed by multio
+!! fortran interface
+!!
 module multio_api
 
     ! Constants
@@ -27,7 +32,7 @@ implicit none
     ! Default symbol visibility
     private
 
-    ! White list of the visible symbols
+    !! White list of the visible symbols
 
     ! Public constants
     public :: MULTIO_SUCCESS

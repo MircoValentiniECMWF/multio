@@ -1,3 +1,10 @@
+!> @file
+!!
+!! @brief Definition of a class used to wrap data to be passed to multio.
+!!
+!! This module is used to expose a class which is a wrapper around eckit::Buffer.
+!!
+
 module multio_data_mod
 
     use, intrinsic :: iso_c_binding, only: c_null_ptr
@@ -13,23 +20,29 @@ implicit none
     !! @class datatype used to wrap eckit::buffer
     type :: multio_data
 
-        !! Class visibility
+        !! Deafult visibility of the members
         private
 
-        type(c_ptr)          :: impl  = c_null_ptr
-        integer(kind=c_int)  :: byte_size_ = 0_c_int
+        !! Pointer to the opaque c object
+        type(c_ptr) :: impl = c_null_ptr
+
+        !! Size of the datatype used
+        integer(kind=c_int) :: byte_size_ = 0_c_int
 
     contains
 
+        ! General management
         procedure :: new    => multio_data_new
         procedure :: delete => multio_data_delete
         procedure :: c_ptr  => multio_data_c_ptr
 
+        ! Utils
         procedure :: resize    => multio_data_resize
         procedure :: size      => multio_data_size
         procedure :: zero      => multio_data_zero
         procedure :: byte_size => multio_data_byte_size
 
+        ! Methods used to set values
         procedure :: set_float_scalar  => multio_data_set_float_scalar
         procedure :: set_double_scalar => multio_data_set_double_scalar
         procedure :: set_float_chunk   => multio_data_set_float_chunk

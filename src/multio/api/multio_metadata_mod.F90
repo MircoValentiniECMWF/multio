@@ -1,6 +1,12 @@
+!> @file
+!!
+!! @brief Definition of a class used to wrap metadata to be passed to multio.
+!!
 module multio_metadata_mod
+
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_null_ptr
+
 implicit none
 
     ! Default visibility of the module
@@ -9,19 +15,25 @@ implicit none
     !>
     !! @class datatype used to wrap the functionalities of a multio_metadata object
     type :: multio_metadata
-        ! Default visibility
+
+        !! Deafult visibility of the members
         private
 
-        ! opaque c object
+        !! Pointer to the opaque c object
         type(c_ptr) :: impl = c_null_ptr
+
     contains
+
+        ! General management of the object
         procedure, public, pass :: new          => multio_new_metadata
         procedure, public, pass :: delete       => multio_delete_metadata
         procedure, public, pass :: c_ptr        => multio_metadata_c_ptr
 
 
+        ! Overload string
         procedure, public, pass :: set_string   => multio_metadata_set_string
 
+        ! Overload integers
         procedure, private, pass :: set_int8     => multio_metadata_set_int8
         procedure, private, pass :: set_int16    => multio_metadata_set_int16
         procedure, private, pass :: set_int32    => multio_metadata_set_int32
@@ -31,18 +43,17 @@ implicit none
                                                  &  set_int32, &
                                                  &  set_int64
 
+        ! Overload bool
         procedure, private, pass :: set_fbool    => multio_metadata_set_fbool
         procedure, private, pass :: set_cbool    => multio_metadata_set_cbool
         generic,   public        :: set_bool     => set_cbool, set_fbool
 
+        ! Oversload real
         procedure, private, pass :: set_real32   => multio_metadata_set_real32
         procedure, private, pass :: set_real64   => multio_metadata_set_real64
         generic,   public        :: set_real     => set_real32, set_real64
 
-        ! Not possible to overload integers with the same dimensions.
-        ! Depending on the architecture long can be 4 or 8 bytes.
-        ! int is usually 4 bytes and long_long is usually 8 bytes
-        !> @todo probably a better approach would be to use c_int8_t, c_int16_t, ..., c_int64_t
+        ! Overload all datatypes
         generic, public :: set => set_string, &
                                &  set_int8,   &
                                &  set_int16,  &
@@ -79,6 +90,7 @@ contains
         ! Exit point
         return
     end function multio_metadata_c_ptr
+
 
     !>
     !! @brief crate a new metadata object
@@ -221,7 +233,6 @@ contains
         ! Exit point
         return
     end function multio_metadata_set_string
-
 
 
     !>

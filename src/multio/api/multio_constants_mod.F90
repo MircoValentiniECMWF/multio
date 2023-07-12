@@ -1,3 +1,7 @@
+!> @file
+!!
+!! @brief Constants and enumerators used in the multio interface
+!!
 module multio_constants_mod
 implicit none
 

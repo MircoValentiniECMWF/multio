@@ -400,8 +400,8 @@ void MultioReplayNemoCApi::initClient() {
 
     int retComm = 0;
     if (passDownMPIComm_) {
-        multio_conf_mpi_parent_comm(multio_cc, eckit::mpi::comm(mpiGroup_.c_str()).communicator());
-        multio_conf_mpi_return_client_comm(multio_cc, &retComm);
+        multio_mpi_parent_comm(multio_cc, eckit::mpi::comm(mpiGroup_.c_str()).communicator());
+        multio_mpi_return_client_comm(multio_cc, &retComm);
     }
 
 

@@ -319,7 +319,7 @@ int multio_conf_set_path(multio_configuration_t* cc, const char* configuration_p
         cc);
 };
 
-int multio_conf_mpi_allow_world_default_comm(multio_configuration_t* cc, bool allow) {
+int multio_mpi_allow_world_default_comm(multio_configuration_t* cc, bool allow) {
     return wrapApiFunction(
         [cc, allow]() {
             ASSERT(cc);
@@ -331,7 +331,7 @@ int multio_conf_mpi_allow_world_default_comm(multio_configuration_t* cc, bool al
         cc);
 };
 
-int multio_conf_mpi_parent_comm(multio_configuration_t* cc, int parent_comm) {
+int multio_mpi_parent_comm(multio_configuration_t* cc, int parent_comm) {
     return wrapApiFunction(
         [cc, parent_comm]() {
             ASSERT(cc);
@@ -343,7 +343,7 @@ int multio_conf_mpi_parent_comm(multio_configuration_t* cc, int parent_comm) {
         cc);
 };
 
-int multio_conf_mpi_return_client_comm(multio_configuration_t* cc, int* return_client_comm) {
+int multio_mpi_return_client_comm(multio_configuration_t* cc, int* return_client_comm) {
     return wrapApiFunction(
         [cc, return_client_comm]() {
             ASSERT(cc);
@@ -355,7 +355,7 @@ int multio_conf_mpi_return_client_comm(multio_configuration_t* cc, int* return_c
         cc);
 };
 
-int multio_conf_mpi_return_server_comm(multio_configuration_t* cc, int* return_server_comm) {
+int multio_mpi_return_server_comm(multio_configuration_t* cc, int* return_server_comm) {
     return wrapApiFunction(
         [cc, return_server_comm]() {
             ASSERT(cc);

@@ -1,3 +1,8 @@
+!> @file
+!!
+!! @brief Set of functions that can be used for the general
+!! management of the multio interface
+!!
 module multio_utils_mod
 implicit none
 
@@ -12,6 +17,7 @@ implicit none
     public :: multio_error_string
 
 contains
+
 
     !>
     !! @brief initialization of multio
@@ -78,6 +84,7 @@ contains
         ! Exit point
         return
     end function multio_start_server
+
 
     !>
     !! @brief remove a failure handler to the list of failure handler list
@@ -195,6 +202,7 @@ contains
         return
     end function multio_vcs_version
 
+
     !>
     !! @brief return the version of multio
     !!
@@ -222,7 +230,7 @@ contains
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
                 integer(c_int), value, intent(in) :: err
-                type(c_ptr), value,    intent(in) :: info
+                type(c_ptr),    value, intent(in) :: info
                 type(c_ptr) :: error_string
             end function c_multio_error_string_info
             function c_multio_error_string(err) result(error_string) &

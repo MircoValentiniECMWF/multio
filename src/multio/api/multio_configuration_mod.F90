@@ -1,7 +1,14 @@
+!> @file
+!!
+!! @brief Definition of an object that can be used as main
+!! configuration for a multio_handle
+!!
 module multio_configuration_mod
+
     use, intrinsic :: iso_c_binding, only: c_int
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_null_ptr
+
 implicit none
 
     ! Default visibility of the module
@@ -10,12 +17,16 @@ implicit none
     !>
     !! @class datatype used to wrap the functionalities of a multio_configuration object
     type :: multio_configuration
-        ! Default visibility
+
+        !! Deafult visibility of the members
         private
 
-        ! Members
+        !! Pointer to the opaque c object
         type(c_ptr) :: impl = c_null_ptr
+
+        !! Pointer to the failure handler
         integer(c_int), pointer :: failure_id => null()
+
     contains
         procedure, public, pass :: new_default       => multio_new_configuration
         procedure, public, pass :: new_from_filename => multio_new_configuration_from_filename
@@ -225,7 +236,6 @@ contains
         use, intrinsic :: iso_c_binding, only: c_f_pointer
         use :: multio_error_handling_mod, only: failure_handler_t
         use :: multio_error_handling_mod, only: failure_info_list
-        use :: multio_error_handling_mod, only: failure_handler_wrapper
     implicit none
         ! Dummy arguments
         class(multio_configuration),  intent(inout) :: cc
@@ -261,7 +271,7 @@ contains
         ! Append the new error handler
         new_id_loc = failure_info_list%add(handler, context)
         call c_f_pointer(new_id_loc, cc%failure_id)
-        c_err = c_multio_config_set_failure_handler(cc%c_ptr(), c_funloc(failure_handler_wrapper), new_id_loc)
+        c_err = c_multio_config_set_failure_handler(cc%c_ptr(), failure_info_list%c_wrapper(), new_id_loc)
         ! Revo the old error handler if exists
         if(associated(old_id)) then
             call failure_info_list%remove(old_id)
@@ -347,7 +357,7 @@ contains
         ! Private interface to the c API
         interface
             function c_multio_conf_mpi_allow_world_default_comm(cc, allow) result(err) &
-                bind(c, name='multio_conf_mpi_allow_world_default_comm')
+                bind(c, name='multio_mpi_allow_world_default_comm')
                 use, intrinsic :: iso_c_binding, only: c_bool
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
@@ -394,7 +404,7 @@ contains
         ! Private interface to the c API
         interface
             function c_multio_conf_mpi_parent_comm(cc, parent_comm) result(err) &
-                bind(c, name='multio_conf_mpi_parent_comm')
+                bind(c, name='multio_mpi_parent_comm')
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
@@ -438,7 +448,7 @@ contains
         ! Private interface to the c API
         interface
             function c_multio_conf_mpi_return_client_comm(cc, return_comm) result(err) &
-                bind(c, name='multio_conf_mpi_return_client_comm')
+                bind(c, name='multio_mpi_return_client_comm')
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
@@ -482,7 +492,7 @@ contains
         ! Private interface to the c API
         interface
             function c_multio_conf_mpi_return_server_comm(cc, return_comm) result(err) &
-                bind(c, name='multio_conf_mpi_return_server_comm')
+                bind(c, name='multio_mpi_return_server_comm')
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none

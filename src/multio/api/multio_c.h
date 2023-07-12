@@ -147,7 +147,7 @@ int multio_conf_set_path(multio_configuration_t* cc, const char* configuration_p
  * to eckit::mpi yet. \param cc Handle to the multio configuration  object \returns Return code
  * (#MultioErrorValues)
  */
-int multio_conf_mpi_allow_world_default_comm(multio_configuration_t* cc, bool allow);
+int multio_mpi_allow_world_default_comm(multio_configuration_t* cc, bool allow);
 
 
 /** Set MPI specific initalization parameters
@@ -156,7 +156,7 @@ int multio_conf_mpi_allow_world_default_comm(multio_configuration_t* cc, bool al
  * \param cc Handle to the multio configuration  object
  * \returns Return code (#MultioErrorValues)
  */
-int multio_conf_mpi_parent_comm(multio_configuration_t* cc, int parent_comm);
+int multio_mpi_parent_comm(multio_configuration_t* cc, int parent_comm);
 
 
 /** Set MPI specific initalization parameters
@@ -164,7 +164,7 @@ int multio_conf_mpi_parent_comm(multio_configuration_t* cc, int parent_comm);
  * \param return_client_comm Pointer to an integer specifying the client communicator that the multio may set on
  * initialization \param cc Handle to the multio configuration  object \returns Return code (#MultioErrorValues)
  */
-int multio_conf_mpi_return_client_comm(multio_configuration_t* cc, int* return_client_comm);
+int multio_mpi_return_client_comm(multio_configuration_t* cc, int* return_client_comm);
 
 
 /** Set MPI specific initalization parameters
@@ -172,7 +172,7 @@ int multio_conf_mpi_return_client_comm(multio_configuration_t* cc, int* return_c
  * \param return_server_comm Pointer to an integer specifying the server communicator that the multio may set on
  * initialization \param cc Handle to the multio configuration  object \returns Return code (#MultioErrorValues)
  */
-int multio_conf_mpi_return_server_comm(multio_configuration_t* cc, int* return_server_comm);
+int multio_mpi_return_server_comm(multio_configuration_t* cc, int* return_server_comm);
 
 
 /** Creates a multio (client) instance without an configuration. Behaves like passing a default configuration directly

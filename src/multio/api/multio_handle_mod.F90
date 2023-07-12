@@ -1,8 +1,21 @@
+!> @file
+!!
+!! @brief Definition of the main functionalities of a multio_handle
+!!
+!! This module defines all the overloaded methods needed to write to
+!! multio fields, masks and domains
+!!
+!! @note This module is separated from the "base" multio handle in
+!!       order to avoid circular deps.
+!!
+
 module multio_handle_mod
+
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_int
     use, intrinsic :: iso_c_binding, only: c_null_ptr
-    use :: multio_base_handle_mod,    only: multio_base_handle
+    use :: multio_base_handle_mod,   only: multio_base_handle
+
 implicit none
 
     ! Default symbols visibility
@@ -11,7 +24,10 @@ implicit none
     !>
     !! @class datatype used to wrap the functionalities of a multio_handle object
     type, extends(multio_base_handle) :: multio_handle
+
+        !! Deafult visibility of the members
         private
+
     contains
 
         ! Signalling
@@ -45,8 +61,7 @@ implicit none
 
         ! Utils
         procedure, public,  pass :: field_accepted => multio_handle_field_accepted
-        ! procedure :: field_is_active => multio_field_is_active
-        ! procedure :: category_is_fully_active => multio_category_is_fully_active
+
     end type ! multio_handle
 
     ! Public symbols whitelist
@@ -221,9 +236,9 @@ contains
                 use, intrinsic :: iso_c_binding, only: c_ptr
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
-                type(c_ptr), value, intent(in) :: handle
-                type(c_ptr), value, intent(in) :: metadata
-                type(c_ptr), value, intent(in) :: data
+                type(c_ptr),    value, intent(in) :: handle
+                type(c_ptr),    value, intent(in) :: metadata
+                type(c_ptr),    value, intent(in) :: data
                 integer(c_int), value, intent(in) :: size
                 integer(c_int) :: err
             end function c_multio_write_mask_float
@@ -690,9 +705,9 @@ contains
                 use, intrinsic :: iso_c_binding, only: c_bool
                 use, intrinsic :: iso_c_binding, only: c_int
             implicit none
-                type(c_ptr), intent(in), value :: handle
-                type(c_ptr), intent(in), value :: metadata
-                logical(c_bool), intent(out) :: set_value
+                type(c_ptr), value, intent(in)  :: handle
+                type(c_ptr), value, intent(in)  :: metadata
+                logical(c_bool),    intent(out) :: set_value
                 integer(c_int) :: err
             end function c_multio_field_accepted
         end interface
