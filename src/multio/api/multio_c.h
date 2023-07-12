@@ -1,5 +1,4 @@
-#ifndef multio_c_h
-#define multio_c_h
+#pragma once
 
 #include <stdbool.h>
 
@@ -15,6 +14,9 @@ typedef struct multio_configuration_t multio_configuration_t;
 
 struct multio_metadata_t;
 typedef struct multio_metadata_t multio_metadata_t;
+
+struct multio_data_t;
+typedef struct multio_data_t multio_data_t;
 
 struct multio_handle_t;
 typedef struct multio_handle_t multio_handle_t;
@@ -57,7 +59,7 @@ const char* multio_error_string(int err);
 const char* multio_error_string_info(int err, multio_failure_info_t* info);
 
 /** Error handler callback function signature
- * \param usercontext Uer defined context to pass through
+ * \param usercontext User defined context to pass through
  * \param error_code Error code (#MultioErrorValues)
  * \param info Object with information about the error. Used with multio_error_string_info.
  */
@@ -145,7 +147,7 @@ int multio_conf_set_path(multio_configuration_t* cc, const char* configuration_p
  * to eckit::mpi yet. \param cc Handle to the multio configuration  object \returns Return code
  * (#MultioErrorValues)
  */
-int multio_conf_mpi_allow_world_default_comm(multio_configuration_t* cc, bool allow);
+int multio_mpi_allow_world_default_comm(multio_configuration_t* cc, bool allow);
 
 
 /** Set MPI specific initalization parameters
@@ -154,7 +156,7 @@ int multio_conf_mpi_allow_world_default_comm(multio_configuration_t* cc, bool al
  * \param cc Handle to the multio configuration  object
  * \returns Return code (#MultioErrorValues)
  */
-int multio_conf_mpi_parent_comm(multio_configuration_t* cc, int parent_comm);
+int multio_mpi_parent_comm(multio_configuration_t* cc, int parent_comm);
 
 
 /** Set MPI specific initalization parameters
@@ -162,7 +164,7 @@ int multio_conf_mpi_parent_comm(multio_configuration_t* cc, int parent_comm);
  * \param return_client_comm Pointer to an integer specifying the client communicator that the multio may set on
  * initialization \param cc Handle to the multio configuration  object \returns Return code (#MultioErrorValues)
  */
-int multio_conf_mpi_return_client_comm(multio_configuration_t* cc, int* return_client_comm);
+int multio_mpi_return_client_comm(multio_configuration_t* cc, int* return_client_comm);
 
 
 /** Set MPI specific initalization parameters
@@ -170,7 +172,7 @@ int multio_conf_mpi_return_client_comm(multio_configuration_t* cc, int* return_c
  * \param return_server_comm Pointer to an integer specifying the server communicator that the multio may set on
  * initialization \param cc Handle to the multio configuration  object \returns Return code (#MultioErrorValues)
  */
-int multio_conf_mpi_return_server_comm(multio_configuration_t* cc, int* return_server_comm);
+int multio_mpi_return_server_comm(multio_configuration_t* cc, int* return_server_comm);
 
 
 /** Creates a multio (client) instance without an configuration. Behaves like passing a default configuration directly
@@ -295,6 +297,14 @@ int multio_write_field_float(multio_handle_t* mio, multio_metadata_t* md, const 
  */
 int multio_write_field_double(multio_handle_t* mio, multio_metadata_t* md, const double* data, int size);
 
+/** Writes (partial) fields
+ * \param mio Handle to the multio (client) instance
+ * \param md Metadata information about the field
+ * \param d Pointer to the (eckit::Buffer) data containing the (partial) field values
+ * \param byte_size Size of the packed data (i.e.4 for float 8 for double)
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_write_field_buffer(multio_handle_t* mio, multio_metadata_t* md, multio_data_t* d, int byte_size);
 
 /** @} */
 
@@ -379,6 +389,76 @@ int multio_metadata_set_float(multio_metadata_t* md, const char* key, float valu
 int multio_metadata_set_double(multio_metadata_t* md, const char* key, double value);
 
 
+/** Creates a multio data object
+ * \param md Return a handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_new(multio_data_t** md, multio_handle_t* mio);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_delete(multio_data_t* md);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_zero(multio_data_t* md);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_resize(multio_data_t* md, int new_size);
+
+
+/** Deletes a multio data object
+ * \param md Handle to the multio metadata object
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_size(multio_data_t* md, int* size);
+
+/** Sets a metadata key-value pair for integer values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Integer value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_float_scalar(multio_data_t* md, float* value, int pos);
+
+
+/** Sets a metadata key-value pair for long values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Long value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_double_scalar(multio_data_t* md, double* value, int pos);
+
+
+/** Sets a metadata key-value pair for integer values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Integer value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_float_chunk(multio_data_t* md, float* value, int pos, int size);
+
+
+/** Sets a metadata key-value pair for long values
+ * \param md Handle to the multio metadata object
+ * \param key C-string key to be set
+ * \param value Long value to be set
+ * \returns Return code (#MultioErrorValues)
+ */
+int multio_data_set_double_chunk(multio_data_t* md, double* value, int pos, int size);
+
+
 /** Determines if the pipelines are configured to accept the specified data
  *
  * \param mio Handle to the multio (client) instance
@@ -390,6 +470,4 @@ int multio_field_accepted(multio_handle_t* mio, const multio_metadata_t* md, boo
 
 #ifdef __cplusplus
 } /* extern "C" */
-#endif
-
 #endif
