@@ -149,7 +149,7 @@ contains
                 call node%handler_fn(node%context, err, info)
                 node => null()
             else
-                !! Go to the next node\
+                !! Go to the next node
                 node => node%next
             endif
         enddo SearchLoop
