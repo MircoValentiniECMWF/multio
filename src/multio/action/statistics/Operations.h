@@ -59,12 +59,13 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     throw eckit::UserError(os.str(), Here());
 }
 
-std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::string>& opNames, message::Message msg,
+std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::string>& opNames,
+                                                        const message::Message& msg,
                                                         std::shared_ptr<StatisticsIO>& IOmanager,
                                                         const OperationWindow& win, const StatisticsConfiguration& cfg);
 
-std::vector<std::unique_ptr<Operation>> make_operations( const std::string& op, size_t N, message::Message msg,
-                                            std::shared_ptr<StatisticsIO>& IOmanager,
-                                            const OperationWindow& win, const StatisticsConfiguration& cfg);                                                        
+std::vector<std::unique_ptr<Operation>> make_operations(const std::string& op, size_t N, const message::Message& msg,
+                                                        std::shared_ptr<StatisticsIO>& IOmanager,
+                                                        const OperationWindow& win, const StatisticsConfiguration& cfg);
 
 }  // namespace multio::action

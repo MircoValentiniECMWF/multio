@@ -27,7 +27,7 @@ public:
     virtual void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) = 0;
 
     virtual size_t byte_size() const = 0;
-    virtual void compute(eckit::Buffer& buf) = 0;
+    virtual void compute(eckit::Buffer& buf) const = 0;
     virtual void init(const void* data, long sz) = 0;
     virtual void init() = 0;
 

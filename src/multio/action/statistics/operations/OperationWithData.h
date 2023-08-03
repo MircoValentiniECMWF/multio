@@ -86,14 +86,14 @@ protected:
         return;
     };
 
-    void checkSize(long sz) {
+    void checkSize(long sz) const {
         if (values_.size() != static_cast<long>(sz / sizeof(T))) {
             throw eckit::AssertionFailed(logHeader_ + " :: Expected size: " + std::to_string(values_.size())
                                          + " -- actual size: " + std::to_string(sz));
         }
     };
 
-    void checkTimeInterval() {
+    void checkTimeInterval() const {
         long sec = win_.count() * cfg_.stepFreq() * cfg_.timeStep();
         if (sec == 0) {
             throw eckit::SeriousBug{logHeader_ + " :: Divide by zero", Here()};

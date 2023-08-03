@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string>
-#include <memory>
-#include <map>
 #include <cstdint>
+#include <map>
+#include <memory>
+#include <string>
 
 #include "multio/action/ChainedAction.h"
 #include "multio/message/Message.h"
@@ -12,51 +12,52 @@
 
 namespace multio::action {
 
-// Match timestamp according to some specific rule that can be configured from 
+// Match timestamp according to some specific rule that can be configured from
 // input file
-class SynopticMatcher{
+class SynopticMatcher {
 public:
-    SynopticMatcher( );
+    SynopticMatcher(){};
 
-    virtual ~SynopticMatcher();
+    virtual ~SynopticMatcher(){};
 
     virtual size_t size() const = 0;
 
-    virtual bool match( const message::Message& msg, const StatisticsConfiguration& cfg, size_t& key ) const = 0;
+    virtual bool match(const message::Message& msg, const StatisticsConfiguration& cfg, size_t& key) const = 0;
 };
 
 
-class AllTimesMatcher final : public SynopticMatcher{
+class AllTimesMatcher final : public SynopticMatcher {
 public:
-    AllTimesMatcher( ){};
+    AllTimesMatcher(){};
+
+    ~AllTimesMatcher(){};
 
     size_t size() const;
 
-    bool match( const message::Message& msg, const StatisticsConfiguration& cfg, size_t& key ) const;
+    bool match(const message::Message& msg, const StatisticsConfiguration& cfg, size_t& key) const;
 };
 
 
-class DailyHoursMatcher final : public SynopticMatcher{
+class DailyHoursMatcher final : public SynopticMatcher {
 public:
-    DailyHoursMatcher( ){};
+    DailyHoursMatcher(){};
+    ~DailyHoursMatcher(){};
 
     size_t size() const;
 
-    bool match( const message::Message& msg, const StatisticsConfiguration& cfg, size_t& key ) const;
+    bool match(const message::Message& msg, const StatisticsConfiguration& cfg, size_t& key) const;
 };
 
 
-// List of all available matchers 
-class SynopticMatchers{
+// List of all available matchers
+class SynopticMatchers {
 private:
-
-    std::map<std::string,std::shared_ptr<SynopticMatcher>> matchers_;
+    std::map<std::string, std::shared_ptr<SynopticMatcher>> matchers_;
 
 public:
+    SynopticMatchers(const ComponentConfiguration& compConf);
 
-    SynopticMatchers( const ComponentConfiguration& compConf );
-
-    const std::shared_ptr<SynopticMatcher>& getMatcher( const std::string& key );
+    const std::shared_ptr<SynopticMatcher>& getMatcher(const std::string& key);
 };
 
-}
+}  // namespace multio::action

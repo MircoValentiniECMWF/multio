@@ -108,7 +108,8 @@ void Statistics::executeImpl(message::Message msg) {
     util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
 
     if (fieldStats_.find(key) == fieldStats_.end()) {
-        fieldStats_[key] = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, msg, IOmanager_, cfg);
+        fieldStats_[key]
+            = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, matchers_, msg, IOmanager_, cfg);
         if (cfg.solver_send_initial_condition()) {
             util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
             return;
@@ -119,7 +120,7 @@ void Statistics::executeImpl(message::Message msg) {
 
     if (fieldStats_.at(key)->isEndOfWindow(msg, cfg)) {
         auto md = outputMetadata(msg.metadata(), cfg, key);
-        for (auto it = fieldStats_.at(key)->begin(); it != fieldStats_.at(key)->end(); ++it) {
+        for (auto it = fieldStats_.at(key)->collection_begin(); it != fieldStats_.at(key)->collection_end(); ++it) {
             eckit::Buffer payload;
             payload.resize((*it)->byte_size());
             payload.zero();

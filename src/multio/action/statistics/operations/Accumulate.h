@@ -25,7 +25,7 @@ public:
                const StatisticsConfiguration& cfg) :
         OperationWithData<T>{name, "accumulate", sz, true, win, IOmanager, cfg} {};
 
-    void compute(eckit::Buffer& buf) override {
+    void compute(eckit::Buffer& buf) const override {
         checkTimeInterval();
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;
         buf.copy(values_.data(), values_.size() * sizeof(T));

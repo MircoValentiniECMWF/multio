@@ -24,7 +24,7 @@ public:
                 const StatisticsConfiguration& cfg) :
         OperationWithData<T>{name, "average", sz, true, win, IOmanager, cfg} {};
 
-    void compute(eckit::Buffer& buf) override {
+    void compute(eckit::Buffer& buf) const override {
         checkTimeInterval();
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;
         auto val = static_cast<T*>(buf.data());
@@ -41,18 +41,19 @@ public:
     }
 
 private:
-    void computeWithMissing(T* buf) {
+    void computeWithMissing(T* buf) const {
         const double m = cfg_.missingValue();
         const double c
             = static_cast<double>(1.0) / static_cast<double>(win_.count() * cfg_.stepFreq() * cfg_.timeStep());
-        std::transform(values_.begin(), values_.end(), buf, [c, m](T v) { return static_cast<T>(m == v ? m : v * c); });
+        std::transform(values_.cbegin(), values_.cend(), buf,
+                       [c, m](const T& v) { return static_cast<T>(m == v ? m : v * c); });
         return;
     }
 
-    void computeWithoutMissing(T* buf) {
+    void computeWithoutMissing(T* buf) const {
         const double c
             = static_cast<double>(1.0) / static_cast<double>(win_.count() * cfg_.stepFreq() * cfg_.timeStep());
-        std::transform(values_.begin(), values_.end(), buf, [c](T v) { return static_cast<T>(v * c); });
+        std::transform(values_.cbegin(), values_.cend(), buf, [c](const T& v) { return static_cast<T>(v * c); });
         return;
     }
 
