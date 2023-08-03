@@ -27,7 +27,8 @@ Statistics::Statistics(const ComponentConfiguration& compConf) :
     cfg_{compConf},
     operations_{compConf.parsedConfig().getStringVector("operations")},
     periodUpdater_{make_period_updater(compConf.parsedConfig().getString("output-frequency"))},
-    IOmanager_{StatisticsIOFactory::instance().build(cfg_.restartLib(), cfg_.restartPath(), cfg_.restartPrefix())} {}
+    IOmanager_{StatisticsIOFactory::instance().build(cfg_.restartLib(), cfg_.restartPath(), cfg_.restartPrefix())},
+    matchers_{compConf} {}
 
 
 void Statistics::DumpRestart() {

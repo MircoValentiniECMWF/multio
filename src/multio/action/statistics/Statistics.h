@@ -20,6 +20,7 @@
 #include "StatisticsConfiguration.h"
 #include "StatisticsIO.h"
 #include "multio/action/ChainedAction.h"
+#include "SynopticMatcher.h"
 
 namespace eckit {
 class Configuration;
@@ -44,6 +45,7 @@ private:
     const std::vector<std::string> operations_;
     std::shared_ptr<PeriodUpdater> periodUpdater_;
     std::shared_ptr<StatisticsIO> IOmanager_;
+    SynopticMatchers matchers_;
 
 
     std::map<std::string, std::unique_ptr<TemporalStatistics>> fieldStats_;

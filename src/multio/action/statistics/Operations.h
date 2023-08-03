@@ -63,4 +63,8 @@ std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::s
                                                         std::shared_ptr<StatisticsIO>& IOmanager,
                                                         const OperationWindow& win, const StatisticsConfiguration& cfg);
 
+std::vector<std::unique_ptr<Operation>> make_operations( const std::string& op, size_t N, message::Message msg,
+                                            std::shared_ptr<StatisticsIO>& IOmanager,
+                                            const OperationWindow& win, const StatisticsConfiguration& cfg);                                                        
+
 }  // namespace multio::action

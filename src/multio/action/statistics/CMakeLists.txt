@@ -4,6 +4,10 @@ list( APPEND _statistics_sources
     StatisticsConfiguration.h
     StatisticsIO.cc
     StatisticsIO.h
+    SynopticMatcher.cc
+    SynopticMatcher.h
+    SynopticCollection.cc
+    SynopticCollection.h
     io/FstreamIO.cc
     io/FstreamIO.h
     TimeUtils.cc
