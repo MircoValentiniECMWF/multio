@@ -7,22 +7,23 @@
 namespace multio::action {
 
 template <typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-class FluxAverage final : public OperationWithData<T> {
+class FluxAverage final : public OperationWithData<T, 1> {
 public:
-    using OperationWithData<T>::name_;
-    using OperationWithData<T>::cfg_;
-    using OperationWithData<T>::logHeader_;
-    using OperationWithData<T>::values_;
-    using OperationWithData<T>::win_;
-    using OperationWithData<T>::checkSize;
-    using OperationWithData<T>::checkTimeInterval;
+    using state = std::array<T, 1>;
+    using OperationWithData<T, 1>::name_;
+    using OperationWithData<T, 1>::cfg_;
+    using OperationWithData<T, 1>::logHeader_;
+    using OperationWithData<T, 1>::values_;
+    using OperationWithData<T, 1>::win_;
+    using OperationWithData<T, 1>::checkSize;
+    using OperationWithData<T, 1>::checkTimeInterval;
 
     FluxAverage(const std::string& name, long sz, const OperationWindow& win, const StatisticsConfiguration& cfg) :
-        OperationWithData<T>{name, "average", sz, true, win, cfg} {}
+        OperationWithData<T, 1>{name, "average", sz, true, win, cfg} {}
 
     FluxAverage(const std::string& name, long sz, const OperationWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
                 const StatisticsConfiguration& cfg) :
-        OperationWithData<T>{name, "average", sz, true, win, IOmanager, cfg} {};
+        OperationWithData<T, 1>{name, "average", sz, true, win, IOmanager, cfg} {};
 
     void compute(eckit::Buffer& buf) const override {
         checkTimeInterval();
@@ -36,7 +37,7 @@ public:
         checkSize(sz);
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const T* val = static_cast<const T*>(data);
-        std::copy(val, val + (sz / sizeof(T)), values_.begin());
+        update(val);
         return;
     }
 
@@ -46,14 +47,20 @@ private:
         const double c
             = static_cast<double>(1.0) / static_cast<double>(win_.count() * cfg_.stepFreq() * cfg_.timeStep());
         std::transform(values_.cbegin(), values_.cend(), buf,
-                       [c, m](const T& v) { return static_cast<T>(m == v ? m : v * c); });
+                       [c, m](const state& v) { return static_cast<T>(m == v[0] ? m : v[0] * c); });
         return;
     }
 
     void computeWithoutMissing(T* buf) const {
         const double c
             = static_cast<double>(1.0) / static_cast<double>(win_.count() * cfg_.stepFreq() * cfg_.timeStep());
-        std::transform(values_.cbegin(), values_.cend(), buf, [c](const T& v) { return static_cast<T>(v * c); });
+        std::transform(values_.cbegin(), values_.cend(), buf, [c](const state& v) { return static_cast<T>(v[0] * c); });
+        return;
+    }
+
+    void update(const T* val) {
+        std::transform(values_.cbegin(), values_.cend(), val, values_.begin(),
+                       [](const state& v1, const T& v2) { return state{v2}; });
         return;
     }
 

@@ -18,10 +18,13 @@
 
 #include "multio/action/statistics/operations/Accumulate.h"
 #include "multio/action/statistics/operations/Average.h"
+#include "multio/action/statistics/operations/Difference.h"
 #include "multio/action/statistics/operations/FluxAverage.h"
 #include "multio/action/statistics/operations/Instant.h"
 #include "multio/action/statistics/operations/Maximum.h"
 #include "multio/action/statistics/operations/Minimum.h"
+#include "multio/action/statistics/operations/StdDev.h"
+#include "multio/action/statistics/operations/Variance.h"
 
 namespace multio::action {
 
@@ -52,6 +55,18 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     if (opname != "accumulate") {
         return cfg.readRestart() ? std::make_unique<Accumulate<Precision>>(opname, sz, win, IOmanager, cfg)
                                  : std::make_unique<Accumulate<Precision>>(opname, sz, win, cfg);
+    }
+    if (opname != "difference") {
+        return cfg.readRestart() ? std::make_unique<Difference<Precision>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Difference<Precision>>(opname, sz, win, cfg);
+    }
+    if (opname != "variance") {
+        return cfg.readRestart() ? std::make_unique<Variance<Precision>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Variance<Precision>>(opname, sz, win, cfg);
+    }
+    if (opname != "stddev") {
+        return cfg.readRestart() ? std::make_unique<StdDev<Precision>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<StdDev<Precision>>(opname, sz, win, cfg);
     }
 
     std::ostringstream os;

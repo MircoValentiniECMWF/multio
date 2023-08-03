@@ -7,28 +7,30 @@
 namespace multio::action {
 
 template <typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
-class Maximum final : public OperationWithData<T> {
+class Maximum final : public OperationWithData<T, 1> {
 public:
-    using OperationWithData<T>::name_;
-    using OperationWithData<T>::cfg_;
-    using OperationWithData<T>::logHeader_;
-    using OperationWithData<T>::values_;
-    using OperationWithData<T>::win_;
-    using OperationWithData<T>::checkSize;
-    using OperationWithData<T>::checkTimeInterval;
+    using state = std::array<T, 1>;
+    using OperationWithData<T, 1>::name_;
+    using OperationWithData<T, 1>::cfg_;
+    using OperationWithData<T, 1>::logHeader_;
+    using OperationWithData<T, 1>::values_;
+    using OperationWithData<T, 1>::win_;
+    using OperationWithData<T, 1>::checkSize;
+    using OperationWithData<T, 1>::checkTimeInterval;
 
 
     Maximum(const std::string& name, long sz, const OperationWindow& win, const StatisticsConfiguration& cfg) :
-        OperationWithData<T>{name, "maximum", sz, true, win, cfg} {}
+        OperationWithData<T, 1>{name, "maximum", sz, true, win, cfg} {}
 
     Maximum(const std::string& name, long sz, const OperationWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
             const StatisticsConfiguration& cfg) :
-        OperationWithData<T>{name, "maximum", sz, true, win, IOmanager, cfg} {};
+        OperationWithData<T, 1>{name, "maximum", sz, true, win, IOmanager, cfg} {};
 
     void compute(eckit::Buffer& buf) const override {
         checkTimeInterval();
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;
-        buf.copy(values_.data(), values_.size() * sizeof(T));
+        auto val = static_cast<T*>(buf.data());
+        compute(val);
         return;
     };
 
@@ -42,16 +44,21 @@ public:
 
 
 private:
+    void compute(T* buf) const {
+        std::transform(values_.cbegin(), values_.cend(), buf, [](const state& v) { return static_cast<T>(v[0]); });
+        return;
+    }
+
     void updateWithoutMissing(const T* val) {
-        std::transform(values_.begin(), values_.end(), val, values_.begin(),
-                       [](T v1, T v2) { return static_cast<T>(v1 > v2 ? v1 : v2); });
+        std::transform(values_.cbegin(), values_.cend(), val, values_.begin(),
+                       [](const state& v1, const T& v2) { return state{static_cast<T>(v1[0] > v2 ? v1[0] : v2)}; });
         return;
     };
 
     void updateWithMissing(const T* val) {
         double m = cfg_.missingValue();
-        std::transform(values_.begin(), values_.end(), val, values_.begin(), [m](T v1, T v2) {
-            return static_cast<T>(m == v2 ? m : v1 > v2 ? v1 : v2);
+        std::transform(values_.cbegin(), values_.cend(), val, values_.begin(), [m](const state& v1, const T& v2) {
+            return state{static_cast<T>(m == v2 ? m : v1[0] > v2 ? v1[0] : v2)};
         });
         return;
     };

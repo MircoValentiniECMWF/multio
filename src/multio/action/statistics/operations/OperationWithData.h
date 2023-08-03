@@ -1,11 +1,13 @@
 
 #pragma once
 
+#include <array>
+
 #include "multio/action/statistics/operations/Operation.h"
 
 namespace multio::action {
 
-template <typename T, typename = std::enable_if_t<std::is_floating_point<T>::value>>
+template <typename T, size_t nStates, typename = std::enable_if_t<std::is_floating_point<T>::value>>
 class OperationWithData : public Operation {
 public:
     using Operation::cfg_;
@@ -15,19 +17,22 @@ public:
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const OperationWindow& win, const StatisticsConfiguration& cfg) :
         Operation{name, operation, win, cfg},
-        values_{std::vector<T>(sz /= sizeof(T), 0.0)},
+        values_{std::vector<std::array<T, nStates>>(sz /= sizeof(T), std::array<T, nStates>{0.0})},
         needRestart_{needRestart} {}
 
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const OperationWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
                       const StatisticsConfiguration& cfg) :
-        Operation{name, operation, win, cfg}, values_{std::vector<T>(sz /= sizeof(T), 0.0)}, needRestart_{needRestart} {
+        Operation{name, operation, win, cfg},
+        values_{std::vector<std::array<T, nStates>>(sz /= sizeof(T), std::array<T, nStates>{0.0})},
+        needRestart_{needRestart} {
         load(IOmanager, cfg);
         return;
     }
 
     void updateWindow(const void* data, long sz) override {
-        std::transform(values_.begin(), values_.end(), values_.begin(), [](T v) { return static_cast<T>(0.0); });
+        std::transform(values_.cbegin(), values_.cend(), values_.begin(),
+                       [](const std::array<T, nStates>& v) { return std::array<T, nStates>{0.0}; });
         return;
     };
 
@@ -66,23 +71,27 @@ public:
 
 protected:
     void serialize(IOBuffer& restartState) const {
-        std::transform(values_.cbegin(), values_.cend(), restartState.begin(), [](const T& v) {
-            T lv = v;
-            double dv = static_cast<double>(lv);
-            return *reinterpret_cast<uint64_t*>(&dv);
-        });
+        size_t cnt = 0;
+        for (size_t i = 0; i < values_.size(); ++i) {
+            for (int j = 0; j < nStates; j++) {
+                double dv = static_cast<double>(values_[i][j]);
+                restartState[cnt] = *reinterpret_cast<uint64_t*>(&dv);
+                cnt++;
+            }
+        }
         restartState.computeChecksum();
         return;
     };
 
     void deserialize(const IOBuffer& restartState) {
         restartState.checkChecksum();
-        auto last = restartState.cend();
-        std::transform(restartState.cbegin(), --last, values_.begin(), [](const std::uint64_t& v) {
-            std::uint64_t lv = v;
+        for (size_t i = 0; i < restartState.size() - 1; ++i) {
+            std::uint64_t lv = restartState[i];
             double dv = *reinterpret_cast<double*>(&lv);
-            return static_cast<T>(dv);
-        });
+            size_t ii = i / nStates;
+            size_t jj = i % nStates;
+            values_[ii][jj] = static_cast<T>(dv);
+        }
         return;
     };
 
@@ -102,7 +111,7 @@ protected:
     };
 
     size_t restartSize() const { return values_.size() + 1; }
-    std::vector<T> values_;
+    std::vector<std::array<T, nStates>> values_;
 
 private:
     bool needRestart_;

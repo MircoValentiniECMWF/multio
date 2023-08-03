@@ -26,6 +26,9 @@ list( APPEND _statistics_sources
     operations/Instant.h
     operations/Minimum.h
     operations/Maximum.h
+    operations/Difference.h
+    operations/Variance.h
+    operations/StdDev.h
     TemporalStatistics.cc
     TemporalStatistics.h
     Statistics.cc
