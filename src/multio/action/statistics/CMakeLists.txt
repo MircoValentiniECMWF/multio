@@ -14,6 +14,7 @@ list( APPEND _statistics_sources
     TimeUtils.h
     PeriodUpdater.cc
     PeriodUpdater.h
+    StatisticsProfiler.h
     OperationWindow.cc
     OperationWindow.h
     Operations.cc

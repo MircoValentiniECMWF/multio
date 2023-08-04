@@ -15,6 +15,8 @@ class Average final : public OperationWithData<T, 1> {
 public:
     using state = std::array<T, 1>;
     using OperationWithData<T, 1>::init;
+    using OperationWithData<T, 1>::needStepZero;
+    using OperationWithData<T, 1>::profiler_;
     using OperationWithData<T, 1>::name_;
     using OperationWithData<T, 1>::cfg_;
     using OperationWithData<T, 1>::logHeader_;
@@ -30,37 +32,48 @@ public:
             const StatisticsConfiguration& cfg) :
         OperationWithData<T, 1>{name, "average", sz, true, win, IOmanager, cfg} {};
 
-    void compute(eckit::Buffer& buf) const override {
-        checkTimeInterval();
-        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;
-        Q* val = static_cast<Q*>(buf.data());
-        compute(val);
-        return;
-    }
+    bool needStepZero() const override { return false; };
 
-    void updateData(const void* data, long sz) override {
-        checkSize(sz);
+    void init(const eckit::Buffer& data) override {
+        profiler_[0].tic();
+        checkSize(data.size());
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
-        const Q* val = static_cast<const Q*>(data);
-        cfg_.haveMissingValue() ? updateDataWithMissing(val) : updateDataWithoutMissing(val);
-        return;
-    }
-
-    void updateWindow(const void* data, long sz) override {
-        checkSize(sz);
-        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
-        const Q* val = static_cast<const Q*>(data);
-        updateWindow(val);
-        return;
-    };
-
-    void init(const void* data, long sz) override {
-        checkSize(sz);
-        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
-        const Q* val = static_cast<const Q*>(data);
+        const Q* val = static_cast<const Q*>(data.data());
+        profiler_[0].toc();
         // TODO: Used to save the first field of the window
         return;
     };
+
+    void updateData(const eckit::Buffer& data) override {
+        profiler_[1].tic();
+        checkSize(data.size());
+        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
+        const Q* val = static_cast<const Q*>(data.data());
+        cfg_.haveMissingValue() ? updateDataWithMissing(val) : updateDataWithoutMissing(val);
+        profiler_[1].toc();
+        return;
+    }
+
+    void updateWindow(const eckit::Buffer& data) override {
+        profiler_[2].tic();
+        checkSize(data.size());
+        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
+        const Q* val = static_cast<const Q*>(data.data());
+        updateWindow(val);
+        profiler_[2].toc();
+        return;
+    };
+
+    void compute(eckit::Buffer& data) const override {
+        profiler_[3].tic();
+        checkSize(data.size());
+        checkTimeInterval();
+        LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;
+        Q* val = static_cast<Q*>(data.data());
+        compute(val);
+        profiler_[3].toc();
+        return;
+    }
 
 private:
     void compute(Q* buf) const {

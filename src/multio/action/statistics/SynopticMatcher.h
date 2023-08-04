@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "multio/action/ChainedAction.h"
 #include "multio/message/Message.h"
@@ -42,6 +43,19 @@ class DailyHoursMatcher final : public SynopticMatcher {
 public:
     DailyHoursMatcher(){};
     ~DailyHoursMatcher(){};
+
+    size_t size() const;
+
+    bool match(const message::Message& msg, const StatisticsConfiguration& cfg, size_t& key) const;
+};
+
+
+class DailyCustomMatcher final : public SynopticMatcher {
+    const std::vector<long> reqHours_;
+
+public:
+    DailyCustomMatcher(const std::vector<long>& req) : reqHours_{req} {};
+    ~DailyCustomMatcher(){};
 
     size_t size() const;
 

@@ -66,7 +66,7 @@ void SynopticCollection::resetWindow(const message::Message& msg, const Statisti
         // TODO: add profiling code
         // TODO: handling the time for a better metadata control
         // TODO: update data must have control over
-        statistics_[key]->updateWindow(msg.payload().data(), msg.size());
+        statistics_[key]->updateWindow(msg.payload());
     }
     return;
 };
@@ -78,7 +78,7 @@ void SynopticCollection::updateData(const message::Message& msg, const Statistic
     if (matcher_->match(msg, cfg, key)) {
         // TODO: add profiling code
         // TODO: handling the time for a better metadata control
-        statistics_[key]->updateData(msg.payload().data(), msg.size());
+        statistics_[key]->updateData(msg.payload());
     }
     return;
 };
@@ -112,7 +112,7 @@ bool SynopticCollection::ready( size_t idx, const StatisticsConfiguration& cfg )
     if ( matcher_->match( msg, cfg, key ) ){
         // TODO: add profiling code 
         // TODO: handling the time for a better metadata control
-        statistics_[key]->updateData( msg.payload().data(), msg.size() );
+        statistics_[key]->updateData( msg.payload() );
 
     }
     return;
@@ -125,7 +125,7 @@ message::Message SynopticCollection::compute( size_t idx, const StatisticsConfig
     if ( matcher_->match( msg, cfg, key ) ){
         // TODO: add profiling code 
         // TODO: handling the time for a better metadata control
-        statistics_[key]->updateData( msg.payload().data(), msg.size() );
+        statistics_[key]->updateData( msg.payload() );
     }
     return;
 }

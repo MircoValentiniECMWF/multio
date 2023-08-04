@@ -27,11 +27,13 @@ std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::s
                     break;
                 }
             }
-            if (cfg.solver_send_initial_condition()) {
-                stats.back()->init(msg.payload().data(), msg.size());
+            if (!cfg.solver_send_initial_condition() && stats.back()->needStepZero()) {
+                std::ostringstream os;
+                os << " + Solver doesn't send initial condition and Operation needs it :: " << op << std::endl;
+                throw eckit::SeriousBug(os.str(), Here());
             }
-            else {
-                stats.back()->init();
+            if (cfg.solver_send_initial_condition()) {
+                stats.back()->init(msg.payload());
             }
         }
         return stats;
@@ -62,11 +64,13 @@ std::vector<std::unique_ptr<Operation>> make_operations(const std::string& op, s
                     break;
                 }
             }
-            if (cfg.solver_send_initial_condition()) {
-                stats.back()->init(msg.payload().data(), msg.size());
+            if (!cfg.solver_send_initial_condition() && stats.back()->needStepZero()) {
+                std::ostringstream os;
+                os << " + Solver doesn't send initial condition and Operation needs it :: " << op << std::endl;
+                throw eckit::SeriousBug(os.str(), Here());
             }
-            else {
-                stats.back()->init();
+            if (cfg.solver_send_initial_condition()) {
+                stats.back()->init(msg.payload());
             }
         }
         return stats;
