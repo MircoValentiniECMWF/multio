@@ -13,6 +13,7 @@
 #include "multio/LibMultio.h"
 #include "multio/message/Message.h"
 
+#include "multio/action/statistics/OperationActivation.h"
 #include "multio/action/statistics/operations/Operation.h"
 #include "multio/action/statistics/operations/OperationWithData.h"
 
@@ -28,46 +29,72 @@
 
 namespace multio::action {
 
-template <typename Precision>
+template <typename Precision, typename MsgPrec>
 std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, std::shared_ptr<StatisticsIO>& IOmanager,
                                           const OperationWindow& win, const StatisticsConfiguration& cfg) {
 
+#ifdef __ENABLE_INSTANT_OPERATION__
     if (opname == "instant") {
-        return cfg.readRestart() ? std::make_unique<Instant<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<Instant<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<Instant<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Instant<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_AVERAGE_OPERATION__
     if (opname == "average") {
-        return cfg.readRestart() ? std::make_unique<Average<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<Average<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<Average<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Average<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_FLUXAVERAGE_OPERATION__
     if (opname == "flux-average") {
-        return cfg.readRestart() ? std::make_unique<FluxAverage<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<FluxAverage<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<FluxAverage<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<FluxAverage<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_MINIMUM_OPERATION__
     if (opname == "minimum") {
-        return cfg.readRestart() ? std::make_unique<Minimum<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<Minimum<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<Minimum<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Minimum<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_MAXIMUM_OPERATION__
     if (opname == "maximum") {
-        return cfg.readRestart() ? std::make_unique<Maximum<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<Maximum<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<Maximum<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Maximum<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_ACCUMULATE_OPERATION__
     if (opname != "accumulate") {
-        return cfg.readRestart() ? std::make_unique<Accumulate<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<Accumulate<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<Accumulate<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Accumulate<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_DIFFERENCE_OPERATION__
     if (opname != "difference") {
-        return cfg.readRestart() ? std::make_unique<Difference<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<Difference<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<Difference<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Difference<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_VARIANCE__OPERATION__
     if (opname != "variance") {
-        return cfg.readRestart() ? std::make_unique<Variance<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<Variance<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<Variance<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<Variance<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
+
+#ifdef __ENABLE_STDDEV_OPERATION__
     if (opname != "stddev") {
-        return cfg.readRestart() ? std::make_unique<StdDev<Precision>>(opname, sz, win, IOmanager, cfg)
-                                 : std::make_unique<StdDev<Precision>>(opname, sz, win, cfg);
+        return cfg.readRestart() ? std::make_unique<StdDev<Precision, MsgPrec>>(opname, sz, win, IOmanager, cfg)
+                                 : std::make_unique<StdDev<Precision, MsgPrec>>(opname, sz, win, cfg);
     }
+#endif
 
     std::ostringstream os;
     os << "Invalid opname in statistics operation :: " << opname << std::endl;

@@ -30,17 +30,6 @@ public:
         return;
     }
 
-    void updateWindow(const void* data, long sz) override {
-        std::transform(values_.cbegin(), values_.cend(), values_.begin(),
-                       [](const std::array<T, nStates>& v) { return std::array<T, nStates>{0.0}; });
-        return;
-    };
-
-    void init(const void* data, long sz) override {
-        // TODO: Used to save the first field of the window
-        return;
-    };
-
     void init() override {
         // TODO: Used to save the initialization time of the window
         return;

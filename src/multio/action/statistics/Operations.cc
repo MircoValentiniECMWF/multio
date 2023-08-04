@@ -3,17 +3,30 @@
 
 namespace multio::action {
 
-std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::string>& opNames, 
-                                                        const message::Message&         msg,
-                                                        std::shared_ptr<StatisticsIO>&  IOmanager,
-                                                        const OperationWindow&          win,
+std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::string>& opNames,
+                                                        const message::Message& msg,
+                                                        std::shared_ptr<StatisticsIO>& IOmanager,
+                                                        const OperationWindow& win,
                                                         const StatisticsConfiguration& cfg) {
 
     return multio::util::dispatchPrecisionTag(msg.precision(), [&](auto pt) {
         using Precision = typename decltype(pt)::type;
         std::vector<std::unique_ptr<Operation>> stats;
         for (const auto& op : opNames) {
-            stats.push_back(make_operation<Precision>(op, msg.size(), IOmanager, win, cfg));
+            switch (cfg.opPrecision()) {
+                case (operationPrecision::ENFORCE_DOUBLE): {
+                    stats.push_back(make_operation<double, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    break;
+                }
+                case (operationPrecision::ENFORCE_SINGLE): {
+                    stats.push_back(make_operation<float, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    break;
+                }
+                case (operationPrecision::FROM_MESSAGE): {
+                    stats.push_back(make_operation<Precision, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    break;
+                }
+            }
             if (cfg.solver_send_initial_condition()) {
                 stats.back()->init(msg.payload().data(), msg.size());
             }
@@ -26,18 +39,29 @@ std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::s
 };
 
 
-std::vector<std::unique_ptr<Operation>> make_operations( const std::string&              op, 
-                                                         size_t                          N,
-                                                         const message::Message&         msg,
-                                                         std::shared_ptr<StatisticsIO>&  IOmanager,
-                                                         const OperationWindow&          win,
-                                                         const StatisticsConfiguration& cfg) {
+std::vector<std::unique_ptr<Operation>> make_operations(const std::string& op, size_t N, const message::Message& msg,
+                                                        std::shared_ptr<StatisticsIO>& IOmanager,
+                                                        const OperationWindow& win,
+                                                        const StatisticsConfiguration& cfg) {
 
     return multio::util::dispatchPrecisionTag(msg.precision(), [&](auto pt) {
         using Precision = typename decltype(pt)::type;
         std::vector<std::unique_ptr<Operation>> stats;
-        for ( int i=0; i<N; ++i) {
-            stats.push_back(make_operation<Precision>(op, msg.size(), IOmanager, win, cfg));
+        for (int i = 0; i < N; ++i) {
+            switch (cfg.opPrecision()) {
+                case (operationPrecision::ENFORCE_DOUBLE): {
+                    stats.push_back(make_operation<double, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    break;
+                }
+                case (operationPrecision::ENFORCE_SINGLE): {
+                    stats.push_back(make_operation<float, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    break;
+                }
+                case (operationPrecision::FROM_MESSAGE): {
+                    stats.push_back(make_operation<Precision, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    break;
+                }
+            }
             if (cfg.solver_send_initial_condition()) {
                 stats.back()->init(msg.payload().data(), msg.size());
             }

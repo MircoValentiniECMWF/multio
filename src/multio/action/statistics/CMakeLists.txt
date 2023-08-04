@@ -18,6 +18,7 @@ list( APPEND _statistics_sources
     OperationWindow.h
     Operations.cc
     Operations.h
+    OperationActivation.h
     operations/Operation.h
     operations/OperationWithData.h
     operations/Accumulate.h

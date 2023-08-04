@@ -26,6 +26,7 @@ StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfigur
     step_{-1},
     restartStep_{-1},
     solverSendInitStep_{false},
+    opPrecision_{operationPrecision::FROM_MESSAGE},
     haveMissingValue_{false},
     missingValue_{9999.0},
     restartPath_{"."},
@@ -53,6 +54,7 @@ StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfigur
     parseRestartPrefix(compConf, cfg);
     parseRestartLib(cfg);
     parseLogPrefix(compConf, cfg);
+    parseOpPrecision(cfg);
 
     return;
 };
@@ -68,6 +70,7 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
     step_{-1},
     restartStep_{-1},
     solverSendInitStep_{cfg.solver_send_initial_condition()},
+    opPrecision_{cfg.opPrecision()},
     haveMissingValue_{false},
     missingValue_{9999.0},
     restartPath_{cfg.restartPath()},
@@ -83,6 +86,7 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
     readStepFrequency(msg);
     readMissingValue(msg);
     createLoggingPrefix(cfg, msg);
+
 
     dumpConfiguration();
 
@@ -183,6 +187,26 @@ void StatisticsConfiguration::parseLogPrefix(const config::ComponentConfiguratio
     return;
 };
 
+
+void StatisticsConfiguration::parseOpPrecision(const eckit::LocalConfiguration& cfg) {
+    // Used for enforcing the numerical precision for the operations
+    std::string opp = cfg.getString("operation-precision", "from-message");
+    if (opp == "enforce-double") {
+        opPrecision_ = operationPrecision::ENFORCE_DOUBLE;
+        return;
+    }
+    if (opp == "enforce-single") {
+        opPrecision_ = operationPrecision::ENFORCE_SINGLE;
+        return;
+    }
+    if (opp == "from-message") {
+        opPrecision_ = operationPrecision::FROM_MESSAGE;
+        return;
+    }
+    throw eckit::SeriousBug{"Wrong configuration for operation precision", Here()};
+};
+
+
 void StatisticsConfiguration::readStartTime(const message::Message& msg) {
     if (useDateTime() && msg.metadata().has("time")) {
         startTime_ = msg.metadata().getLong("time");
@@ -195,6 +219,7 @@ void StatisticsConfiguration::readStartTime(const message::Message& msg) {
     }
     return;
 };
+
 
 void StatisticsConfiguration::readStartDate(const message::Message& msg) {
     if (useDateTime() && msg.metadata().has("date")) {
@@ -283,6 +308,24 @@ void StatisticsConfiguration::createLoggingPrefix(const StatisticsConfiguration&
 
 
 void StatisticsConfiguration::dumpConfiguration() {
+
+    auto opp = [](operationPrecision opPrecision) -> std::string {
+        switch (opPrecision) {
+            case (operationPrecision::ENFORCE_DOUBLE): {
+                return std::string{"enforce-double"};
+            }
+            case (operationPrecision::ENFORCE_SINGLE): {
+                return std::string{"enforce-single"};
+            }
+            case (operationPrecision::FROM_MESSAGE): {
+                return std::string{"from-message"};
+            }
+            default: {
+                throw eckit::SeriousBug{"Wrong value for operation-precision", Here()};
+            }
+        }
+    };
+
     LOG_DEBUG_LIB(LibMultio) << " + useDateTime_        :: " << useDateTime_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + stepFreq_           :: " << stepFreq_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + timeStep_           :: " << timeStep_ << ";" << std::endl;
@@ -300,6 +343,7 @@ void StatisticsConfiguration::dumpConfiguration() {
     LOG_DEBUG_LIB(LibMultio) << " + restartPrefix_      :: " << restartPrefix_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + restartLib_         :: " << restartLib_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + logPrefix_          :: " << logPrefix_ << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + opPrecision_        :: " << opp(opPrecision_) << ";" << std::endl;
     return;
 }
 
@@ -341,6 +385,10 @@ void StatisticsConfiguration::usage() {
               << "type=string, "
               << "default=\"fstream_io\"     : "
               << "library used to write/read the restart files" << std::endl;
+    std::cout << "operation-precision       : "
+              << "type=string, "
+              << "default=\"from-message\"   : "
+              << "[\"enforce-double\"|\"enforce-single\"|\"from-message\"]" << std::endl;
     return;
 }
 
@@ -408,4 +456,8 @@ double StatisticsConfiguration::missingValue() const {
     return missingValue_;
 };
 
+
+operationPrecision StatisticsConfiguration::opPrecision() const {
+    return opPrecision_;
+};
 }  // namespace multio::action
