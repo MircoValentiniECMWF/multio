@@ -2,35 +2,41 @@
 #pragma once
 
 #include <array>
+#include <execution>
 
 #include "multio/action/statistics/operations/Operation.h"
 
 #include "eckit/exception/Exceptions.h"
 namespace multio::action {
 
-template <typename T, size_t nStates, typename = std::enable_if_t<std::is_floating_point<T>::value>>
+template <typename ComputationalType, class ExecutionPolicy, size_t nStates, typename = std::enable_if_t<std::is_floating_point<ComputationalType>::value>>
 class OperationWithData : public Operation {
 public:
+
+
     using Operation::cfg_;
     using Operation::logHeader_;
     using Operation::name_;
     using Operation::profiler_;
 
+
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const OperationWindow& win, const StatisticsConfiguration& cfg) :
         Operation{name, operation, win, cfg},
-        values_{std::vector<std::array<T, nStates>>(sz /= sizeof(T), std::array<T, nStates>{0.0})},
-        needRestart_{needRestart} {}
+        values_{std::vector<std::array<ComputationalType, nStates>>(sz /= sizeof(ComputationalType), std::array<ComputationalType, nStates>{0.0})},
+        policy_{},needRestart_{needRestart} {}
+
 
     OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
                       const OperationWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
                       const StatisticsConfiguration& cfg) :
         Operation{name, operation, win, cfg},
-        values_{std::vector<std::array<T, nStates>>(sz /= sizeof(T), std::array<T, nStates>{0.0})},
-        needRestart_{needRestart} {
+        values_{std::vector<std::array<ComputationalType, nStates>>(sz /= sizeof(ComputationalType), std::array<ComputationalType, nStates>{0.0})},
+        policy_{},needRestart_{needRestart} {
         load(IOmanager, cfg);
         return;
     }
+
 
     void init() override {
         // TODO: Used to save the initialization time of the window
@@ -39,8 +45,8 @@ public:
 
 
     size_t numberOfStates() const override final { return nStates; };
-    size_t byte_size() const override final { return values_.size() * sizeof(T); };
-    size_t memory_in_bytes() const final { return values_.size() * sizeof(T) * nStates; };
+    size_t memory_in_bytes() const final { return values_.size() * sizeof(ComputationalType) * nStates; };
+
 
     void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const override {
         profiler_[4].tic();
@@ -55,6 +61,7 @@ public:
         return;
     };
 
+
     void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) override {
         profiler_[5].tic();
         if (needRestart_) {
@@ -67,7 +74,10 @@ public:
         return;
     };
 
+
 protected:
+
+
     void serialize(IOBuffer& restartState) const {
         size_t cnt = 0;
         for (size_t i = 0; i < values_.size(); ++i) {
@@ -81,6 +91,7 @@ protected:
         return;
     };
 
+
     void deserialize(const IOBuffer& restartState) {
         restartState.checkChecksum();
         for (size_t i = 0; i < restartState.size() - 1; ++i) {
@@ -88,13 +99,14 @@ protected:
             double dv = *reinterpret_cast<double*>(&lv);
             size_t ii = i / nStates;
             size_t jj = i % nStates;
-            values_[ii][jj] = static_cast<T>(dv);
+            values_[ii][jj] = static_cast<ComputationalType>(dv);
         }
         return;
     };
 
+
     void checkSize(long sz) const {
-        if (values_.size() != static_cast<long>(sz / sizeof(T))) {
+        if (values_.size() != static_cast<long>(sz / sizeof(ComputationalType))) {
             std::ostringstream os;
             os << logHeader_ + " :: Expected size: " + std::to_string(values_.size())
                       + " -- actual size: " + std::to_string(sz)
@@ -102,6 +114,7 @@ protected:
             throw eckit::AssertionFailed(os.str());
         }
     };
+
 
     void checkTimeInterval() const {
         long sec = win_.count() * cfg_.stepFreq() * cfg_.timeStep();
@@ -111,11 +124,16 @@ protected:
         return;
     };
 
-    size_t restartSize() const { return values_.size() + 1; }
-    std::vector<std::array<T, nStates>> values_;
+
+    size_t restartSize() const { return values_.size()*nStates + 1; }
+    std::vector<std::array<ComputationalType, nStates>> values_;
+    ExecutionPolicy policy_;
+
 
 private:
+
     bool needRestart_;
+
 };
 
 }  // namespace multio::action

@@ -11,6 +11,7 @@
 
 
 #include "eckit/exception/Exceptions.h"
+
 namespace multio::action {
 
 class Operation {
@@ -38,7 +39,7 @@ public:
     virtual void dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const = 0;
     virtual void load(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) = 0;
 
-    int64_t getTotalTimeNsec(size_t idx) const {
+    int64_t getTotalTimeNsec(size_t idx ) const {
         if (idx > 5) {
             std::ostringstream os;
             os << "Index out of range" << std::endl;
@@ -46,7 +47,7 @@ public:
         }
         return profiler_[idx].getTotalTimeNsec();
     };
-    int64_t getNumberOfCalls(size_t idx) const {
+    int64_t getNumberOfCalls(size_t idx ) const {
         if (idx > 5) {
             std::ostringstream os;
             os << "Index out of range" << std::endl;
@@ -55,6 +56,12 @@ public:
         return profiler_[idx].getNumberOfCalls();
     };
 
+    void resetProfiler( ) const {
+        for ( auto& p : profiler_){
+            p.reset();
+        }
+        return;
+    };
 
     virtual void init() = 0;
 
@@ -66,7 +73,7 @@ protected:
     const std::string logHeader_;
     const StatisticsConfiguration& cfg_;
     const OperationWindow& win_;
-    mutable std::array<Profiler, 6> profiler_;
+    mutable std::array<Profiler<1>, 6> profiler_;
 
     friend std::ostream& operator<<(std::ostream& os, const Operation& a) {
         a.print(os);

@@ -27,6 +27,7 @@ StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfigur
     restartStep_{-1},
     solverSendInitStep_{false},
     opPrecision_{operationPrecision::FROM_MESSAGE},
+    executionPolicy_{Policy::seq},
     haveMissingValue_{false},
     missingValue_{9999.0},
     restartPath_{"."},
@@ -55,6 +56,7 @@ StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfigur
     parseRestartLib(cfg);
     parseLogPrefix(compConf, cfg);
     parseOpPrecision(cfg);
+    parseExecutionPolicy(cfg);
 
     return;
 };
@@ -71,6 +73,7 @@ StatisticsConfiguration::StatisticsConfiguration(const StatisticsConfiguration& 
     restartStep_{-1},
     solverSendInitStep_{cfg.solver_send_initial_condition()},
     opPrecision_{cfg.opPrecision()},
+    executionPolicy_{cfg.executionPolicy()},
     haveMissingValue_{false},
     missingValue_{9999.0},
     restartPath_{cfg.restartPath()},
@@ -204,6 +207,29 @@ void StatisticsConfiguration::parseOpPrecision(const eckit::LocalConfiguration& 
         return;
     }
     throw eckit::SeriousBug{"Wrong configuration for operation precision", Here()};
+};
+
+
+void StatisticsConfiguration::parseExecutionPolicy(const eckit::LocalConfiguration& cfg) {
+    // Used for defining the execution policy
+    std::string ex_pol = cfg.getString("execution-policy", "seq");
+    if (ex_pol == "seq" || ex_pol == "sequenced_policy" ) {
+        executionPolicy_ = Policy::seq;
+        return;
+    }
+    if (ex_pol == "unseq" || ex_pol == "unsequenced_policy") {
+        executionPolicy_ = Policy::unseq;
+        return;
+    }
+    if (ex_pol == "par_unseq" || ex_pol == "parallel_unsequenced_policy") {
+        executionPolicy_ = Policy::par_unseq;
+        return;
+    }
+    if (ex_pol == "par" || ex_pol == "parallel_policy") {
+        executionPolicy_ = Policy::par;
+        return;
+    }
+    throw eckit::SeriousBug{"Wrong configuration execution policy", Here()};
 };
 
 
@@ -451,13 +477,16 @@ bool StatisticsConfiguration::haveMissingValue() const {
     return haveMissingValue_ != 0;
 };
 
-
 double StatisticsConfiguration::missingValue() const {
     return missingValue_;
 };
 
-
 operationPrecision StatisticsConfiguration::opPrecision() const {
     return opPrecision_;
 };
+
+Policy StatisticsConfiguration::executionPolicy() const {
+    return executionPolicy_;
+};
+
 }  // namespace multio::action

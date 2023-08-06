@@ -21,6 +21,7 @@
 #include "StatisticsIO.h"
 #include "multio/action/ChainedAction.h"
 #include "SynopticMatcher.h"
+#include "StatisticsProfiler.h"
 
 namespace eckit {
 class Configuration;
@@ -38,16 +39,19 @@ public:
                                      const std::string& key) const;
 
 private:
+
     void DumpRestart();
+    void PrintProfilingInfo();
     std::string generateKey(const message::Message& msg) const;
     void print(std::ostream& os) const override;
     const StatisticsConfiguration cfg_;
     const std::vector<std::string> operations_;
     std::shared_ptr<PeriodUpdater> periodUpdater_;
     std::shared_ptr<StatisticsIO> IOmanager_;
+
     SynopticMatchers matchers_;
-
-
+    Profiler<4>  profiler_;
+    StatisticsProfilingInfo timingData_;
     std::map<std::string, std::unique_ptr<TemporalStatistics>> fieldStats_;
 };
 

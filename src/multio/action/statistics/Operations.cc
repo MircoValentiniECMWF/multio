@@ -1,6 +1,10 @@
 
 #include "Operations.h"
 
+
+#include <execution>
+
+
 namespace multio::action {
 
 std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::string>& opNames,
@@ -15,15 +19,75 @@ std::vector<std::unique_ptr<Operation>> make_operations(const std::vector<std::s
         for (const auto& op : opNames) {
             switch (cfg.opPrecision()) {
                 case (operationPrecision::ENFORCE_DOUBLE): {
-                    stats.push_back(make_operation<double, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    switch ( cfg.executionPolicy()){
+                        case (Policy::seq):{
+                            stats.push_back(make_operation<double, Precision, std::execution::sequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::unseq):{
+                            stats.push_back(make_operation<double, Precision, std::execution::unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par_unseq):{
+                            stats.push_back(make_operation<double, Precision, std::execution::parallel_unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par):{
+                            stats.push_back(make_operation<double, Precision, std::execution::parallel_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        default:{
+                            throw eckit::SeriousBug("ERROR: Wrong execution par", Here());            
+                        }
+                    }
                     break;
                 }
                 case (operationPrecision::ENFORCE_SINGLE): {
-                    stats.push_back(make_operation<float, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    switch ( cfg.executionPolicy()){
+                        case (Policy::seq):{
+                            stats.push_back(make_operation<float, Precision,std::execution::sequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::unseq):{
+                            stats.push_back(make_operation<float, Precision,std::execution::unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par_unseq):{
+                            stats.push_back(make_operation<float, Precision,std::execution::parallel_unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par):{
+                            stats.push_back(make_operation<float, Precision, std::execution::parallel_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        default:{
+                            throw eckit::SeriousBug("ERROR: Wrong execution par", Here());            
+                        }
+                    }
                     break;
                 }
                 case (operationPrecision::FROM_MESSAGE): {
-                    stats.push_back(make_operation<Precision, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    switch ( cfg.executionPolicy()){
+                        case (Policy::seq):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::sequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::unseq):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par_unseq):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::parallel_unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::parallel_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        default:{
+                            throw eckit::SeriousBug("ERROR: Wrong execution par", Here());            
+                        }
+                    }
                     break;
                 }
             }
@@ -52,15 +116,75 @@ std::vector<std::unique_ptr<Operation>> make_operations(const std::string& op, s
         for (int i = 0; i < N; ++i) {
             switch (cfg.opPrecision()) {
                 case (operationPrecision::ENFORCE_DOUBLE): {
-                    stats.push_back(make_operation<double, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    switch ( cfg.executionPolicy()){
+                        case (Policy::seq):{
+                            stats.push_back(make_operation<double, Precision, std::execution::sequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::unseq):{
+                            stats.push_back(make_operation<double, Precision, std::execution::unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par_unseq):{
+                            stats.push_back(make_operation<double, Precision, std::execution::parallel_unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par):{
+                            stats.push_back(make_operation<double, Precision, std::execution::parallel_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        default:{
+                            throw eckit::SeriousBug("ERROR: Wrong execution par", Here());            
+                        }
+                    }
                     break;
                 }
                 case (operationPrecision::ENFORCE_SINGLE): {
-                    stats.push_back(make_operation<float, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    switch ( cfg.executionPolicy()){
+                        case (Policy::seq):{
+                            stats.push_back(make_operation<float, Precision, std::execution::sequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::unseq):{
+                            stats.push_back(make_operation<float, Precision, std::execution::unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par_unseq):{
+                            stats.push_back(make_operation<float, Precision, std::execution::parallel_unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par):{
+                            stats.push_back(make_operation<float, Precision, std::execution::parallel_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        default:{
+                            throw eckit::SeriousBug("ERROR: Wrong execution par", Here());            
+                        }
+                    }
                     break;
                 }
                 case (operationPrecision::FROM_MESSAGE): {
-                    stats.push_back(make_operation<Precision, Precision>(op, msg.size(), IOmanager, win, cfg));
+                    switch ( cfg.executionPolicy()){
+                        case (Policy::seq):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::sequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::unseq):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par_unseq):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::parallel_unsequenced_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        case (Policy::par):{
+                            stats.push_back(make_operation<Precision, Precision, std::execution::parallel_policy>(op, msg.size(), IOmanager, win, cfg));
+                            break;
+                        }
+                        default:{
+                            throw eckit::SeriousBug("ERROR: Wrong execution par", Here());            
+                        }
+                    }
                     break;
                 }
             }

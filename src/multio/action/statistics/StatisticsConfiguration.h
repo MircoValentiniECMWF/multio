@@ -9,8 +9,14 @@
 
 namespace multio::action {
 
-enum class operationPrecision
-{
+enum class Policy { 
+    seq, 
+    unseq, 
+    par_unseq, 
+    par 
+};
+
+enum class operationPrecision{
     ENFORCE_DOUBLE,
     ENFORCE_SINGLE,
     FROM_MESSAGE
@@ -31,6 +37,7 @@ private:
     long restartStep_;
     bool solverSendInitStep_;
     operationPrecision opPrecision_;
+    Policy executionPolicy_;
 
     int haveMissingValue_;
     double missingValue_;
@@ -59,6 +66,7 @@ public:
     const std::string& restartLib() const;
     const std::string& logPrefix() const;
     operationPrecision opPrecision() const;
+    Policy executionPolicy() const;
 
     bool haveMissingValue() const;
     double missingValue() const;
@@ -70,6 +78,7 @@ private:
     void parseInitialConditionPresent(const eckit::LocalConfiguration& cfg);
     void parseRestartActivation(const eckit::LocalConfiguration& cfg);
     void parseOpPrecision(const eckit::LocalConfiguration& cfg);
+    void parseExecutionPolicy(const eckit::LocalConfiguration& cfg);
     void parseRestartPath(const config::ComponentConfiguration& compConf, const eckit::LocalConfiguration& cfg);
     void parseRestartPrefix(const config::ComponentConfiguration& compConf, const eckit::LocalConfiguration& cfg);
     void parseRestartLib(const eckit::LocalConfiguration& cfg);

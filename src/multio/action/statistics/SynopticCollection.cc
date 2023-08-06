@@ -6,6 +6,8 @@
 #include <regex>
 
 
+#include "multio/action/statistics/Operations.h"
+
 namespace multio::action {
 
 namespace {
@@ -36,6 +38,7 @@ std::array<std::string, 2> parseOperationName(const std::string& operation) {
     return out;
 }
 }  // namespace
+
 
 
 // Construct a synoptic collection of statistics

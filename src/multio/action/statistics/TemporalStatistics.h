@@ -45,7 +45,7 @@ public:
 
         // reference operator*() const { return *coll_[topIdx][subIdx]; }
         pointer operator*() {
-            std::cout << topIdx_ << ", " << subIdx_ << std::endl;
+            // std::cout << topIdx_ << ", " << subIdx_ << std::endl;
             return (*coll_[topIdx_])[subIdx_];
         }
         Iterator& operator++() {

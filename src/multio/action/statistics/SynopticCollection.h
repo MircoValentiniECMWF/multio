@@ -11,7 +11,7 @@
 
 
 #include "OperationWindow.h"
-#include "Operations.h"
+#include "multio/action/statistics/operations/Operation.h"
 #include "StatisticsConfiguration.h"
 #include "StatisticsIO.h"
 #include "SynopticMatcher.h"
@@ -57,5 +57,6 @@ public:
 std::vector<std::unique_ptr<SynopticCollection>> make_collections(
     const std::vector<std::string>& operations, SynopticMatchers& matchers, const message::Message& msg,
     std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win, const StatisticsConfiguration& cfg);
+
 
 }  // namespace multio::action

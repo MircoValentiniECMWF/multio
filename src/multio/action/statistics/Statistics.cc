@@ -28,7 +28,8 @@ Statistics::Statistics(const ComponentConfiguration& compConf) :
     operations_{compConf.parsedConfig().getStringVector("operations")},
     periodUpdater_{make_period_updater(compConf.parsedConfig().getString("output-frequency"))},
     IOmanager_{StatisticsIOFactory::instance().build(cfg_.restartLib(), cfg_.restartPath(), cfg_.restartPrefix())},
-    matchers_{compConf} {}
+    matchers_{compConf},
+    profiler_{} {}
 
 
 void Statistics::DumpRestart() {
@@ -45,6 +46,41 @@ void Statistics::DumpRestart() {
             it->second->win().updateFlush();
         }
     }
+}
+
+
+void Statistics::PrintProfilingInfo() {
+    timingData_.updateCounter();
+    for (auto ite = fieldStats_.begin(); ite != fieldStats_.end(); ite++) {
+        LOG_DEBUG_LIB(LibMultio) << " + Collect prfiling info " << std::endl;
+        for (auto it = ite->second->collection_begin(); it != ite->second->collection_end(); ++it) {
+            timingData_.InitTime( (*it)->getTotalTimeNsec( 0 ) );
+            timingData_.DataTime( (*it)->getTotalTimeNsec( 1 ) );
+            timingData_.WindowTime ( (*it)->getTotalTimeNsec( 2 ) );
+            timingData_.ComputeTime( (*it)->getTotalTimeNsec( 3 ) );
+            timingData_.DumpTime( (*it)->getTotalTimeNsec( 4 ) );
+            timingData_.LoadTime( (*it)->getTotalTimeNsec( 5 ) );
+            timingData_.TotalMemory( (*it)->memory_in_bytes()     );
+        }
+    }
+    
+
+    std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+    std::cout << " + Cnt              :: " << timingData_.cnt()             << std::endl;
+    std::cout << " + InitTime         :: " << timingData_.TotInitTime()     << std::endl;
+    std::cout << " + UpdateWindowTime :: " << timingData_.TotWindowTime()   << std::endl;
+    std::cout << " + UpdateDataTime   :: " << timingData_.TotDataTime()     << std::endl;
+    std::cout << " + ComputeTime      :: " << timingData_.TotComputeTime()  << std::endl;
+    std::cout << " + Dump Time        :: " << timingData_.TotDumpTime()     << std::endl;
+    std::cout << " + Load Time        :: " << timingData_.TotLoadTime()     << std::endl;
+    std::cout << " + TotMemory        :: " << timingData_.TotalMemory()     << std::endl;
+
+    std::cout << " + Time to Flush   :: " << profiler_.getTotalTimeNsec( 0 ) << ", (" << profiler_.getNumberOfCalls(0) << ")" << std::endl;
+    std::cout << " + Time to forward :: " << profiler_.getTotalTimeNsec( 1 ) << ", (" << profiler_.getNumberOfCalls(1) << ")" << std::endl;
+    std::cout << " + Time to create  :: " << profiler_.getTotalTimeNsec( 2 ) << ", (" << profiler_.getNumberOfCalls(2) << ")" << std::endl;
+    std::cout << " + Time to compute :: " << profiler_.getTotalTimeNsec( 3 ) << ", (" << profiler_.getNumberOfCalls(3) << ")" << std::endl;
+    std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+    return;
 }
 
 
@@ -87,13 +123,17 @@ message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetad
 
 void Statistics::executeImpl(message::Message msg) {
 
+    profiler_.tic();
     if (msg.tag() == message::Message::Tag::Flush) {
         DumpRestart();
+        PrintProfilingInfo();
+        profiler_.toc( 0 );
         executeNext(msg);
         return;
     }
 
     if (msg.tag() != message::Message::Tag::Field) {
+        profiler_.toc( 1 );
         executeNext(msg);
         return;
     }
@@ -112,6 +152,7 @@ void Statistics::executeImpl(message::Message msg) {
             = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, matchers_, msg, IOmanager_, cfg);
         if (cfg.solver_send_initial_condition()) {
             util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
+            profiler_.toc( 2 );
             return;
         }
     }
@@ -126,9 +167,12 @@ void Statistics::executeImpl(message::Message msg) {
             payload.zero();
             md.set("operation", (*it)->operation());
             (*it)->compute(payload);
+            profiler_.toc( 3 );
             executeNext(message::Message{message::Message::Header{message::Message::Tag::Field, msg.source(),
-                                                                  msg.destination(), message::Metadata{md}},
-                                         std::move(payload)});
+                        msg.destination(),
+                        message::Metadata{md}},
+                        std::move(payload)});
+            profiler_.tic();        
         }
 
         util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
@@ -136,6 +180,8 @@ void Statistics::executeImpl(message::Message msg) {
         fieldStats_.at(key)->updateWindow(msg, cfg);
     }
 
+
+    profiler_.toc( 3 );    
     return;
 }
 
