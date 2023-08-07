@@ -7,6 +7,8 @@
 
 
 #include "multio/action/statistics/Operations.h"
+#include "multio/action/statistics/SynopticMatcher.h"
+
 
 namespace multio::action {
 
@@ -42,12 +44,12 @@ std::array<std::string, 2> parseOperationName(const std::string& operation) {
 
 
 // Construct a synoptic collection of statistics
-SynopticCollection::SynopticCollection(const std::string& operation, SynopticMatchers& matchers,
+SynopticCollection::SynopticCollection(const std::string& operation,
                                        const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
                                        const OperationWindow& win, const StatisticsConfiguration& cfg) :
     win_{win},
     op_{parseOperationName(operation)},
-    matcher_{matchers.getMatcher(op_[0])},
+    matcher_{make_matcher(op_[0],cfg)},
     statistics_{make_operations(op_[1], matcher_->size(), msg, IOmanager, win, cfg)} {};
 
 
@@ -136,14 +138,14 @@ message::Message SynopticCollection::compute( size_t idx, const StatisticsConfig
 
 
 std::vector<std::unique_ptr<SynopticCollection>> make_collections(
-    const std::vector<std::string>& operations, SynopticMatchers& matchers, const message::Message& msg,
+    const std::vector<std::string>& operations, const message::Message& msg,
     std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win, const StatisticsConfiguration& cfg) {
 
     std::vector<std::unique_ptr<SynopticCollection>> collections;
     for (const auto& op : operations) {
         // std::string tmp = "DailyHours::" + op;
         // TODO: manage force double precision here
-        collections.push_back(std::make_unique<SynopticCollection>(op, matchers, msg, IOmanager, win, cfg));
+        collections.push_back(std::make_unique<SynopticCollection>(op, msg, IOmanager, win, cfg));
     }
     return collections;
 }

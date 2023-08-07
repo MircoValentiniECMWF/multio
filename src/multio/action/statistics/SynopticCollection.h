@@ -12,9 +12,9 @@
 
 #include "OperationWindow.h"
 #include "multio/action/statistics/operations/Operation.h"
-#include "StatisticsConfiguration.h"
-#include "StatisticsIO.h"
-#include "SynopticMatcher.h"
+#include "multio/action/statistics/StatisticsConfiguration.h"
+#include "multio/action/statistics/StatisticsIO.h"
+#include "multio/action/statistics/SynopticMatcher.h"
 
 
 namespace multio::action {
@@ -32,14 +32,14 @@ private:
     const std::array<std::string, 2> op_;
 
     // Pointer to the matcher used to construct the operation-flavours
-    const std::shared_ptr<SynopticMatcher> matcher_;
+    const std::unique_ptr<SynopticMatcher> matcher_;
 
 
     // memory space used to save the data of partial operations
     std::vector<std::unique_ptr<Operation>> statistics_;
 
 public:
-    SynopticCollection(const std::string& operation, SynopticMatchers& matchers, const message::Message& msg,
+    SynopticCollection(const std::string& operation, const message::Message& msg,
                        std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win,
                        const StatisticsConfiguration& cfg);
 
@@ -55,7 +55,7 @@ public:
 
 
 std::vector<std::unique_ptr<SynopticCollection>> make_collections(
-    const std::vector<std::string>& operations, SynopticMatchers& matchers, const message::Message& msg,
+    const std::vector<std::string>& operations, const message::Message& msg,
     std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win, const StatisticsConfiguration& cfg);
 
 

@@ -19,7 +19,7 @@ list( APPEND _statistics_sources
     OperationWindow.h
     Operations.cc
     Operations.h
-    OperationActivation.h
+    StatisticsComponentsActivation.h
     operations/Operation.h
     operations/OperationWithData.h
     operations/Accumulate.h
@@ -31,6 +31,8 @@ list( APPEND _statistics_sources
     operations/Difference.h
     operations/Variance.h
     operations/StdDev.h
+    synoptic-matchers/AllTimesMatcher.h
+    synoptic-matchers/DailyHoursMatcher.h
     TemporalStatistics.cc
     TemporalStatistics.h
     Statistics.cc
@@ -56,6 +58,16 @@ list( APPEND _statistics_libs
 
 endif()
 
+
+list( APPEND _tbb_lib )
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  # using Clang
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # using GCC
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+list( APPEND _tbb_lib tbb )
+endif()
+
 ecbuild_add_library(
 
     TARGET multio-action-statistics
@@ -69,6 +81,8 @@ ecbuild_add_library(
 
     CONDITION
 
+    PRIVATE_LIBS
+    ${_tbb_lib}
     PUBLIC_LIBS
     ${_statistics_libs}
 )

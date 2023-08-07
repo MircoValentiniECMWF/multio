@@ -17,9 +17,11 @@ namespace multio::action {
 
 class TemporalStatistics {
 public:
-    TemporalStatistics(const std::shared_ptr<PeriodUpdater>& periodUpdater, const std::vector<std::string>& operations,
-                       SynopticMatchers& matchers, const message::Message& msg,
-                       std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg);
+    TemporalStatistics(const std::shared_ptr<PeriodUpdater>& periodUpdater,
+                       const std::vector<std::string>& operations,
+                       const message::Message& msg,
+                       std::shared_ptr<StatisticsIO>& IOmanager,
+                       const StatisticsConfiguration& cfg);
 
     bool isEndOfWindow(message::Message& msg, const StatisticsConfiguration& cfg);
 

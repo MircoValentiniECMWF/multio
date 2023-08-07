@@ -13,7 +13,7 @@
 #include "multio/LibMultio.h"
 #include "multio/message/Message.h"
 
-#include "multio/action/statistics/OperationActivation.h"
+#include "multio/action/statistics/StatisticsComponentsActivation.h"
 #include "multio/action/statistics/operations/Operation.h"
 #include "multio/action/statistics/operations/OperationWithData.h"
 

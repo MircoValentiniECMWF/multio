@@ -28,7 +28,6 @@ Statistics::Statistics(const ComponentConfiguration& compConf) :
     operations_{compConf.parsedConfig().getStringVector("operations")},
     periodUpdater_{make_period_updater(compConf.parsedConfig().getString("output-frequency"))},
     IOmanager_{StatisticsIOFactory::instance().build(cfg_.restartLib(), cfg_.restartPath(), cfg_.restartPrefix())},
-    matchers_{compConf},
     profiler_{} {}
 
 
@@ -149,7 +148,7 @@ void Statistics::executeImpl(message::Message msg) {
 
     if (fieldStats_.find(key) == fieldStats_.end()) {
         fieldStats_[key]
-            = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, matchers_, msg, IOmanager_, cfg);
+            = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, msg, IOmanager_, cfg);
         if (cfg.solver_send_initial_condition()) {
             util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
             profiler_.toc( 2 );

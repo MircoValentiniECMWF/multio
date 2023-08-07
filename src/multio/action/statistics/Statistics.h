@@ -49,7 +49,6 @@ private:
     std::shared_ptr<PeriodUpdater> periodUpdater_;
     std::shared_ptr<StatisticsIO> IOmanager_;
 
-    SynopticMatchers matchers_;
     Profiler<4>  profiler_;
     StatisticsProfilingInfo timingData_;
     std::map<std::string, std::unique_ptr<TemporalStatistics>> fieldStats_;

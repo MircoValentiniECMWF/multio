@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include "multio/LibMultio.h"
-#include "multio/action/statistics/OperationActivation.h"
+#include "multio/action/statistics/StatisticsComponentsActivation.h"
 #include "multio/action/statistics/operations/OperationWithData.h"
 
 #ifdef __ENABLE_STDDEV_OPERATION__
