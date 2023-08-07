@@ -48,9 +48,11 @@ private:
     const std::vector<std::string> operations_;
     std::shared_ptr<PeriodUpdater> periodUpdater_;
     std::shared_ptr<StatisticsIO> IOmanager_;
+    const std::map<std::string,eckit::LocalConfiguration> matcherCfg_;
 
     Profiler<4>  profiler_;
     StatisticsProfilingInfo timingData_;
+
     std::map<std::string, std::unique_ptr<TemporalStatistics>> fieldStats_;
 };
 

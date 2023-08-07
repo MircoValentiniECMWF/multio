@@ -2,9 +2,9 @@
 
 
 // Matchers
-#define __ENABLE_NO_FILTER_MATCHER___
-#define __ENABLE_DAILY_HOURS_MATCHER___
-// #define __ENABLE_DAILY_CUSTOM_MATCHER___
+#define __ENABLE_NO_FILTER_MATCHER__
+#define __ENABLE_DAILY_HOURS_MATCHER__
+#define __ENABLE_DAILY_CUSTOM_MATCHER__
 
 
 // Operations

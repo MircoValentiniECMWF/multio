@@ -14,20 +14,55 @@ namespace multio::action {
 
 namespace {
 
+
 // Parse input for requested statistics
-std::array<std::string, 2> parseOperationName(const std::string& operation) {
+const std::array<std::string, 3> parseOperationName(
+    const std::string& operation, 
+    const std::map<std::string,eckit::LocalConfiguration>& matcherConf) {
     static const std::regex op1_grammar("([a-zA-Z]+)::([a-zA-Z]+)");
     static const std::regex op2_grammar("([a-zA-Z]+)");
     std::smatch match1;
     std::smatch match2;
-    std::array<std::string, 2> out;
+    std::array<std::string, 3> out;
     if (std::regex_match(operation, match1, op1_grammar)) {
-        out[0] = match1[1].str();
-        out[1] = match1[2].str();
+        if ( match1[1].str() == "NoFilter" || match1[1].str() == "DailyHours" ) {
+            out[0] = match1[1].str();
+            out[1] = match1[1].str();
+            out[2] = match1[2].str();
+            return out;
+        }
+        else if (matcherConf.find(match1[1].str()) != matcherConf.end()) {
+            if ( matcherConf.at(match1[1].str()).has("type") ){
+                out[0] = match1[1].str();
+                out[1] = matcherConf.at(match1[1].str()).getString("type");
+                out[2] = match1[2].str();
+                return out;
+            }
+            else {
+                std::ostringstream os;
+                os << "Wrong configuration for Operation :: " << std::endl
+                   << "current configuration is: \"" << operation << "\""
+                   << "valid configuration are : \"<synopticFilterName>::<OperationName>\" or "
+                   << "\"<operationName>\"" << std::endl;
+                throw eckit::SeriousBug(os.str(), Here());               
+            }
+        }
+        else {
+            std::ostringstream os;
+            os << "Wrong configuration for Operation :: " << std::endl
+               << "current configuration is: \"" << operation << "\""
+               << "valid configuration are : \"<synopticFilterName>::<OperationName>\" or "
+               << "\"<operationName>\"" << std::endl;
+            std::cout << " + Configuration :: " << matcherConf << std::endl;
+            std::cout << " + Find          :: " << match1[1].str() << std::endl;
+            throw eckit::SeriousBug(os.str(), Here());               
+        }
     }
     else if (std::regex_match(operation, match2, op2_grammar)) {
         out[0] = "NoFilter";
-        out[1] = match2[1].str();
+        out[1] = "NoFilter";
+        out[2] = match2[1].str();
+        return out;
     }
     else {
         std::ostringstream os;
@@ -37,7 +72,6 @@ std::array<std::string, 2> parseOperationName(const std::string& operation) {
            << "\"<operationName>\"" << std::endl;
         throw eckit::SeriousBug(os.str(), Here());
     }
-    return out;
 }
 }  // namespace
 
@@ -46,11 +80,13 @@ std::array<std::string, 2> parseOperationName(const std::string& operation) {
 // Construct a synoptic collection of statistics
 SynopticCollection::SynopticCollection(const std::string& operation,
                                        const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
-                                       const OperationWindow& win, const StatisticsConfiguration& cfg) :
+                                       const OperationWindow& win, 
+                                       const std::map<std::string,eckit::LocalConfiguration>& matcherConf,
+                                       const StatisticsConfiguration& cfg) :
     win_{win},
-    op_{parseOperationName(operation)},
-    matcher_{make_matcher(op_[0],cfg)},
-    statistics_{make_operations(op_[1], matcher_->size(), msg, IOmanager, win, cfg)} {};
+    op_{parseOperationName(operation,matcherConf)},
+    matcher_{op_[0]==op_[1]?make_matcher(op_[1],cfg):make_matcher(op_[1],matcherConf.at(op_[0]),cfg)},
+    statistics_{make_operations(op_[2], matcher_->size(), msg, IOmanager, win, cfg)} {};
 
 
 // Number of different statistics that are contained in this collection
@@ -139,13 +175,15 @@ message::Message SynopticCollection::compute( size_t idx, const StatisticsConfig
 
 std::vector<std::unique_ptr<SynopticCollection>> make_collections(
     const std::vector<std::string>& operations, const message::Message& msg,
-    std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win, const StatisticsConfiguration& cfg) {
+    std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win, 
+    const std::map<std::string,eckit::LocalConfiguration>& matcherConf,
+    const StatisticsConfiguration& cfg) {
 
     std::vector<std::unique_ptr<SynopticCollection>> collections;
     for (const auto& op : operations) {
         // std::string tmp = "DailyHours::" + op;
         // TODO: manage force double precision here
-        collections.push_back(std::make_unique<SynopticCollection>(op, msg, IOmanager, win, cfg));
+        collections.push_back(std::make_unique<SynopticCollection>(op, msg, IOmanager, win, matcherConf, cfg));
     }
     return collections;
 }

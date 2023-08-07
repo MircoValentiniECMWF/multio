@@ -4,6 +4,8 @@
 
 #include "eckit/types/DateTime.h"
 
+#include "multio/config/ComponentConfiguration.h"
+
 #include "multio/LibMultio.h"
 
 #include "TimeUtils.h"
@@ -14,10 +16,11 @@ namespace multio::action {
 TemporalStatistics::TemporalStatistics(const std::shared_ptr<PeriodUpdater>& periodUpdater,
                                        const std::vector<std::string>& operations,
                                        const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
+                                       const std::map<std::string,eckit::LocalConfiguration>& matcherConf,
                                        const StatisticsConfiguration& cfg) :
     periodUpdater_{periodUpdater},
     window_{periodUpdater_->initPeriod(msg, IOmanager, cfg)},
-    collections_{make_collections(operations, msg, IOmanager, window_, cfg)} {}
+    collections_{make_collections(operations, msg, IOmanager, window_, matcherConf, cfg)} {}
 
 
 void TemporalStatistics::dump(std::shared_ptr<StatisticsIO>& IOmanager, const StatisticsConfiguration& cfg) const {

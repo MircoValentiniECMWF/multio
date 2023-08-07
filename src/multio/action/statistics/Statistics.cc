@@ -22,12 +22,36 @@
 
 namespace multio::action {
 
+namespace {
+    std::map<std::string,eckit::LocalConfiguration> getMatcherConfiguration(const ComponentConfiguration& compConf){
+        std::cout << " + Sub configuration" << std::endl;
+        std::map<std::string,eckit::LocalConfiguration> cfg;
+        if ( compConf.parsedConfig().has("synoptic-filters") ){
+            for ( auto& subComp : compConf.subComponents("synoptic-filters") ){
+                if ( subComp.parsedConfig().has("name") ){
+                    std::string name_ = subComp.parsedConfig().getString("name");
+                    cfg[name_] = subComp.parsedConfig();
+                    std::cout << name_ << "Sub configuration"<< std::endl;
+                }
+                else {
+                    std::ostringstream os;
+                    os << "type keyword expected" << std::endl;
+                    throw eckit::UserError(os.str(), Here());
+                };
+            }
+        }
+        return cfg;
+    }
+}
+
+
 Statistics::Statistics(const ComponentConfiguration& compConf) :
     ChainedAction{compConf},
     cfg_{compConf},
     operations_{compConf.parsedConfig().getStringVector("operations")},
     periodUpdater_{make_period_updater(compConf.parsedConfig().getString("output-frequency"))},
     IOmanager_{StatisticsIOFactory::instance().build(cfg_.restartLib(), cfg_.restartPath(), cfg_.restartPrefix())},
+    matcherCfg_{getMatcherConfiguration(compConf)},
     profiler_{} {}
 
 
@@ -148,7 +172,7 @@ void Statistics::executeImpl(message::Message msg) {
 
     if (fieldStats_.find(key) == fieldStats_.end()) {
         fieldStats_[key]
-            = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, msg, IOmanager_, cfg);
+            = std::make_unique<TemporalStatistics>(periodUpdater_, operations_, msg, IOmanager_, matcherCfg_, cfg);
         if (cfg.solver_send_initial_condition()) {
             util::ScopedTiming timing{statistics_.localTimer_, statistics_.actionTiming_};
             profiler_.toc( 2 );

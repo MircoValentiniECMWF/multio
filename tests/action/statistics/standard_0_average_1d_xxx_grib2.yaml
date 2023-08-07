@@ -1,0 +1,32 @@
+plans:
+  - name: test_average_1d_grib2
+    actions:
+
+      - type: statistics
+        output-frequency: 1d
+        synoptic-filters:
+          - type: DailyCustom
+            name: pluto
+            hours-set: [ 0, 2, 4, 6, 8, 10, 15, 16, 22, 21, 23 ]
+          - type: DailyCustom
+            name: paperino
+            from: 7
+            to: 21
+            by: 3
+        operations: [ "pluto::average", "paperino::maximum" ]
+        options:
+          initial-condition-present: true
+          step-frequency: 1
+          time-step: 3600
+          use-current-time: true
+
+      - type: encode
+        format: grib
+        template: reduced_gg_pl_80_avg_grib2.tmpl
+
+      - type: sink
+        sinks:
+          - type: file
+            append: false
+            per-server: false # Will give you one file per server
+            path: Result_standard_0_average_1d_grib2.grib

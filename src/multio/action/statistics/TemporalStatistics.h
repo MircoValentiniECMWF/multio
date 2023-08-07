@@ -21,6 +21,7 @@ public:
                        const std::vector<std::string>& operations,
                        const message::Message& msg,
                        std::shared_ptr<StatisticsIO>& IOmanager,
+                       const std::map<std::string,eckit::LocalConfiguration>& matcherConf,
                        const StatisticsConfiguration& cfg);
 
     bool isEndOfWindow(message::Message& msg, const StatisticsConfiguration& cfg);
@@ -75,7 +76,11 @@ public:
     };
 
 
-    Iterator collection_begin() { return Iterator(collections_, 0, 0); };
+    Iterator collection_begin() { 
+        return Iterator(collections_, 0, 0);
+    };
+
+    
     Iterator collection_end() {
         size_t topIdx = collections_.size();
         size_t subIdx = 0;

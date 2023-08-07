@@ -5,7 +5,7 @@
 
 
 
-#ifdef __ENABLE_DAILY_HOURS_MATCHER___
+#ifdef __ENABLE_DAILY_HOURS_MATCHER__
 
 namespace multio::action {
 
