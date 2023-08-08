@@ -53,8 +53,6 @@ const std::array<std::string, 3> parseOperationName(
                << "current configuration is: \"" << operation << "\""
                << "valid configuration are : \"<synopticFilterName>::<OperationName>\" or "
                << "\"<operationName>\"" << std::endl;
-            std::cout << " + Configuration :: " << matcherConf << std::endl;
-            std::cout << " + Find          :: " << match1[1].str() << std::endl;
             throw eckit::SeriousBug(os.str(), Here());               
         }
     }

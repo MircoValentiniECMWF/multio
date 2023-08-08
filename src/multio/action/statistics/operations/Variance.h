@@ -30,12 +30,12 @@ public:
 
 
     Variance(const std::string& name, long sz, const OperationWindow& win, const StatisticsConfiguration& cfg) :
-        OperationWithData<ComputationalType,ExecutionPolicy,2>{name, "variance", sz, true, win, cfg} {}
+        OperationWithData<ComputationalType,ExecutionPolicy,2>{name, "variance", sz/sizeof(InputOutputType), true, win, cfg} {}
 
 
     Variance(const std::string& name, long sz, const OperationWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
              const StatisticsConfiguration& cfg) :
-        OperationWithData<ComputationalType,ExecutionPolicy,2>{name, "variance", sz, true, win, IOmanager, cfg} {};
+        OperationWithData<ComputationalType,ExecutionPolicy,2>{name, "variance", sz/sizeof(InputOutputType), true, win, IOmanager, cfg} {};
 
 
     size_t byte_size() const override final { return values_.size() * sizeof(InputOutputType); };
@@ -46,7 +46,7 @@ public:
 
     void init(const eckit::Buffer& data) override {
         profiler_[0].tic();
-        checkSize(data.size());
+        checkSize(data.size()/sizeof(InputOutputType));
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const InputOutputType* val = static_cast<const InputOutputType*>(data.data());
         profiler_[0].toc();
@@ -57,7 +57,7 @@ public:
 
     void updateData(const eckit::Buffer& data) override {
         profiler_[1].tic();
-        checkSize(data.size());
+        checkSize(data.size()/sizeof(InputOutputType));
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const InputOutputType* val = static_cast<const InputOutputType*>(data.data());
         cfg_.haveMissingValue() ? updateWithMissing(val) : updateWithoutMissing(val);
@@ -68,7 +68,7 @@ public:
 
     void updateWindow(const eckit::Buffer& data) override {
         profiler_[2].tic();
-        checkSize(data.size());
+        checkSize(data.size()/sizeof(InputOutputType));
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const InputOutputType* val = static_cast<const InputOutputType*>(data.data());
         updateWindow( val );
@@ -79,7 +79,7 @@ public:
 
     void compute(eckit::Buffer& data) const override {
         profiler_[3].tic();
-        checkSize(data.size());
+        checkSize(data.size()/sizeof(InputOutputType));
         checkTimeInterval();
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".compute().count=" << win_.count() << std::endl;
         auto val = static_cast<InputOutputType*>(data.data());

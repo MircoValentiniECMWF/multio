@@ -20,18 +20,18 @@ public:
     using Operation::profiler_;
 
 
-    OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
+    OperationWithData(const std::string& name, const std::string& operation, size_t sz, bool needRestart,
                       const OperationWindow& win, const StatisticsConfiguration& cfg) :
         Operation{name, operation, win, cfg},
-        values_{std::vector<std::array<ComputationalType, nStates>>(sz /= sizeof(ComputationalType), std::array<ComputationalType, nStates>{0.0})},
+        values_{std::vector<std::array<ComputationalType, nStates>>(sz, std::array<ComputationalType, nStates>{0.0})},
         policy_{},needRestart_{needRestart} {}
 
 
-    OperationWithData(const std::string& name, const std::string& operation, long sz, bool needRestart,
+    OperationWithData(const std::string& name, const std::string& operation, size_t sz, bool needRestart,
                       const OperationWindow& win, std::shared_ptr<StatisticsIO>& IOmanager,
                       const StatisticsConfiguration& cfg) :
         Operation{name, operation, win, cfg},
-        values_{std::vector<std::array<ComputationalType, nStates>>(sz /= sizeof(ComputationalType), std::array<ComputationalType, nStates>{0.0})},
+        values_{std::vector<std::array<ComputationalType, nStates>>(sz, std::array<ComputationalType, nStates>{0.0})},
         policy_{},needRestart_{needRestart} {
         load(IOmanager, cfg);
         return;
@@ -106,7 +106,7 @@ protected:
 
 
     void checkSize(long sz) const {
-        if (values_.size() != static_cast<long>(sz / sizeof(ComputationalType))) {
+        if (values_.size() != sz) {
             std::ostringstream os;
             os << logHeader_ + " :: Expected size: " + std::to_string(values_.size())
                       + " -- actual size: " + std::to_string(sz)

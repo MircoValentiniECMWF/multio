@@ -42,9 +42,6 @@ std::unique_ptr<SynopticMatcher> make_matcher( const std::string& matcherKind, c
 
 std::unique_ptr<SynopticMatcher> make_matcher( const std::string& matcherKind, const eckit::LocalConfiguration& compConf, const StatisticsConfiguration& cfg  ){
 
-
-    std::cout << matcherKind <<  " :: " << compConf << std::endl;
-
 #ifdef __ENABLE_DAILY_CUSTOM_MATCHER__
     if ( matcherKind == "DailyCustom" ){
         return std::make_unique<DailyCustomMatcher>( compConf, cfg );               

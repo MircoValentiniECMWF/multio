@@ -24,14 +24,12 @@ namespace multio::action {
 
 namespace {
     std::map<std::string,eckit::LocalConfiguration> getMatcherConfiguration(const ComponentConfiguration& compConf){
-        std::cout << " + Sub configuration" << std::endl;
         std::map<std::string,eckit::LocalConfiguration> cfg;
         if ( compConf.parsedConfig().has("synoptic-filters") ){
             for ( auto& subComp : compConf.subComponents("synoptic-filters") ){
                 if ( subComp.parsedConfig().has("name") ){
                     std::string name_ = subComp.parsedConfig().getString("name");
                     cfg[name_] = subComp.parsedConfig();
-                    std::cout << name_ << "Sub configuration"<< std::endl;
                 }
                 else {
                     std::ostringstream os;
@@ -90,18 +88,18 @@ void Statistics::PrintProfilingInfo() {
 
     std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
     std::cout << " + Cnt              :: " << timingData_.cnt()             << std::endl;
-    std::cout << " + InitTime         :: " << timingData_.TotInitTime()     << std::endl;
-    std::cout << " + UpdateWindowTime :: " << timingData_.TotWindowTime()   << std::endl;
-    std::cout << " + UpdateDataTime   :: " << timingData_.TotDataTime()     << std::endl;
-    std::cout << " + ComputeTime      :: " << timingData_.TotComputeTime()  << std::endl;
-    std::cout << " + Dump Time        :: " << timingData_.TotDumpTime()     << std::endl;
-    std::cout << " + Load Time        :: " << timingData_.TotLoadTime()     << std::endl;
-    std::cout << " + TotMemory        :: " << timingData_.TotalMemory()     << std::endl;
+    std::cout << " + InitTime         :: " << static_cast<double>(timingData_.TotInitTime()/1000)/1000000     << std::endl;
+    std::cout << " + UpdateWindowTime :: " << static_cast<double>(timingData_.TotWindowTime()/1000)/1000000   << std::endl;
+    std::cout << " + UpdateDataTime   :: " << static_cast<double>(timingData_.TotDataTime()/1000)/1000000     << std::endl;
+    std::cout << " + ComputeTime      :: " << static_cast<double>(timingData_.TotComputeTime()/1000)/1000000  << std::endl;
+    std::cout << " + Dump Time        :: " << static_cast<double>(timingData_.TotDumpTime()/1000)/1000000     << std::endl;
+    std::cout << " + Load Time        :: " << static_cast<double>(timingData_.TotLoadTime()/1000)/1000000     << std::endl;
+    std::cout << " + TotMemory        :: " << static_cast<double>(timingData_.TotalMemory()/1000)/1000000     << std::endl;
 
-    std::cout << " + Time to Flush   :: " << profiler_.getTotalTimeNsec( 0 ) << ", (" << profiler_.getNumberOfCalls(0) << ")" << std::endl;
-    std::cout << " + Time to forward :: " << profiler_.getTotalTimeNsec( 1 ) << ", (" << profiler_.getNumberOfCalls(1) << ")" << std::endl;
-    std::cout << " + Time to create  :: " << profiler_.getTotalTimeNsec( 2 ) << ", (" << profiler_.getNumberOfCalls(2) << ")" << std::endl;
-    std::cout << " + Time to compute :: " << profiler_.getTotalTimeNsec( 3 ) << ", (" << profiler_.getNumberOfCalls(3) << ")" << std::endl;
+    std::cout << " + Time to Flush   :: " << static_cast<double>(profiler_.getTotalTimeNsec( 0 )/1000000)/1000 << ", (" << profiler_.getNumberOfCalls(0) << ")" << std::endl;
+    std::cout << " + Time to forward :: " << static_cast<double>(profiler_.getTotalTimeNsec( 1 )/1000000)/1000 << ", (" << profiler_.getNumberOfCalls(1) << ")" << std::endl;
+    std::cout << " + Time to create  :: " << static_cast<double>(profiler_.getTotalTimeNsec( 2 )/1000000)/1000 << ", (" << profiler_.getNumberOfCalls(2) << ")" << std::endl;
+    std::cout << " + Time to compute :: " << static_cast<double>(profiler_.getTotalTimeNsec( 3 )/1000000)/1000 << ", (" << profiler_.getNumberOfCalls(3) << ")" << std::endl;
     std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
     return;
 }

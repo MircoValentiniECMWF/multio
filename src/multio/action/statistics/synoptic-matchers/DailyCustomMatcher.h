@@ -65,7 +65,6 @@ std::vector<long> initDailyCustomMatcherReadVars(const eckit::LocalConfiguration
     for (long i = from; i <= to; i = i + by) {
         tmp.push_back(i);
     }
-    std::cout << " + Hours set :: " << tmp << std::endl;
     LOG_DEBUG_LIB(LibMultio) << cfg.logPrefix() << " + Hours set :: " << tmp << std::endl;
     return tmp;
 };
