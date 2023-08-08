@@ -10,11 +10,11 @@
 #include "multio/message/Message.h"
 
 
-#include "OperationWindow.h"
-#include "multio/action/statistics/operations/Operation.h"
+#include "multio/action/statistics/OperationWindow.h"
 #include "multio/action/statistics/StatisticsConfiguration.h"
 #include "multio/action/statistics/StatisticsIO.h"
 #include "multio/action/statistics/SynopticMatcher.h"
+#include "multio/action/statistics/operations/Operation.h"
 #include "multio/config/ComponentConfiguration.h"
 
 
@@ -42,7 +42,7 @@ private:
 public:
     SynopticCollection(const std::string& operation, const message::Message& msg,
                        std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win,
-                       const std::map<std::string,eckit::LocalConfiguration>& matcherConf,
+                       const std::map<std::string, eckit::LocalConfiguration>& matcherConf,
                        const StatisticsConfiguration& cfg);
 
 
@@ -57,9 +57,8 @@ public:
 
 
 std::vector<std::unique_ptr<SynopticCollection>> make_collections(
-    const std::vector<std::string>& operations, const message::Message& msg,
-    std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win, 
-    const std::map<std::string,eckit::LocalConfiguration>& matcherConf, 
+    const std::vector<std::string>& operations, const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
+    const OperationWindow& win, const std::map<std::string, eckit::LocalConfiguration>& matcherConf,
     const StatisticsConfiguration& cfg);
 
 

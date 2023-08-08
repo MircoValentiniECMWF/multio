@@ -2,18 +2,21 @@
 #pragma once
 
 #include <array>
+#ifdef __USE_EXECUTION_POLICIES__
 #include <execution>
+#endif
 
 #include "multio/action/statistics/operations/Operation.h"
 
 #include "eckit/exception/Exceptions.h"
+#include "multio/util/ParallelPolicies.h"
+
 namespace multio::action {
 
-template <typename ComputationalType, class ExecutionPolicy, size_t nStates, typename = std::enable_if_t<std::is_floating_point<ComputationalType>::value>>
+template <typename ComputationalType, size_t nStates,
+          typename = std::enable_if_t<std::is_floating_point<ComputationalType>::value>>
 class OperationWithData : public Operation {
 public:
-
-
     using Operation::cfg_;
     using Operation::logHeader_;
     using Operation::name_;
@@ -24,7 +27,8 @@ public:
                       const OperationWindow& win, const StatisticsConfiguration& cfg) :
         Operation{name, operation, win, cfg},
         values_{std::vector<std::array<ComputationalType, nStates>>(sz, std::array<ComputationalType, nStates>{0.0})},
-        policy_{},needRestart_{needRestart} {}
+        policy_{cfg.executionPolicy()},
+        needRestart_{needRestart} {}
 
 
     OperationWithData(const std::string& name, const std::string& operation, size_t sz, bool needRestart,
@@ -32,7 +36,8 @@ public:
                       const StatisticsConfiguration& cfg) :
         Operation{name, operation, win, cfg},
         values_{std::vector<std::array<ComputationalType, nStates>>(sz, std::array<ComputationalType, nStates>{0.0})},
-        policy_{},needRestart_{needRestart} {
+        policy_{cfg.executionPolicy()},
+        needRestart_{needRestart} {
         load(IOmanager, cfg);
         return;
     }
@@ -76,8 +81,6 @@ public:
 
 
 protected:
-
-
     void serialize(IOBuffer& restartState) const {
         size_t cnt = 0;
         for (size_t i = 0; i < values_.size(); ++i) {
@@ -125,15 +128,13 @@ protected:
     };
 
 
-    size_t restartSize() const { return values_.size()*nStates + 1; }
+    size_t restartSize() const { return values_.size() * nStates + 1; }
     std::vector<std::array<ComputationalType, nStates>> values_;
-    ExecutionPolicy policy_;
+    util::ExecutionPolicy policy_;
 
 
 private:
-
     bool needRestart_;
-
 };
 
 }  // namespace multio::action

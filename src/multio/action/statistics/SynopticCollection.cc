@@ -1,11 +1,13 @@
 
-#include "SynopticCollection.h"
+#include "multio/action/statistics/SynopticCollection.h"
 
 #include <iostream>
 #include <ostream>
 #include <regex>
 
 
+#include "multio/LibMultio.h"
+#include "multio/action/statistics/OperationWindow.h"
 #include "multio/action/statistics/Operations.h"
 #include "multio/action/statistics/SynopticMatcher.h"
 
@@ -17,22 +19,21 @@ namespace {
 
 // Parse input for requested statistics
 const std::array<std::string, 3> parseOperationName(
-    const std::string& operation, 
-    const std::map<std::string,eckit::LocalConfiguration>& matcherConf) {
+    const std::string& operation, const std::map<std::string, eckit::LocalConfiguration>& matcherConf) {
     static const std::regex op1_grammar("([a-zA-Z]+)::([a-zA-Z]+)");
     static const std::regex op2_grammar("([a-zA-Z]+)");
     std::smatch match1;
     std::smatch match2;
     std::array<std::string, 3> out;
     if (std::regex_match(operation, match1, op1_grammar)) {
-        if ( match1[1].str() == "NoFilter" || match1[1].str() == "DailyHours" ) {
+        if (match1[1].str() == "NoFilter" || match1[1].str() == "DailyHours") {
             out[0] = match1[1].str();
             out[1] = match1[1].str();
             out[2] = match1[2].str();
             return out;
         }
         else if (matcherConf.find(match1[1].str()) != matcherConf.end()) {
-            if ( matcherConf.at(match1[1].str()).has("type") ){
+            if (matcherConf.at(match1[1].str()).has("type")) {
                 out[0] = match1[1].str();
                 out[1] = matcherConf.at(match1[1].str()).getString("type");
                 out[2] = match1[2].str();
@@ -44,7 +45,7 @@ const std::array<std::string, 3> parseOperationName(
                    << "current configuration is: \"" << operation << "\""
                    << "valid configuration are : \"<synopticFilterName>::<OperationName>\" or "
                    << "\"<operationName>\"" << std::endl;
-                throw eckit::SeriousBug(os.str(), Here());               
+                throw eckit::SeriousBug(os.str(), Here());
             }
         }
         else {
@@ -53,7 +54,7 @@ const std::array<std::string, 3> parseOperationName(
                << "current configuration is: \"" << operation << "\""
                << "valid configuration are : \"<synopticFilterName>::<OperationName>\" or "
                << "\"<operationName>\"" << std::endl;
-            throw eckit::SeriousBug(os.str(), Here());               
+            throw eckit::SeriousBug(os.str(), Here());
         }
     }
     else if (std::regex_match(operation, match2, op2_grammar)) {
@@ -74,16 +75,14 @@ const std::array<std::string, 3> parseOperationName(
 }  // namespace
 
 
-
 // Construct a synoptic collection of statistics
-SynopticCollection::SynopticCollection(const std::string& operation,
-                                       const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
-                                       const OperationWindow& win, 
-                                       const std::map<std::string,eckit::LocalConfiguration>& matcherConf,
+SynopticCollection::SynopticCollection(const std::string& operation, const message::Message& msg,
+                                       std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win,
+                                       const std::map<std::string, eckit::LocalConfiguration>& matcherConf,
                                        const StatisticsConfiguration& cfg) :
     win_{win},
-    op_{parseOperationName(operation,matcherConf)},
-    matcher_{op_[0]==op_[1]?make_matcher(op_[1],cfg):make_matcher(op_[1],matcherConf.at(op_[0]),cfg)},
+    op_{parseOperationName(operation, matcherConf)},
+    matcher_{op_[0] == op_[1] ? make_matcher(op_[1], cfg) : make_matcher(op_[1], matcherConf.at(op_[0]), cfg)},
     statistics_{make_operations(op_[2], matcher_->size(), msg, IOmanager, win, cfg)} {};
 
 
@@ -172,9 +171,8 @@ message::Message SynopticCollection::compute( size_t idx, const StatisticsConfig
 
 
 std::vector<std::unique_ptr<SynopticCollection>> make_collections(
-    const std::vector<std::string>& operations, const message::Message& msg,
-    std::shared_ptr<StatisticsIO>& IOmanager, const OperationWindow& win, 
-    const std::map<std::string,eckit::LocalConfiguration>& matcherConf,
+    const std::vector<std::string>& operations, const message::Message& msg, std::shared_ptr<StatisticsIO>& IOmanager,
+    const OperationWindow& win, const std::map<std::string, eckit::LocalConfiguration>& matcherConf,
     const StatisticsConfiguration& cfg) {
 
     std::vector<std::unique_ptr<SynopticCollection>> collections;

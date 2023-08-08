@@ -213,19 +213,19 @@ void StatisticsConfiguration::parseOpPrecision(const eckit::LocalConfiguration& 
 void StatisticsConfiguration::parseExecutionPolicy(const eckit::LocalConfiguration& cfg) {
     // Used for defining the execution policy
     std::string ex_pol = cfg.getString("execution-policy", "seq");
-    if (ex_pol == "seq" || ex_pol == "sequenced_policy" ) {
+    if (ex_pol == "seq" || ex_pol == "sequenced-policy") {
         executionPolicy_ = Policy::seq;
         return;
     }
-    if (ex_pol == "unseq" || ex_pol == "unsequenced_policy") {
+    if (ex_pol == "unseq" || ex_pol == "unsequenced-policy") {
         executionPolicy_ = Policy::unseq;
         return;
     }
-    if (ex_pol == "par_unseq" || ex_pol == "parallel_unsequenced_policy") {
+    if (ex_pol == "par-unseq" || ex_pol == "parallel-unsequenced-policy") {
         executionPolicy_ = Policy::par_unseq;
         return;
     }
-    if (ex_pol == "par" || ex_pol == "parallel_policy") {
+    if (ex_pol == "par" || ex_pol == "parallel-policy") {
         executionPolicy_ = Policy::par;
         return;
     }
@@ -352,6 +352,26 @@ void StatisticsConfiguration::dumpConfiguration() {
         }
     };
 
+    auto exPol = [](Policy executionPolicy) -> std::string {
+        switch (executionPolicy) {
+            case (Policy::seq): {
+                return std::string{"sequenced_policy"};
+            }
+            case (Policy::unseq): {
+                return std::string{"unsequenced_policy"};
+            }
+            case (Policy::par_unseq): {
+                return std::string{"parallel_unsequenced_policy"};
+            }
+            case (Policy::par): {
+                return std::string{"parallel_policy"};
+            }
+            default: {
+                throw eckit::SeriousBug{"Wrong value for operation-precision", Here()};
+            }
+        }
+    };
+
     LOG_DEBUG_LIB(LibMultio) << " + useDateTime_        :: " << useDateTime_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + stepFreq_           :: " << stepFreq_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + timeStep_           :: " << timeStep_ << ";" << std::endl;
@@ -370,6 +390,7 @@ void StatisticsConfiguration::dumpConfiguration() {
     LOG_DEBUG_LIB(LibMultio) << " + restartLib_         :: " << restartLib_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + logPrefix_          :: " << logPrefix_ << ";" << std::endl;
     LOG_DEBUG_LIB(LibMultio) << " + opPrecision_        :: " << opp(opPrecision_) << ";" << std::endl;
+    LOG_DEBUG_LIB(LibMultio) << " + executionPolicy_    :: " << exPol(executionPolicy_) << ";" << std::endl;
     return;
 }
 
