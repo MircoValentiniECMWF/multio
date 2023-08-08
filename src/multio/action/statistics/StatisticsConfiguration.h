@@ -2,19 +2,13 @@
 
 #include <string>
 
+#include "multio/util/ParallelPolicies.h"
 #include "eckit/config/LocalConfiguration.h"
 #include "multio/config/ComponentConfiguration.h"
 #include "multio/message/Message.h"
 
 
 namespace multio::action {
-
-enum class Policy { 
-    seq, 
-    unseq, 
-    par_unseq, 
-    par 
-};
 
 enum class operationPrecision{
     ENFORCE_DOUBLE,
@@ -37,7 +31,7 @@ private:
     long restartStep_;
     bool solverSendInitStep_;
     operationPrecision opPrecision_;
-    Policy executionPolicy_;
+    util::ExecutionPolicy executionPolicy_;
 
     int haveMissingValue_;
     double missingValue_;
@@ -66,7 +60,7 @@ public:
     const std::string& restartLib() const;
     const std::string& logPrefix() const;
     operationPrecision opPrecision() const;
-    Policy executionPolicy() const;
+    util::ExecutionPolicy executionPolicy() const;
 
     bool haveMissingValue() const;
     double missingValue() const;

@@ -2,13 +2,10 @@
 #pragma once
 
 #include <array>
-#ifdef __USE_EXECUTION_POLICIES__
-#include <execution>
-#endif
-
 #include "multio/action/statistics/operations/Operation.h"
 
 #include "eckit/exception/Exceptions.h"
+
 #include "multio/util/ParallelPolicies.h"
 
 namespace multio::action {
@@ -86,7 +83,7 @@ protected:
         for (size_t i = 0; i < values_.size(); ++i) {
             for (int j = 0; j < nStates; j++) {
                 double dv = static_cast<double>(values_[i][j]);
-                restartState[cnt] = *reinterpret_cast<uint64_t*>(&dv);
+                restartState[cnt] = *reinterpret_cast<std::uint64_t*>(&dv);
                 cnt++;
             }
         }

@@ -19,7 +19,9 @@ namespace {
 
 // Parse input for requested statistics
 const std::array<std::string, 3> parseOperationName(
-    const std::string& operation, const std::map<std::string, eckit::LocalConfiguration>& matcherConf) {
+    const std::string& operation, 
+    const std::map<std::string, eckit::LocalConfiguration>& matcherConf)
+{
     static const std::regex op1_grammar("([a-zA-Z]+)::([a-zA-Z]+)");
     static const std::regex op2_grammar("([a-zA-Z]+)");
     std::smatch match1;

@@ -27,7 +27,7 @@ StatisticsConfiguration::StatisticsConfiguration(const config::ComponentConfigur
     restartStep_{-1},
     solverSendInitStep_{false},
     opPrecision_{operationPrecision::FROM_MESSAGE},
-    executionPolicy_{Policy::seq},
+    executionPolicy_{util::ExecutionPolicy::seq},
     haveMissingValue_{false},
     missingValue_{9999.0},
     restartPath_{"."},
@@ -214,19 +214,19 @@ void StatisticsConfiguration::parseExecutionPolicy(const eckit::LocalConfigurati
     // Used for defining the execution policy
     std::string ex_pol = cfg.getString("execution-policy", "seq");
     if (ex_pol == "seq" || ex_pol == "sequenced-policy") {
-        executionPolicy_ = Policy::seq;
+        executionPolicy_ = util::ExecutionPolicy::seq;
         return;
     }
     if (ex_pol == "unseq" || ex_pol == "unsequenced-policy") {
-        executionPolicy_ = Policy::unseq;
+        executionPolicy_ = util::ExecutionPolicy::unseq;
         return;
     }
     if (ex_pol == "par-unseq" || ex_pol == "parallel-unsequenced-policy") {
-        executionPolicy_ = Policy::par_unseq;
+        executionPolicy_ = util::ExecutionPolicy::par_unseq;
         return;
     }
     if (ex_pol == "par" || ex_pol == "parallel-policy") {
-        executionPolicy_ = Policy::par;
+        executionPolicy_ = util::ExecutionPolicy::par;
         return;
     }
     throw eckit::SeriousBug{"Wrong configuration execution policy", Here()};
@@ -352,18 +352,18 @@ void StatisticsConfiguration::dumpConfiguration() {
         }
     };
 
-    auto exPol = [](Policy executionPolicy) -> std::string {
+    auto exPol = [](util::ExecutionPolicy executionPolicy) -> std::string {
         switch (executionPolicy) {
-            case (Policy::seq): {
+            case (util::ExecutionPolicy::seq): {
                 return std::string{"sequenced_policy"};
             }
-            case (Policy::unseq): {
+            case (util::ExecutionPolicy::unseq): {
                 return std::string{"unsequenced_policy"};
             }
-            case (Policy::par_unseq): {
+            case (util::ExecutionPolicy::par_unseq): {
                 return std::string{"parallel_unsequenced_policy"};
             }
-            case (Policy::par): {
+            case (util::ExecutionPolicy::par): {
                 return std::string{"parallel_policy"};
             }
             default: {
@@ -506,7 +506,7 @@ operationPrecision StatisticsConfiguration::opPrecision() const {
     return opPrecision_;
 };
 
-Policy StatisticsConfiguration::executionPolicy() const {
+util::ExecutionPolicy StatisticsConfiguration::executionPolicy() const {
     return executionPolicy_;
 };
 

@@ -18,18 +18,18 @@
 #include "multio/action/statistics/operations/OperationWithData.h"
 
 
-// Single state operations
-#include "multio/action/statistics/operations/Accumulate.h"
+// // Single state operations
+// #include "multio/action/statistics/operations/Accumulate.h"
 #include "multio/action/statistics/operations/Average.h"
-#include "multio/action/statistics/operations/FluxAverage.h"
-#include "multio/action/statistics/operations/Instant.h"
+// #include "multio/action/statistics/operations/FluxAverage.h"
+// #include "multio/action/statistics/operations/Instant.h"
 #include "multio/action/statistics/operations/Maximum.h"
-#include "multio/action/statistics/operations/Minimum.h"
-
-// Dual state operations
-#include "multio/action/statistics/operations/Difference.h"
-#include "multio/action/statistics/operations/StdDev.h"
-#include "multio/action/statistics/operations/Variance.h"
+// #include "multio/action/statistics/operations/Minimum.h"
+// 
+// // Dual state operations
+// #include "multio/action/statistics/operations/Difference.h"
+// #include "multio/action/statistics/operations/StdDev.h"
+// #include "multio/action/statistics/operations/Variance.h"
 
 
 namespace multio::action {
