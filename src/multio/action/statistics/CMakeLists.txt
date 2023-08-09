@@ -58,14 +58,14 @@ list( APPEND _statistics_libs
 
 endif()
 
-
+# TODO: Better management of std::execution::par
 list( APPEND _tbb_lib )
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  # using Clang
+# using Clang
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-list( APPEND _tbb_lib tbb )
+# list( APPEND _tbb_lib tbb )
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
-list( APPEND _tbb_lib tbb )
+# list( APPEND _tbb_lib tbb )
 endif()
 
 ecbuild_add_library(
