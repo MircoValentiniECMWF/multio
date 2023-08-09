@@ -16,7 +16,6 @@
 
 #include <fstream>
 #include <regex>
-#include <bits/stdc++.h>
 
 #include "eckit/config/LocalConfiguration.h"
 #include "eckit/exception/Exceptions.h"
@@ -39,7 +38,6 @@ namespace multio {
 namespace test {
 
 namespace {
-
 class TempFile {
     const std::string path_;
 
@@ -144,10 +142,6 @@ void MultioFeed::finish(const eckit::option::CmdArgs&) {}
 
 void MultioFeed::execute(const eckit::option::CmdArgs& args) {
     using eckit::message::ValueRepresentation;
-
-    long cnt = -1;
-    for ( int i=0; i<100; i++ ){
-
     eckit::message::Reader reader{args(0)};
 
     eckit::message::Message msg;
@@ -219,58 +213,40 @@ void MultioFeed::execute(const eckit::option::CmdArgs& args) {
                 metadata.set("level", metadataDetailed.getString("level"));
             }
 
-            eckit::Buffer data; // = msg.decode();
-            data.resize( 50000000*sizeof(double) );
-            double* val = static_cast<double*>(data.data());
-            auto rnd = [](){ return (double)(rand()) / (double)(rand()); };
-            for ( int d=0; d<50000000; ++d  ){
-                val[i] = rnd();
+            // Inject metadata needed for statistics
+            if (!metadata.has("timeStep")) {
+                metadata.set("timeStep", 3600);
+            }
+            if (!metadata.has("step-frequency")) {
+                metadata.set("step-frequency", 1);
             }
 
-            cnt ++;
-            for ( long j=0; j< 2; j++ ){
-                for ( long k=0; k< 2; k++ ){
-                    // Inject metadata needed for statistics
-                    if (!metadata.has("timeStep")) {
-                        metadata.set("timeStep", 3600);
-                    }
-                    if (!metadata.has("step-frequency")) {
-                        metadata.set("step-frequency", 1);
-                    }
+            eckit::Buffer data = msg.decode();
 
+            metadata.set("globalSize", data.size() / sizeof(double));
 
+            if (decodeDoubleData_) {
+                metadata.set("precision", "double");
+                size_t words = eckit::round(data.size(), sizeof(fortint)) / sizeof(fortint);
+                fortint iwords = static_cast<fortint>(words);
 
-                    metadata.set("globalSize", data.size() / sizeof(double));
-                    metadata.set("stepId", cnt );
-                    metadata.set("step", cnt );
-                    metadata.set("paramId", j*10);
-                    metadata.set("level", k*100);
+                if (imultio_write_raw_(&metadata, reinterpret_cast<const void*>(data.data()), &iwords)) {
+                    ASSERT(false);
+                }
+            }
+            else {
+                metadata.set("precision", "single");
+                size_t words
+                    = eckit::round(data.size() / sizeof(double) * sizeof(float), sizeof(fortint)) / sizeof(fortint);
+                fortint iwords = static_cast<fortint>(words);
 
-
-                    if (decodeDoubleData_) {
-                        metadata.set("precision", "double");
-                        size_t words = eckit::round(data.size(), sizeof(fortint)) / sizeof(fortint);
-                        fortint iwords = static_cast<fortint>(words);
-
-                        if (imultio_write_raw_(&metadata, reinterpret_cast<const void*>(data.data()), &iwords)) {
-                            ASSERT(false);
-                        }
-                    }
-                    else {
-                        metadata.set("precision", "single");
-                        size_t words
-                            = eckit::round(data.size() / sizeof(double) * sizeof(float), sizeof(fortint)) / sizeof(fortint);
-                        fortint iwords = static_cast<fortint>(words);
-
-                        std::vector<float> tmp(data.size() / sizeof(double), 0.0);
-                        const double* srcData = reinterpret_cast<const double*>(data.data());
-                        for (int i = 0; i < tmp.size(); ++i) {
-                            tmp[i] = float(srcData[i]);
-                        }
-                        if (imultio_write_raw_(&metadata, reinterpret_cast<const void*>(tmp.data()), &iwords)) {
-                            ASSERT(false);
-                        }
-                    }
+                std::vector<float> tmp(data.size() / sizeof(double), 0.0);
+                const double* srcData = reinterpret_cast<const double*>(data.data());
+                for (int i = 0; i < tmp.size(); ++i) {
+                    tmp[i] = float(srcData[i]);
+                }
+                if (imultio_write_raw_(&metadata, reinterpret_cast<const void*>(tmp.data()), &iwords)) {
+                    ASSERT(false);
                 }
             }
         }
@@ -287,8 +263,6 @@ void MultioFeed::execute(const eckit::option::CmdArgs& args) {
 
     if (imultio_flush_()) {
         ASSERT(false);
-    }
-
     }
 
     if (testSubtoc_) {
