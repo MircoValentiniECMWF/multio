@@ -4,7 +4,7 @@
 #include <algorithm>
 
 
-#define __USE_EXECUTION_POLICIES__
+// #define __USE_EXECUTION_POLICIES__
 #ifdef __USE_EXECUTION_POLICIES__
 #include <execution>
 #endif
