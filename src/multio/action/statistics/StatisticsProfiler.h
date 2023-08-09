@@ -121,43 +121,54 @@ class StatisticsProfilingInfo{
         TotalMemory_{0}        
         {};
 
+    void reset(){
+        TotInitTime_ = 0;
+        TotWindowTime_ = 0;
+        TotDataTime_ = 0;
+        TotComputeTime_ = 0;
+        TotDumpTime_ = 0;
+        TotLoadTime_ = 0;
+        TotalMemory_ = 0;      
+        return;
+    }
+
     void updateCounter(){
         cnt_++;
         return;
     }
 
     void InitTime    ( int64_t val ){ 
-        TotInitTime_   = val;
+        TotInitTime_   += val;
         return;
     };
 
     void WindowTime  ( int64_t val ){ 
-        TotWindowTime_ = val;
+        TotWindowTime_ += val;
         return;
     };
 
     void DataTime    ( int64_t val ){ 
-        TotDataTime_ = val;
+        TotDataTime_ += val;
         return;
     };
 
     void ComputeTime ( int64_t val ){ 
-        TotComputeTime_ = val;
+        TotComputeTime_ += val;
         return;
     };
 
     void DumpTime    ( int64_t val ){ 
-        TotDumpTime_ = val;
+        TotDumpTime_ += val;
         return;
     };
 
     void LoadTime    ( int64_t val ){ 
-        TotLoadTime_ = val;
+        TotLoadTime_ += val;
         return;
     };
  
     void TotalMemory ( int64_t val ){ 
-        TotalMemory_ = val;
+        TotalMemory_ += val;
         return;
     };
 

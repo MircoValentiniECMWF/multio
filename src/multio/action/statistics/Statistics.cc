@@ -72,9 +72,11 @@ void Statistics::DumpRestart() {
 
 void Statistics::PrintProfilingInfo() {
     timingData_.updateCounter();
+    timingData_.reset();
     for (auto ite = fieldStats_.begin(); ite != fieldStats_.end(); ite++) {
         LOG_DEBUG_LIB(LibMultio) << " + Collect prfiling info " << std::endl;
         for (auto it = ite->second->collection_begin(); it != ite->second->collection_end(); ++it) {
+            LOG_DEBUG_LIB(LibMultio) << " + Print profiling info related to operations" << std::endl;
             timingData_.InitTime( (*it)->getTotalTimeNsec( 0 ) );
             timingData_.DataTime( (*it)->getTotalTimeNsec( 1 ) );
             timingData_.WindowTime ( (*it)->getTotalTimeNsec( 2 ) );
@@ -100,6 +102,11 @@ void Statistics::PrintProfilingInfo() {
     std::cout << " + Time to forward :: " << static_cast<double>(profiler_.getTotalTimeNsec( 1 )/1000000)/1000 << ", (" << profiler_.getNumberOfCalls(1) << ")" << std::endl;
     std::cout << " + Time to create  :: " << static_cast<double>(profiler_.getTotalTimeNsec( 2 )/1000000)/1000 << ", (" << profiler_.getNumberOfCalls(2) << ")" << std::endl;
     std::cout << " + Time to compute :: " << static_cast<double>(profiler_.getTotalTimeNsec( 3 )/1000000)/1000 << ", (" << profiler_.getNumberOfCalls(3) << ")" << std::endl;
+
+    double tmp = ( static_cast<double>(timingData_.TotInitTime()/1000)/1000000 + static_cast<double>(timingData_.TotWindowTime()/1000)/1000000 +
+                   static_cast<double>(timingData_.TotDataTime()/1000)/1000000 + static_cast<double>(timingData_.TotComputeTime()/1000)/1000000 ) /
+                   (static_cast<double>(profiler_.getTotalTimeNsec( 3 )/1000)/1000000);
+    std::cout << " + Floating point intensity :: " << tmp << ", (" << profiler_.getNumberOfCalls(3) << ")" << std::endl;
     std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
     return;
 }
@@ -115,6 +122,8 @@ std::string Statistics::generateKey(const message::Message& msg) const {
     LOG_DEBUG_LIB(LibMultio) << "Generating key for the field :: " << os.str() << std::endl;
     return os.str();
 }
+
+// Message(version=1, tag=Field, source=Peer(group=null,id=18446744073709551615), destination=Peer(group=null,id=18446744073709551615), metadata={"domain":"g","date":20200120,"time":0,"expver":"hvi1","class":"rd","type":"fc","stream":"lwda","anoffset":9,"step":1,"levelist":1,"levtype":"ml","param":152,"gridType":"reduced_gg","name":"Logarithm of surface pressure","shortName":"lnsp","paramId":20,"gribEdition":"2","level":100,"timeStep":3600,"step-frequency":1,"globalSize":1000000,"stepId":1,"precision":"double"}, payload-size=8000000)
 
 
 message::Metadata Statistics::outputMetadata(const message::Metadata& inputMetadata, const StatisticsConfiguration& cfg,
