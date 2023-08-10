@@ -16,7 +16,7 @@
 
 #include <fstream>
 #include <regex>
-#include <bits/stdc++.h>
+#include <cstdlib>
 
 #include "eckit/config/LocalConfiguration.h"
 #include "eckit/exception/Exceptions.h"
