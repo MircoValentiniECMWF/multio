@@ -1,5 +1,15 @@
 ### config headers
 
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+set( HAVE_CLANG_COMPILER 1 )
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+set( HAVE_GNU_COMPILER 1 )
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+set( HAVE_INTEL_COMPILER 1 )
+endif()
+
+
 ecbuild_generate_config_headers( DESTINATION ${INSTALL_INCLUDE_DIR}/multio )
 
 configure_file( multio_config.h.in  multio_config.h  )

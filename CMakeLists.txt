@@ -67,7 +67,7 @@ ecbuild_add_option( FEATURE LEGACY_IFSIO
 ### use c++17 execution policies for parallel algorithms
 
 ecbuild_add_option( FEATURE EXECUTION_POLICY
-                    DEFAULT OFF
+                    DEFAULT ON
                     DESCRIPTION "Use execution policies" )
 
 if( HAVE_FORTRAN )

@@ -13,3 +13,7 @@
 
 // features
 #cmakedefine HAVE_EXECUTION_POLICY
+
+#cmakedefine HAVE_INTEL_COMPILER
+#cmakedefine HAVE_CLANG_COMPILER
+#cmakedefine HAVE_GNU_COMPILER
