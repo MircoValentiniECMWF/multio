@@ -87,7 +87,6 @@ void Statistics::PrintProfilingInfo() {
         }
     }
     
-
     std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
     std::cout << " + Cnt              :: " << timingData_.cnt()             << std::endl;
     std::cout << " + InitTime         :: " << static_cast<double>(timingData_.TotInitTime()/1000)/1000000     << std::endl;

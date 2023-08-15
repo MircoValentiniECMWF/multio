@@ -3,7 +3,7 @@
 #include "multio/action/statistics/synoptic-matchers/Matcher.h"
 #include "multio/action/statistics/StatisticsComponentsActivation.h"
 
-#ifdef __ENABLE_NO_FILTER_MATCHER__
+#ifdef ENABLE_NO_FILTER_MATCHER
 
 namespace multio::action {
 

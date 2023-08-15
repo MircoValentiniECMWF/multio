@@ -64,6 +64,12 @@ ecbuild_add_option( FEATURE LEGACY_IFSIO
                     DESCRIPTION "Legacy (FDB4) IFS I/O interface" )
 
 
+### use c++17 execution policies for parallel algorithms
+
+ecbuild_add_option( FEATURE EXECUTION_POLICY
+                    DEFAULT OFF
+                    DESCRIPTION "Use execution policies" )
+
 if( HAVE_FORTRAN )
   ecbuild_enable_fortran( REQUIRED MODULE_DIRECTORY ${PROJECT_BINARY_DIR}/module)
   ecbuild_find_package( NAME fckit   VERSION 0.10.0   REQUIRED )

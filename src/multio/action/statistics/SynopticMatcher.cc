@@ -21,13 +21,13 @@ namespace multio::action {
 
 std::unique_ptr<SynopticMatcher> make_matcher( const std::string& matcherKind, const StatisticsConfiguration& cfg  ){
 
-#ifdef __ENABLE_NO_FILTER_MATCHER__
+#ifdef ENABLE_NO_FILTER_MATCHER
     if ( matcherKind == "NoFilter" ){
         return std::make_unique<AllTimesMatcher>(  );
     }
 #endif
 
-#ifdef __ENABLE_DAILY_HOURS_MATCHER__
+#ifdef ENABLE_DAILY_HOURS_MATCHER
     if ( matcherKind == "DailyHours" ){
         return std::make_unique<DailyHoursMatcher>( );        
     }
@@ -42,7 +42,7 @@ std::unique_ptr<SynopticMatcher> make_matcher( const std::string& matcherKind, c
 
 std::unique_ptr<SynopticMatcher> make_matcher( const std::string& matcherKind, const eckit::LocalConfiguration& compConf, const StatisticsConfiguration& cfg  ){
 
-#ifdef __ENABLE_DAILY_CUSTOM_MATCHER__
+#ifdef ENABLE_DAILY_CUSTOM_MATCHER
     if ( matcherKind == "DailyCustom" ){
         return std::make_unique<DailyCustomMatcher>( compConf, cfg );               
     }

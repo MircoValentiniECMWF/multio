@@ -8,7 +8,7 @@
 #include "multio/util/ParallelPolicies.h"
 
 
-#ifdef __ENABLE_ACCUMULATE_OPERATION__
+#ifdef ENABLE_ACCUMULATE_OPERATION
 namespace multio::action {
 
 template <typename ComputationalType, typename InputOutputType,

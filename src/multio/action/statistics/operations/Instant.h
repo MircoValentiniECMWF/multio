@@ -4,9 +4,10 @@
 #include "multio/LibMultio.h"
 #include "multio/action/statistics/StatisticsComponentsActivation.h"
 #include "multio/action/statistics/operations/OperationWithData.h"
+#include "multio/util/CastUtils.h"
+#include "multio/util/ParallelPolicies.h"
 
-
-#ifdef __ENABLE_INSTANT_OPERATION__
+#ifdef ENABLE_INSTANT_OPERATION
 namespace multio::action {
 
 template <typename ComputationalType, typename InputOutputType,
@@ -92,12 +93,7 @@ public:
 private:
     void compute(InputOutputType* buf) const {
         auto func = [](const state& v) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return v[0];
-            }
-            else {
-                return static_cast<InputOutputType>(v[0]);
-            }
+            return util::staticCastValueMaybe<InputOutputType, ComputationalType>(v[0]);
         };
         util::transform(policy_, values_.cbegin(), values_.cend(), buf, func);
         return;
@@ -106,12 +102,7 @@ private:
 
     void update(const InputOutputType* val) {
         auto func = [](const state& v1, const InputOutputType& v2) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return state{v2};
-            }
-            else {
-                return state{static_cast<ComputationalType>(v2)};
-            }
+            return state{util::staticCastValueMaybe<ComputationalType, InputOutputType>(v2)};
         };
         util::transform(policy_, values_.cbegin(), values_.cend(), val, values_.begin(), func);
         return;
@@ -120,7 +111,7 @@ private:
 
     void updateWindow(const InputOutputType* val) {
         auto func
-            = [](const state& v1, const InputOutputType& v2) { return state{static_cast<ComputationalType>(0.0)}; };
+            = [](const state& v1, const InputOutputType& v2) { return state{util::staticCastValueMaybe<ComputationalType, InputOutputType>(0.0)}; };
         util::transform(policy_, values_.begin(), values_.end(), val, values_.begin(), func);
         return;
     }

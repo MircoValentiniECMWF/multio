@@ -4,8 +4,11 @@
 #include "multio/LibMultio.h"
 #include "multio/action/statistics/StatisticsComponentsActivation.h"
 #include "multio/action/statistics/operations/OperationWithData.h"
+#include "multio/util/CastUtils.h"
+#include "multio/util/ParallelPolicies.h"
 
-#ifdef __ENABLE_DIFFERENCE_OPERATION__
+
+#ifdef ENABLE_DIFFERENCE_OPERATION
 namespace multio::action {
 
 template <typename ComputationalType, typename InputOutputType,
@@ -92,14 +95,9 @@ private:
     void computeWithMissing(InputOutputType* buf) const {
         const InputOutputType m = static_cast<InputOutputType>(cfg_.missingValue());
         auto func = [m](const state& v) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return ((m == v[0]) ? m : v[1] - v[0]);
-            }
-            else {
-                InputOutputType v0_ = static_cast<InputOutputType>(v[0]);
-                InputOutputType v1_ = static_cast<InputOutputType>(v[1]);
-                return ((m == v0_) ? m : v1_ - v0_);
-            }
+            InputOutputType v0_ = util::staticCastValueMaybe<InputOutputType, ComputationalType>(v[0]);
+            InputOutputType v1_ = util::staticCastValueMaybe<InputOutputType, ComputationalType>(v[1]);
+            return ((m == v0_) ? m : v1_ - v0_);
         };
         util::transform(policy_, values_.cbegin(), values_.cend(), buf, func);
         return;
@@ -108,14 +106,9 @@ private:
 
     void computeWithoutMissing(InputOutputType* buf) const {
         auto func = [](const state& v) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return (v[1] - v[0]);
-            }
-            else {
-                InputOutputType v0_ = static_cast<InputOutputType>(v[0]);
-                InputOutputType v1_ = static_cast<InputOutputType>(v[1]);
-                return (v1_ - v0_);
-            }
+            InputOutputType v0_ = util::staticCastValueMaybe<InputOutputType, ComputationalType>(v[0]);
+            InputOutputType v1_ = util::staticCastValueMaybe<InputOutputType, ComputationalType>(v[1]);
+            return (v1_ - v0_);
         };
         util::transform(policy_, values_.cbegin(), values_.cend(), buf, func);
         return;
@@ -124,12 +117,7 @@ private:
 
     void updateData(const InputOutputType* val) {
         auto func = [](const state& v1, const InputOutputType& v2) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return state{v1[0], v2};
-            }
-            else {
-                return state{v1[0], static_cast<ComputationalType>(v2)};
-            }
+            return state{v1[0], util::staticCastValueMaybe<ComputationalType, InputOutputType>(v2)};
         };
         util::transform(policy_, values_.begin(), values_.end(), val, values_.begin(), func);
         return;
@@ -138,12 +126,7 @@ private:
 
     void updateWindow(const InputOutputType* val) {
         auto func = [](const state& v1, const InputOutputType& v2) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return state{v2, static_cast<ComputationalType>(0.0)};
-            }
-            else {
-                return state{static_cast<ComputationalType>(v2), static_cast<ComputationalType>(0.0)};
-            }
+            return state{util::staticCastValueMaybe<ComputationalType, InputOutputType>(v2), util::staticCastValueMaybe<ComputationalType, InputOutputType>(0.0)};
         };
         util::transform(policy_, values_.begin(), values_.end(), val, values_.begin(), func);
         return;

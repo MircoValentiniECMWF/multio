@@ -18,19 +18,18 @@
 #include "multio/action/statistics/operations/OperationWithData.h"
 
 
-// // Single state operations
-// #include "multio/action/statistics/operations/Accumulate.h"
+// Single state operations
+#include "multio/action/statistics/operations/Accumulate.h"
 #include "multio/action/statistics/operations/Average.h"
-// #include "multio/action/statistics/operations/FluxAverage.h"
-// #include "multio/action/statistics/operations/Instant.h"
+#include "multio/action/statistics/operations/FluxAverage.h"
+#include "multio/action/statistics/operations/Instant.h"
 #include "multio/action/statistics/operations/Maximum.h"
-// #include "multio/action/statistics/operations/Minimum.h"
+#include "multio/action/statistics/operations/Minimum.h"
 // 
-// // Dual state operations
-// #include "multio/action/statistics/operations/Difference.h"
-// #include "multio/action/statistics/operations/StdDev.h"
-// #include "multio/action/statistics/operations/Variance.h"
-
+// Dual state operations
+#include "multio/action/statistics/operations/Difference.h"
+#include "multio/action/statistics/operations/StdDev.h"
+#include "multio/action/statistics/operations/Variance.h"
 
 namespace multio::action {
 
@@ -38,7 +37,7 @@ template <typename ComputationalType, typename InputOutputType>
 std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, std::shared_ptr<StatisticsIO>& IOmanager,
                                           const OperationWindow& win, const StatisticsConfiguration& cfg) {
 
-#ifdef __ENABLE_INSTANT_OPERATION__
+#ifdef ENABLE_INSTANT_OPERATION
     if (opname == "instant") {
         return cfg.readRestart()
                  ? std::make_unique<Instant<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -46,7 +45,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_AVERAGE_OPERATION__
+#ifdef ENABLE_AVERAGE_OPERATION
     if (opname == "average") {
         return cfg.readRestart()
                  ? std::make_unique<Average<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -54,7 +53,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_FLUXAVERAGE_OPERATION__
+#ifdef ENABLE_FLUXAVERAGE_OPERATION
     if (opname == "flux-average") {
         return cfg.readRestart()
                  ? std::make_unique<FluxAverage<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -62,7 +61,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_MINIMUM_OPERATION__
+#ifdef ENABLE_MINIMUM_OPERATION
     if (opname == "minimum") {
         return cfg.readRestart()
                  ? std::make_unique<Minimum<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -70,7 +69,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_MAXIMUM_OPERATION__
+#ifdef ENABLE_MAXIMUM_OPERATION
     if (opname == "maximum") {
         return cfg.readRestart()
                  ? std::make_unique<Maximum<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -78,7 +77,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_ACCUMULATE_OPERATION__
+#ifdef ENABLE_ACCUMULATE_OPERATION
     if (opname != "accumulate") {
         return cfg.readRestart()
                  ? std::make_unique<Accumulate<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -86,7 +85,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_DIFFERENCE_OPERATION__
+#ifdef ENABLE_DIFFERENCE_OPERATION
     if (opname != "difference") {
         return cfg.readRestart()
                  ? std::make_unique<Difference<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -94,7 +93,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_VARIANCE__OPERATION__
+#ifdef ENABLE_VARIANCE_OPERATION
     if (opname != "variance") {
         return cfg.readRestart()
                  ? std::make_unique<Variance<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)
@@ -102,7 +101,7 @@ std::unique_ptr<Operation> make_operation(const std::string& opname, long sz, st
     }
 #endif
 
-#ifdef __ENABLE_STDDEV_OPERATION__
+#ifdef ENABLE_STDDEV_OPERATION
     if (opname != "stddev") {
         return cfg.readRestart()
                  ? std::make_unique<StdDev<ComputationalType, InputOutputType>>(opname, sz, win, IOmanager, cfg)

@@ -9,3 +9,7 @@
 #cmakedefine MULTIO_HAVE_ECKIT
 #cmakedefine MULTIO_HAVE_FDB
 #cmakedefine MULTIO_HAVE_MIR
+
+
+// features
+#cmakedefine HAVE_EXECUTION_POLICY

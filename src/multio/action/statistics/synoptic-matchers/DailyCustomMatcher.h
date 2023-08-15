@@ -10,7 +10,7 @@
 #include "multio/action/statistics/StatisticsComponentsActivation.h"
 
 
-#ifdef __ENABLE_DAILY_CUSTOM_MATCHER__
+#ifdef ENABLE_DAILY_CUSTOM_MATCHER
 
 namespace multio::action {
 

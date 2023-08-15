@@ -6,8 +6,10 @@
 #include "multio/LibMultio.h"
 #include "multio/action/statistics/StatisticsComponentsActivation.h"
 #include "multio/action/statistics/operations/OperationWithData.h"
+#include "multio/util/CastUtils.h"
+#include "multio/util/ParallelPolicies.h"
 
-#ifdef __ENABLE_STDDEV_OPERATION__
+#ifdef ENABLE_STDDEV_OPERATION
 
 namespace multio::action {
 
@@ -95,15 +97,9 @@ private:
         const ComputationalType c = static_cast<ComputationalType>(icntpp());
         auto func = [c](const state& v1, const InputOutputType& v2) {
             state out;
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                out[0] = v1[0] + c * (v2 - v1[0]);
-                out[1] = v1[1] + (v2 - v1[0]) * (v2 - out[0]);
-            }
-            else {
-                ComputationalType v2_ = static_cast<ComputationalType>(v2);
-                out[0] = v1[0] + c * (v2_ - v1[0]);
-                out[1] = v1[1] + (v2_ - v1[0]) * (v2_ - out[0]);
-            }
+            ComputationalType v2_ = util::staticCastValueMaybe<ComputationalType, InputOutputType>(v2);
+            out[0] = v1[0] + c * (v2_ - v1[0]);
+            out[1] = v1[1] + (v2_ - v1[0]) * (v2_ - out[0]);
             return out;
         };
         util::transform(policy_, values_.begin(), values_.end(), val, values_.begin(), func);
@@ -116,15 +112,9 @@ private:
         const ComputationalType m = static_cast<ComputationalType>(cfg_.missingValue());
         auto func = [c, m](const state& v1, const InputOutputType& v2) {
             state out;
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                out[0] = m == v2 ? m : v1[0] + c * (v2 - v1[0]);
-                out[1] = m == v2 ? m : v1[1] + (v2 - v1[0]) * (v2 - out[0]);
-            }
-            else {
-                ComputationalType v2_ = static_cast<ComputationalType>(v2);
-                out[0] = m == v2_ ? m : v1[0] + c * (v2_ - v1[0]);
-                out[1] = m == v2_ ? m : v1[1] + (v2_ - v1[0]) * (v2_ - out[0]);
-            }
+            ComputationalType v2_ = util::staticCastValueMaybe<ComputationalType, InputOutputType>(v2);
+            out[0] = m == v2_ ? m : v1[0] + c * (v2_ - v1[0]);
+            out[1] = m == v2_ ? m : v1[1] + (v2_ - v1[0]) * (v2_ - out[0]);
             return out;
         };
         util::transform(policy_, values_.cbegin(), values_.cend(), val, values_.begin(), func);
@@ -134,7 +124,7 @@ private:
 
     void updateWindow(const InputOutputType* val) {
         auto func = [](const state& v1, const InputOutputType& v2) {
-            return state{static_cast<ComputationalType>(0.0), static_cast<ComputationalType>(0.0)};
+            return state{util::staticCastValueMaybe<ComputationalType, InputOutputType>(0.0), util::staticCastValueMaybe<ComputationalType, InputOutputType>(0.0)};
         };
         util::transform(policy_, values_.begin(), values_.end(), val, values_.begin(), func);
         return;
@@ -145,13 +135,8 @@ private:
         const InputOutputType c = static_cast<InputOutputType>(icntpp());
         const InputOutputType m = static_cast<InputOutputType>(cfg_.missingValue());
         auto func = [c, m](const state& v) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return std::sqrt((m == v[1]) ? m : v[1] * c);
-            }
-            else {
-                InputOutputType v1_ = static_cast<InputOutputType>(v[1]);
-                return std::sqrt((m == v1_) ? m : v1_ * c);
-            }
+            InputOutputType v1_ = util::staticCastValueMaybe<InputOutputType, ComputationalType>(v[1]);
+            return std::sqrt((m == v1_) ? m : v1_ * c);
         };
         util::transform(policy_, values_.cbegin(), values_.cend(), buf, func);
         return;
@@ -161,13 +146,8 @@ private:
     void computeWithoutMissing(InputOutputType* buf) const {
         const InputOutputType c = static_cast<InputOutputType>(icntpp());
         auto func = [c](const state& v) {
-            if constexpr (std::is_same<InputOutputType, ComputationalType>::value) {
-                return std::sqrt(v[1] * c);
-            }
-            else {
-                InputOutputType v1_ = static_cast<InputOutputType>(v[1]);
-                return std::sqrt(v1_ * c);
-            }
+            InputOutputType v1_ = util::staticCastValueMaybe<InputOutputType, ComputationalType>(v[1]);
+            return std::sqrt(v1_ * c);
         };
         util::transform(policy_, values_.cbegin(), values_.cend(), buf, func);
         return;

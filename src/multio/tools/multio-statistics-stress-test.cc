@@ -64,9 +64,9 @@ public:
 }  // namespace
 
 
-class MultioFeed final : public multio::MultioTool {
+class MultioStatisticsStressTester final : public multio::MultioTool {
 public:  // methods
-    MultioFeed(int argc, char** argv);
+    MultioStatisticsStressTester(int argc, char** argv);
 
 private:
 
@@ -83,8 +83,8 @@ private:
 
     void execute(const eckit::option::CmdArgs& args) override;
 
-    int numberOfPositionalArguments() const override { return 1; }
-    int minimumPositionalArguments() const override { return 1; }
+    int numberOfPositionalArguments() const override { return 0; }
+    int minimumPositionalArguments() const override { return 0; }
 
     long nFlushFreq_;
     long nSteps_;
@@ -96,7 +96,7 @@ private:
 
 };
 
-MultioFeed::MultioFeed(int argc, char** argv) :multio::MultioTool{argc, argv} ,nFlushFreq_{1},nSteps_{5},nParamID_{1},nLevels_{1}, nValues_{10000},precisionRatio_{100}
+MultioStatisticsStressTester::MultioStatisticsStressTester(int argc, char** argv) :multio::MultioTool{argc, argv} ,nFlushFreq_{1},nSteps_{5},nParamID_{1},nLevels_{1}, nValues_{10000},precisionRatio_{100}
     {
 
     options_.push_back(
@@ -126,7 +126,7 @@ MultioFeed::MultioFeed(int argc, char** argv) :multio::MultioTool{argc, argv} ,n
         new eckit::option::SimpleOption<std::string>("plans", "Path to YAML/JSON file containing plans and actions."));
 }
 
-void MultioFeed::init(const eckit::option::CmdArgs& args) {
+void MultioStatisticsStressTester::init(const eckit::option::CmdArgs& args) {
 
     args.get("nFlushFreq",     nFlushFreq_ );
     args.get("nSteps",         nSteps_ );
@@ -142,9 +142,9 @@ void MultioFeed::init(const eckit::option::CmdArgs& args) {
     }
 }
 
-void MultioFeed::finish(const eckit::option::CmdArgs&) {}
+void MultioStatisticsStressTester::finish(const eckit::option::CmdArgs&) {}
 
-void MultioFeed::execute(const eckit::option::CmdArgs& args) {
+void MultioStatisticsStressTester::execute(const eckit::option::CmdArgs& args) {
     using eckit::message::ValueRepresentation;
 
     MetadataSetter metadata;
@@ -243,6 +243,6 @@ void MultioFeed::execute(const eckit::option::CmdArgs& args) {
 //---------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char** argv) {
-    multio::test::MultioFeed tool(argc, argv);
+    multio::test::MultioStatisticsStressTester tool(argc, argv);
     return tool.start();
 }
