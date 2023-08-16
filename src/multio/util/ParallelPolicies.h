@@ -20,6 +20,8 @@
 #ifdef HAVE_CLANG_COMPILER
 #error "Execution policies from clang c++17 not tested"
 #endif
+#else
+#include <algorithm>
 #endif
 
 namespace multio::util {
