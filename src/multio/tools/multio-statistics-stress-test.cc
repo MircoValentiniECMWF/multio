@@ -228,7 +228,7 @@ void MultioStatisticsStressTester::execute(const eckit::option::CmdArgs& args) {
             }
 
 
-            if ( i%nFlushFreq_ == 0 ){
+            if ( (i+1)%nFlushFreq_ == 0 || nFlushFreq_==1 ){
                 if (imultio_flush_()) {
                     ASSERT(false);
                 }

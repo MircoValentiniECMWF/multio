@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <array>
 
 #include "PeriodUpdater.h"
 #include "StatisticsConfiguration.h"
@@ -50,8 +51,12 @@ private:
     std::shared_ptr<StatisticsIO> IOmanager_;
     const std::map<std::string,eckit::LocalConfiguration> matcherCfg_;
 
-    Profiler<4>  profiler_;
-    StatisticsProfilingInfo timingData_;
+    std::array<Profiler,10>  profiler_;
+    int64_t nExecuteImplCalls_;
+    int64_t nFlushCalls_;
+    int64_t memoryUsed_;
+    std::array<int64_t,20>   profileTime_;
+    std::array<int64_t,20>   profileNCalls_;
 
     std::map<std::string, std::unique_ptr<TemporalStatistics>> fieldStats_;
 };

@@ -73,7 +73,7 @@ protected:
     const std::string logHeader_;
     const StatisticsConfiguration& cfg_;
     const OperationWindow& win_;
-    mutable std::array<Profiler<1>, 6> profiler_;
+    mutable std::array<Profiler, 6> profiler_;
 
     friend std::ostream& operator<<(std::ostream& os, const Operation& a) {
         a.print(os);

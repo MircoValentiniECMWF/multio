@@ -56,26 +56,26 @@ public:
     };
 
 
-    void updateWindow(const eckit::Buffer& data) override {
+    void updateData(const eckit::Buffer& data) override {
         profiler_[1].tic();
         checkSize(data.size() / sizeof(InputOutputType));
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const InputOutputType* val = static_cast<const InputOutputType*>(data.data());
-        updateWindow(val);
+        update(val);
         profiler_[1].toc();
         return;
-    };
+    }
 
 
-    void updateData(const eckit::Buffer& data) override {
+    void updateWindow(const eckit::Buffer& data) override {
         profiler_[2].tic();
         checkSize(data.size() / sizeof(InputOutputType));
         LOG_DEBUG_LIB(LibMultio) << logHeader_ << ".update().count=" << win_.count() << std::endl;
         const InputOutputType* val = static_cast<const InputOutputType*>(data.data());
-        update(val);
+        updateWindow(val);
         profiler_[2].toc();
         return;
-    }
+    };
 
 
     void compute(eckit::Buffer& data) const override {
