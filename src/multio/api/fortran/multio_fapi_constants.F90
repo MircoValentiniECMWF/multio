@@ -1,8 +1,12 @@
 !> @file
 !!
-!! @brief Constants and enumerators used in the multio interface
+!! @brief Constants and enumerators used in the multio interface.
 !!
-module multio_constants_mod
+!! This file contains a collection of constants and enumerators that are utilized
+!! within the multio interface.
+!!
+
+module multio_api_constants_mod
 implicit none
 
     ! Default visibility
@@ -21,4 +25,4 @@ implicit none
     public :: MULTIO_ERROR_GENERAL_EXCEPTION
     public :: MULTIO_ERROR_UNKNOWN_EXCEPTION
 
-end module multio_constants_mod
+end module multio_api_constants_mod

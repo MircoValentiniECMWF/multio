@@ -1,7 +1,8 @@
 #pragma once
 
 #include "multio/message/Metadata.h"
-#include "multio_c.h"
+
+#include "multio_capi.h"
 
 using multio::message::Metadata;
 

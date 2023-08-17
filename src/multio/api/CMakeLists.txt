@@ -1,8 +1,7 @@
-
 # DataSink plugins
 
 if( CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "GNU" )
-    list( APPEND multio_sink_plugins
+    list( APPEND multio_api_linker_options
         -Wl,--no-as-needed
     )
 endif()
@@ -18,6 +17,8 @@ if( HAVE_MAESTRO )
         multio-maestro
     )
 endif()
+
+
 
 # Action plugins
 
@@ -41,52 +42,10 @@ if( HAVE_MIR )
     )
 endif()
 
+# Create the c api library
+add_subdirectory(c)
 
-ecbuild_add_library(
-
-    TARGET multio-api
-
-    SOURCES
-        multio_c.cc
-        multio_c.h
-
-    PUBLIC_LIBS
-        ${multio_sink_plugins}
-        ${multio_action_plugins}
-        multio
-)
-
-# Cannot use CONDITION for (ecbuild_)configure_file
+# Create the fortran api library
 if( HAVE_FORTRAN )
-    configure_file( multio_config.f90.in multio_config.f90 )
+add_subdirectory(fortran)
 endif()
-
-list( APPEND multio_fapi_srcs
-    multio_constants_mod.F90
-    multio_error_handling_mod.F90
-    multio_configuration_mod.F90
-    multio_base_handle_mod.F90
-    multio_handle_mod.F90
-    multio_data_mod.F90
-    multio_metadata_mod.F90
-    multio_utils_mod.F90
-    multio_api.F90
-)
-
-ecbuild_add_library(
-
-    TARGET multio-fapi
-
-    CONDITION HAVE_FORTRAN
-
-    SOURCES
-        ${multio_fapi_srcs}
-        ${CMAKE_CURRENT_BINARY_DIR}/multio_config.f90
-
-    PUBLIC_INCLUDES
-        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/module>
-        $<BUILD_INTERFACE:${CMAKE_Fortran_MODULE_DIRECTORY}>
-
-    PUBLIC_LIBS
-        multio-api
-)

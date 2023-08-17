@@ -1,12 +1,11 @@
 !> @file
 !!
-!! @brief Definition of the base functionalities of a multio_handle
+!! @brief Definition of the fundamental functionalities for a multio_handle
 !!
-!! @note This module is separated from the "full" multio handle in
-!!       order to avoid circular deps.
+!! @note This module is kept distinct from the "full" multio handle to prevent circular dependencies.
 !!
 
-module multio_base_handle_mod
+module multio_api_base_handle_mod
 
     use, intrinsic :: iso_c_binding, only: c_ptr
     use, intrinsic :: iso_c_binding, only: c_int
@@ -53,49 +52,62 @@ implicit none
 contains
 
 
-    !>
-    !! @brief extract the c pointer of the handle object
+    !> @brief Retrieve the C pointer of the handle object
     !!
-    !! @param [in,out] handle - handle passed object pointer
+    !! This function extracts the C pointer associated with the handle object.
     !!
-    !! @return c pointer to the handle object
+    !! @param [in,out] handle - Pointer to the handle object
+    !!
+    !! @return Pointer to the C handle object
     !!
     function multio_base_handle_c_ptr( handle ) result(loc)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_ptr
+        use, intrinsic :: iso_c_binding, only: c_null_ptr
     implicit none
         ! Dummy arguments
         class(multio_base_handle), target, intent(inout) :: handle
         ! Function result
         type(c_ptr) :: loc
+#if !defined(MULTIO_DUMMY_API)
         ! Implementation
         loc = handle%impl
+#else
+        loc = c_null_ptr
+#endif
         ! Exit point
         return
     end function multio_base_handle_c_ptr
 
 
-    !>
-    !! @brief create a new multio handle from  a multio configuration
+    !> @brief Create a new multio handle from a multio configuration
     !!
-    !! @param [in,out] handle - handle passed object pointer
-    !! @param [in,out] cc     - pointer to the multio_configuration
+    !! This function initializes a new multio handle based on the provided
+    !! multio configuration object.
+    !!
+    !! @param [in,out] handle - Pointer to the handle object to be created
+    !! @param [in,out] cc     - Pointer to the multio_configuration
     !!                          object used to configure the handle
     !!
-    !! @return error code
+    !! @return Error code indicating the operation's success
     !!
     !! @see multio_configuration
     !! @see multio_base_handle_new_default
     !! @see multio_base_handle_delete
     !!
     function multio_base_handle_new(handle, cc) result(err)
-        use :: multio_configuration_mod, only: multio_configuration
-        use, intrinsic :: iso_c_binding, only: c_int
+        ! Variable references from the fortran language standard modules
+        use, intrinsic :: iso_c_binding,     only: c_int
+        ! Variable references from the project
+        use :: multio_api_configuration_mod, only: multio_configuration
+        use :: multio_api_constants_mod,     only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle),   intent(inout) :: handle
         class(multio_configuration), intent(inout) :: cc
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
@@ -115,28 +127,36 @@ contains
         c_err = c_multio_new_handle(handle%impl, cc%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_base_handle_new
 
 
-    !>
-    !! @brief create a default multio handle
+    !> @brief Create a default multio handle
     !!
-    !! @param [in,out] handle - handle passed object pointer
+    !! This function initializes a new multio handle with default settings.
     !!
-    !! @return error code
+    !! @param [in,out] handle - Pointer to the handle object to be created
+    !!
+    !! @return Error code indicating the operation's success
     !!
     !! @see multio_base_handle_new
     !! @see multio_base_handle_delete
     !!
     function multio_base_handle_new_default(handle) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
+        ! Variable references from the project
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
@@ -154,31 +174,38 @@ contains
         c_err = c_multio_new_handle_default(handle%impl)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_base_handle_new_default
 
 
-    !>
-    !! @brief delete a multio handle. This function remove all
-    !!        the allocated memory and removes any installed error
-    !!        handler
+    !> @brief Delete a multio handle.
     !!
-    !! @param [in,out] handle - handle passed object pointer
+    !! This function deallocates all the allocated memory and removes any installed
+    !! error handler associated with the provided handle object.
     !!
-    !! @return error code
+    !! @param [in,out] handle - Pointer to the handle object to be deleted
+    !!
+    !! @return Error code indicating the operation's success
     !!
     !! @see multio_base_handle_new
     !! @see multio_base_handle_new_default
     !!
     function multio_base_handle_delete(handle) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
-        use :: multio_error_handling_mod, only: failure_info_list
+        ! Variable references from the project
+        use :: multio_api_error_handling_mod, only: failure_info_list
+        use :: multio_api_constants_mod,      only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variabels
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
@@ -202,27 +229,36 @@ contains
         end if
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_base_handle_delete
 
 
-    !>
-    !! @brief set the failure handler to multio
+    !> @brief Set the failure handler for multio.
     !!
-    !! @param [in,out] handle - handler function to be called as failure handler
-    !! @param [in,out] handle - configuration context
+    !! This function sets the provided handler function to be called as the failure handler
+    !! for the specified configuration context.
     !!
-    !! @return error code
+    !! @param [in,out] handle  - Pointer to the handle object
+    !! @param [in]     handler - Handler function to be called as the failure handler
+    !! @param [in,out] context - Configuration context
+    !!
+    !! @return Error code indicating the operation's success
     !!
     function multio_base_handle_set_failure_handler( handle, handler, context) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_fortran_env, only: int64
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_null_ptr
         use, intrinsic :: iso_c_binding, only: c_funloc
         use, intrinsic :: iso_c_binding, only: c_f_pointer
-        use :: multio_error_handling_mod, only: failure_handler_t
-        use :: multio_error_handling_mod, only: failure_info_list
+        ! Variable references from the project
+        use :: multio_api_error_handling_mod, only: failure_handler_t
+        use :: multio_api_error_handling_mod, only: failure_info_list
+        use :: multio_api_constants_mod,      only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle),    intent(inout) :: handle
@@ -230,6 +266,7 @@ contains
         integer(int64),               intent(inout) :: context
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variabels
         integer(kind=c_int) :: c_err
         type(c_ptr) :: new_id_loc
@@ -265,27 +302,36 @@ contains
         endif
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_base_handle_set_failure_handler
 
 
-    !>
-    !! @brief open a new connection
+    !> @brief Open a new connection.
     !!
-    !! @param [in,out] handle - handle passed object pointer
+    !! This function initiates the process of opening a new
+    !! connection using the provided handle object.
     !!
-    !! @return error code
+    !! @param [in,out] handle - Pointer to the handle object
+    !!
+    !! @return Error code indicating the operation's success
     !!
     !! @see multio_base_handle_close_connections
     !!
     function multio_base_handle_open_connections(handle) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
+        ! Variable references from the project
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
@@ -303,27 +349,36 @@ contains
         c_err = c_multio_open_connections(handle%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_base_handle_open_connections
 
 
-    !>
-    !! @brief close any existent connection
+    !> @brief Close any existing connection.
     !!
-    !! @param [in,out] handle - handle passed object pointer
+    !! This function initiates the process of closing any existing
+    !! connection using the provided handle object.
     !!
-    !! @return error code
+    !! @param [in,out] handle - Pointer to the handle object
+    !!
+    !! @return Error code indicating the operation's success
     !!
     !! @see multio_base_handle_open_connections
     !!
     function multio_base_handle_close_connections(handle) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
+        ! Variable references from the project
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
@@ -341,8 +396,11 @@ contains
         c_err = c_multio_close_connections(handle%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_base_handle_close_connections
 
-end module multio_base_handle_mod
+end module multio_api_base_handle_mod

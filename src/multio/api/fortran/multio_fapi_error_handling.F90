@@ -1,27 +1,28 @@
 !> @file
 !!
-!! @brief Definition of the failure handlers
+!! @brief Definition of the failure handlers.
 !!
-!! Failure handlers are Fortran functions that needs to be called from
+!! Failure handlers are Fortran functions that need to be called from
 !! the "c" lower level.
 !!
 !! This module has 2 main objectives:
 !!
-!! 1) avoid to force the users of the api to define handlers that are
-!!    callable from "c". This is obtained by wrapping fortran failure
-!!    handlers with a c-callable wrapper;
-!! 2) allow different failure handlers for different handlers. This
-!!    is obtained through a list of filure handlers. The specific failure
-!!    handler to be called is then identified in the list using a unique idx;
+!! 1) Avoid forcing the users of the API to define handlers that are
+!!    callable from "c". This is achieved by wrapping Fortran failure
+!!    handlers with a c-callable wrapper.
+!! 2) Allow different failure handlers for different situations. This
+!!    is achieved through a list of failure handlers. The specific failure
+!!    handler to be called is then identified in the list using a unique index.
 !!
-!! @todo: in order to force the users to use the provided interface, maybe it is
-!!        useful to accept only procedure pointers, instead of procedures
+!! @todo: In order to enforce the usage of the provided interface, it might be
+!!        useful to accept only procedure pointers instead of procedures.
 !!
-module multio_error_handling_mod
 
-    use, intrinsic :: iso_c_binding, only: c_int
-    use, intrinsic :: iso_c_binding, only: c_ptr
-    use, intrinsic :: iso_c_binding, only: c_null_ptr
+module multio_api_error_handling_mod
+
+    use, intrinsic :: iso_c_binding,   only: c_int
+    use, intrinsic :: iso_c_binding,   only: c_ptr
+    use, intrinsic :: iso_c_binding,   only: c_null_ptr
     use, intrinsic :: iso_fortran_env, only: int64
 
 implicit none
@@ -52,7 +53,7 @@ implicit none
 
 
     !>
-    !! @class node used for storing the failure handlers
+    !! node used for storing the failure handlers
     type :: multio_fort_failure_info_node
         integer(c_int) :: id = 0
         integer(int64) :: context = 0
@@ -62,7 +63,7 @@ implicit none
 
 
     !>
-    !! @class list of failure handlers
+    !! list of failure handlers
     type :: multio_fort_failure_info_list
 
         ! Default visibility of the members
@@ -98,16 +99,21 @@ implicit none
 
 contains
 
-    !>
-    !! @brief return the pointer to the c wrapper that need to be called form c
+
+    !> @brief Return the pointer to the C wrapper that needs to be called from C.
     !!
-    !! @param [in] ffi - failure handlers list
+    !! This function retrieves the C wrapper's address that should be called from the C level.
     !!
-    !! @return c address of the wrapper
+    !! @param [in] ffi   The list of failure handlers.
+    !!
+    !! @return The C address of the wrapper.
     !!
     function multio_fort_failure_wrapper_addr( ffi ) result(c_addr)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_funptr
         use, intrinsic :: iso_c_binding, only: c_funloc
+        ! Variable references from the project
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_fort_failure_info_list), intent(inout) :: ffi
@@ -120,17 +126,17 @@ contains
     end function multio_fort_failure_wrapper_addr
 
 
-    !>
-    !! @brief call the failure handler associated with the given id
+    !> @brief Call the failure handler associated with the given ID.
     !!
-    !! @param [in,out] ffi   - failure handlers list
-    !! @param [in]     id    - id of the failure handler to be called
-    !! @param [in]     err   - error id during the call of the error handler
-    !! @param [in]     info  - failure info
+    !! This function calls the failure handler associated with the provided ID.
     !!
-    !! @return error code
+    !! @param [in,out] ffi   The list of failure handlers.
+    !! @param [in]     id    The ID of the failure handler to be called.
+    !! @param [in]     err   The error ID during the call of the error handler.
+    !! @param [in]     info  The failure info.
     !!
     subroutine multio_fort_failure_call(ffi, id, err, info)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
     implicit none
         ! Dummy arguments
@@ -138,6 +144,7 @@ contains
         integer(c_int),                       intent(in)    :: id
         integer,                              intent(in)    :: err
         class(multio_failure_info),           intent(in)    :: info
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         type(multio_fort_failure_info_node), pointer :: node
         ! Implementation
@@ -153,25 +160,29 @@ contains
                 node => node%next
             endif
         enddo SearchLoop
-
+#endif
         ! Exit point
         return
     end subroutine multio_fort_failure_call
 
 
-    !>
-    !! @brief add a failure handler to the list of failure handler list
+    !> @brief Add a failure handler to the list of failure handlers.
     !!
-    !! @param [in,out] ffi        - failure handlers list
-    !! @param [in]     handler_fn - failure handler to be added to the list
-    !! @param [in]     context    - context associated to the failure handler
+    !! This function adds a failure handler along with its associated context to the list
+    !! of failure handlers.
     !!
-    !! @return error code
+    !! @param [in,out] ffi         The list of failure handlers.
+    !! @param [in]     handler_fn  The failure handler to be added to the list.
+    !! @param [in]     context     The context associated with the failure handler.
+    !!
+    !! @return c pointer to the node that constains the error handler
     !!
     function multio_fort_failure_add(ffi, handler_fn, context) result(new_id_loc)
 
-        use, intrinsic :: iso_c_binding, only: c_loc
-        use, intrinsic :: iso_c_binding, only: c_ptr
+        ! Variable references from the fortran language standard modules
+        use, intrinsic :: iso_c_binding,   only: c_loc
+        use, intrinsic :: iso_c_binding,   only: c_ptr
+        use, intrinsic :: iso_c_binding,   only: c_null_ptr
         use, intrinsic :: iso_fortran_env, only: int64
 
     implicit none
@@ -181,6 +192,7 @@ contains
         integer(int64),                        intent(in)    :: context
         ! Function result
         type(c_ptr) :: new_id_loc
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         class(multio_fort_failure_info_node), pointer :: new_node
 
@@ -207,29 +219,32 @@ contains
             ffi%tail%next => new_node
         endif
         ffi%tail => new_node
-
+#else
+        new_id_loc = c_null_ptr
+#endif
         ! Exit point
         return
     end function multio_fort_failure_add
 
 
-    !>
-    !! @brief remove a failure handler from the list of failure handlers.
-    !!        The failure handler to be removed is identified by "id".
+    !> @brief Remove a failure handler from the list of failure handlers.
     !!
-    !! @param [in,out] ffi  - failure handlers list
-    !! @param [in]     id   - index of the failure handler to be removed
+    !! This function removes a failure handler identified by its index ("id") from the list
+    !! of failure handlers.
     !!
-    !! @return error code
+    !! @param [in,out] ffi  The list of failure handlers.
+    !! @param [in]     id   The index of the failure handler to be removed.
     !!
     subroutine multio_fort_failure_remove(ffi, id)
 
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
 
     implicit none
         ! Dummy arguments
         class(multio_fort_failure_info_list), intent(inout) :: ffi
         integer(c_int),                       intent(in)    :: id
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         type(multio_fort_failure_info_node), pointer :: node
         type(multio_fort_failure_info_node), pointer :: node_prev
@@ -273,26 +288,25 @@ contains
             endif
 
         enddo SearchLoop
+#endif
         ! Exit point
         return
     end subroutine multio_fort_failure_remove
 
 
-    !>
-    !! @brief wrap a failure handler.
-    !!        This is the function called from c. Then linker symbol
-    !!        associate to this function is defined through the
-    !!        bind keyword.
+    !> @brief Wrap a failure handler.
     !!
-    !! @param [in] c_idx   - Identifier of the failure handler to be called
-    !! @param [in] c_error - Identifier of the error
-    !! @param [in] c_info  - Opaque informations about the error
+    !! This function serves as the entry point for the failure handler when called from C.
+    !! The linker symbol associated with this function is defined using the `bind` keyword.
     !!
-    !! @return error code
+    !! @param [in] c_pidx   Identifier of the failure handler to be called.
+    !! @param [in] c_error  Identifier of the error.
+    !! @param [in] c_info   Opaque information about the error.
     !!
     subroutine failure_handler_wrapper(c_pidx, c_error, c_info) &
                 bind(c, name='failure_handler_wrapper')
 
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_ptr
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_f_pointer
@@ -302,6 +316,7 @@ contains
         type(c_ptr),    value, intent(in) :: c_pidx
         integer(c_int), value, intent(in) :: c_error
         type(c_ptr),    value, intent(in) :: c_info
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         type(multio_failure_info) :: finfo
         integer(c_int), pointer :: c_idx
@@ -312,8 +327,9 @@ contains
         err = int(c_error,kind(err))
         ! Call the fortran failure handler
         call failure_info_list%callHandler(c_idx, err, finfo)
+#endif
         ! Exit point
         return
     end subroutine failure_handler_wrapper
 
-end module multio_error_handling_mod
+end module multio_api_error_handling_mod

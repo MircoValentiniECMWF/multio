@@ -1,20 +1,20 @@
 !> @file
 !!
-!! @brief Definition of the main functionalities of a multio_handle
+!! @brief Definition of the main functionalities of a multio_handle.
 !!
-!! This module defines all the overloaded methods needed to write to
-!! multio fields, masks and domains
+!! This module defines all the overloaded methods needed to write
+!! multio fields, masks, and domains.
 !!
 !! @note This module is separated from the "base" multio handle in
-!!       order to avoid circular deps.
+!!       order to avoid circular dependencies.
 !!
 
-module multio_handle_mod
+module multio_api_handle_mod
 
-    use, intrinsic :: iso_c_binding, only: c_ptr
-    use, intrinsic :: iso_c_binding, only: c_int
-    use, intrinsic :: iso_c_binding, only: c_null_ptr
-    use :: multio_base_handle_mod,   only: multio_base_handle
+    use, intrinsic :: iso_c_binding,   only: c_ptr
+    use, intrinsic :: iso_c_binding,   only: c_int
+    use, intrinsic :: iso_c_binding,   only: c_null_ptr
+    use :: multio_api_base_handle_mod, only: multio_base_handle
 
 implicit none
 
@@ -69,25 +69,31 @@ implicit none
 
 contains
 
-    !>
-    !! @brief send a flush command through the multio planes
+    !> @brief Send a flush command through the multio plans.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the flush command
+    !! This function sends a flush command through the multio plans of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle     A pointer to the object handle.
+    !! @param [in]     metadata   Metadata to be sent with the flush command.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_notify
     !!
     function multio_handle_flush(handle, metadata) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),   intent(inout) :: handle
         class(multio_metadata), intent(inout) :: metadata
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
@@ -106,30 +112,39 @@ contains
         c_err = c_multio_flush(handle%c_ptr(), metadata%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_flush
 
 
-    !>
-    !! @brief notify some event through the multio planes
+    !> @brief Notify an event through the multio plans.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the notification
+    !! This function notifies an event through the multio plans of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle     A pointer to the object handle.
+    !! @param [in]     metadata   Metadata to be sent with the notification.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_flush
     !!
     function multio_handle_notify(handle, metadata) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),   intent(inout) :: handle
         class(multio_metadata), intent(inout) :: metadata
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
@@ -148,25 +163,34 @@ contains
         c_err = c_multio_notify(handle%c_ptr(), metadata%c_ptr())
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_notify
 
 
-    !>
-    !! @brief send a domain information to multio
+    !> @brief Send domain information to multio.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the domain
-    !! @param [in]     data     - domain data
+    !! This function sends domain information to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the domain.
+    !! @param [in]     data     Domain data.
     !!
-    !! @todo implement for different kinds
+    !! @return An error code indicating the operation's success.
+    !!
+    !! @todo Implement for different kinds.
+    !!
     function multio_handle_write_domain(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),           intent(inout) :: handle
@@ -174,6 +198,7 @@ contains
         integer, dimension(:),  target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -196,29 +221,37 @@ contains
         c_err  = c_multio_write_domain(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_domain
 
 
-    !>
-    !! @brief send a float one dimension mask
+    !> @brief Send a one-dimensional float mask.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the mask
-    !! @param [in]     data     - mask data
+    !! This function sends a one-dimensional float mask to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the mask.
+    !! @param [in]     data     Mask data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_mask_float_2d
     !! @see multio_handle_write_mask_double_1d
     !! @see multio_handle_write_mask_double_2d
     !!
     function multio_handle_write_mask_float_1d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                     intent(inout) :: handle
@@ -226,6 +259,7 @@ contains
         real(kind=c_float), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -248,29 +282,37 @@ contains
         c_err = c_multio_write_mask_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_mask_float_1d
 
 
-    !>
-    !! @brief send a float two dimensions mask
+    !> @brief Send a two-dimensional float mask.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the mask
-    !! @param [in]     data     - mask data
+    !! This function sends a two-dimensional float mask to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the mask.
+    !! @param [in]     data     Mask data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_mask_float_1d
     !! @see multio_handle_write_mask_double_1d
     !! @see multio_handle_write_mask_double_2d
     !!
     function multio_handle_write_mask_float_2d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                       intent(inout) :: handle
@@ -278,6 +320,7 @@ contains
         real(kind=c_float), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -300,29 +343,37 @@ contains
         c_err = c_multio_write_mask_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_mask_float_2d
 
 
-    !>
-    !! @brief send a double one dimension mask
+    !> @brief Send a one-dimensional double mask.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the mask
-    !! @param [in]     data     - mask data
+    !! This function sends a one-dimensional double mask to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the mask.
+    !! @param [in]     data     Mask data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_mask_float_1d
     !! @see multio_handle_write_mask_float_2d
     !! @see multio_handle_write_mask_double_2d
     !!
     function multio_handle_write_mask_double_1d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                      intent(inout) :: handle
@@ -330,6 +381,7 @@ contains
         real(kind=c_double), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -352,29 +404,37 @@ contains
         c_err = c_multio_write_mask_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_mask_double_1d
 
 
-    !>
-    !! @brief send a double two dimensions mask
+    !> @brief Send a two-dimensional double mask.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the mask
-    !! @param [in]     data     - mask data
+    !! This function sends a two-dimensional double mask to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the mask.
+    !! @param [in]     data     Mask data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_mask_float_1d
     !! @see multio_handle_write_mask_float_2d
     !! @see multio_handle_write_mask_double_1d
     !!
     function multio_handle_write_mask_double_2d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                        intent(inout) :: handle
@@ -382,6 +442,7 @@ contains
         real(kind=c_double), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -404,19 +465,24 @@ contains
         c_err = c_multio_write_mask_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_mask_double_2d
 
 
-    !>
-    !! @brief send a float one dimension field
+    !> @brief Send a one-dimensional float field.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the field
-    !! @param [in]     data     - field data
+    !! This function sends a one-dimensional float field to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the field.
+    !! @param [in]     data     Field data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_field_float_2d
     !! @see multio_handle_write_field_double_1d
@@ -424,10 +490,13 @@ contains
     !! @see multio_handle_write_field_buffer
     !!
     function multio_handle_write_field_float_1d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                     intent(inout) :: handle
@@ -435,6 +504,7 @@ contains
         real(kind=c_float), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -457,19 +527,24 @@ contains
         c_err = c_multio_write_field_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_field_float_1d
 
 
-    !>
-    !! @brief send a float two dimensions field
+    !> @brief Send a two-dimensional float field.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the field
-    !! @param [in]     data     - field data
+    !! This function sends a two-dimensional float field to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the field.
+    !! @param [in]     data     Field data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_field_float_1d
     !! @see multio_handle_write_field_double_1d
@@ -477,10 +552,13 @@ contains
     !! @see multio_handle_write_field_buffer
     !!
     function multio_handle_write_field_float_2d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_float
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                       intent(inout) :: handle
@@ -488,6 +566,7 @@ contains
         real(kind=c_float), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -510,19 +589,24 @@ contains
         c_err = c_multio_write_field_float(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_field_float_2d
 
 
-    !>
-    !! @brief send a double one dimension field
+    !> @brief Send a one-dimensional double field.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the field
-    !! @param [in]     data     - field data
+    !! This function sends a one-dimensional double field to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the field.
+    !! @param [in]     data     Field data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_field_float_1d
     !! @see multio_handle_write_field_float_2d
@@ -530,10 +614,13 @@ contains
     !! @see multio_handle_write_field_buffer
     !!
     function multio_handle_write_field_double_1d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                      intent(inout) :: handle
@@ -541,6 +628,7 @@ contains
         real(kind=c_double), dimension(:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -563,19 +651,24 @@ contains
         c_err = c_multio_write_field_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_field_double_1d
 
 
-    !>
-    !! @brief send a double two dimensions field
+    !> @brief Send a two-dimensional double field.
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the field
-    !! @param [in]     data     - field data
+    !! This function sends a two-dimensional double field to the multio of the object
+    !! pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the field.
+    !! @param [in]     data     Field data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_field_float_1d
     !! @see multio_handle_write_field_float_2d
@@ -583,10 +676,13 @@ contains
     !! @see multio_handle_write_field_buffer
     !!
     function multio_handle_write_field_double_2d(handle, metadata, data) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_loc
         use, intrinsic :: iso_c_binding, only: c_double
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),                        intent(inout) :: handle
@@ -594,6 +690,7 @@ contains
         real(kind=c_double), dimension(:,:), target, intent(in)    :: data
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         integer(kind=c_int) :: c_size
@@ -616,29 +713,37 @@ contains
         c_err = c_multio_write_field_double(handle%c_ptr(), metadata%c_ptr(), c_loc(data), c_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_field_double_2d
 
 
-    !>
-    !! @brief send a buffered field (data are already packed in a eckit::buffer)
+    !> @brief Send a buffered field (data is already packed in an eckit::buffer).
     !!
-    !! @param [in,out] handle   - handle passed object pointer
-    !! @param [in]     metadata - metadta to be sent with the field
-    !! @param [in]     data     - field data
+    !! This function sends a buffered field (data that is already packed in an eckit::buffer)
+    !! to the multio of the object pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle   A pointer to the object handle.
+    !! @param [in]     metadata Metadata to be sent with the field.
+    !! @param [in]     data     Field data.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     !! @see multio_handle_write_field_float_1d
     !! @see multio_handle_write_field_float_2d
     !! @see multio_handle_write_field_double_1d
-    !! @see multio_handle_write_field_double_1d
+    !! @see multio_handle_write_field_double_2d
     !!
     function multio_handle_write_field_buffer(handle, metadata, data) result(err)
-        use :: multio_metadata_mod, only: multio_metadata
-        use :: multio_data_mod,     only: multio_data
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_data_mod,      only: multio_data
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),       intent(inout) :: handle
@@ -646,6 +751,7 @@ contains
         class(multio_data), target, intent(inout) :: data
         ! Function rsult
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) c_err
         integer(kind=c_int) c_byte_size
@@ -668,24 +774,32 @@ contains
         c_err = c_multio_write_field_buffer(handle%c_ptr(), metadata%c_ptr(), data%c_ptr(), c_byte_size)
         ! Setting return value
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_write_field_buffer
 
 
-    !>
-    !! @brief set field accepted flag
+    !> @brief Get the field accepted flag.
     !!
-    !! @param [in,out] handle    - handle passed object pointer
-    !! @param [in]     metadata  - metadta to be sent with the field
-    !! @param [in]     set_value - flag
+    !! This function retrieves the field accepted flag from the object pointed to by the provided handle.
     !!
-    !! @return error code
+    !! @param [in,out] handle    A pointer to the object handle.
+    !! @param [in]     metadata  Metadata to be sent with the field.
+    !! @param [out]    set_value The flag value to be retrieved.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     function multio_handle_field_accepted(handle, metadata, set_value) result(err)
+        ! Variable references from the fortran language standard modules
+        use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_int
         use, intrinsic :: iso_c_binding, only: c_bool
-        use :: multio_metadata_mod, only: multio_metadata
+        ! Variable references from the project
+        use :: multio_api_metadata_mod,  only: multio_metadata
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_handle),   intent(inout) :: handle
@@ -693,6 +807,7 @@ contains
         logical,                intent(out)   :: set_value
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         character(:), allocatable, target :: nullified_field
         integer(kind=c_int) :: c_err
@@ -716,8 +831,12 @@ contains
         ! Setting return values
         set_value = logical(c_set_value,kind(set_value))
         err = int(c_err,kind(err))
+#else
+        set_value = .true.
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_handle_field_accepted
 
-end module multio_handle_mod
+end module multio_api_handle_mod

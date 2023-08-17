@@ -1,9 +1,9 @@
 !> @file
 !!
-!! @brief Set of functions that can be used for the general
-!! management of the multio interface
+!! @brief Set of functions for the general management of the multio interface.
 !!
-module multio_utils_mod
+
+module multio_api_utils_mod
 implicit none
 
     ! Default visibility
@@ -19,16 +19,21 @@ implicit none
 contains
 
 
-    !>
-    !! @brief initialization of multio
+    !> @brief Initialize multio.
     !!
-    !! @return error code
+    !! This function initializes the multio interface.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     function multio_initialise() result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_int
+        ! Variable references from the project
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interfaces
@@ -44,26 +49,35 @@ contains
         c_err = c_multio_initialise()
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#else
+#warning "Dummy API is enabled"
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_initialise
 
 
-    !>
-    !! @brief start a multio server
+    !> @brief Start a multio server.
     !!
-    !! @param [in] cc - configuration object witht the configuration of the server
+    !! This function starts a multio server.
     !!
-    !! @return error code
+    !! @param [in] cc The configuration object with the configuration of the server.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     function multio_start_server(cc) result(err)
-        use :: multio_configuration_mod, only: multio_configuration
-        use, intrinsic :: iso_c_binding, only: c_int
+        ! Variable references from the fortran language standard modules
+        use, intrinsic :: iso_c_binding,     only: c_int
+        ! Variable references from the project
+        use :: multio_api_configuration_mod, only: multio_configuration
+        use :: multio_api_constants_mod,     only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         class(multio_configuration), intent(inout) :: cc
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         integer(kind=c_int) :: c_err
         ! Private interfaces
@@ -81,20 +95,24 @@ contains
         c_err = c_multio_start_server(cc%c_ptr())
         ! Cast output values
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_start_server
 
 
-    !>
-    !! @brief remove a failure handler to the list of failure handler list
+    !> @brief Convert a string from c-style to fortran-style
     !!
-    !! @param [in,out] ffi  - failure handlers list
-    !! @param [in]     id   - failure handler to be removed
+    !! This function removes converts a c-string to a fortran-string
     !!
-    !! @return error code
+    !! @param [in,out] cstr  The c string to be converted
+    !!
+    !! @return The fortran string
     !!
     function fortranise_cstr(cstr) result(fstr)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_ptr
         use, intrinsic :: iso_c_binding, only: c_char
         use, intrinsic :: iso_c_binding, only: c_f_pointer
@@ -127,21 +145,25 @@ contains
     end function fortranise_cstr
 
 
-    !>
-    !! @brief return the version of multio
+    !> @brief Return the version of multio.
     !!
-    !! @param [out] version_str - multio version
+    !! This function returns the version of the multio library.
     !!
-    !! @return error code
+    !! @param [out] version_str The string containing the multio version.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     function multio_version(version_str) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_ptr
-        use :: multio_constants_mod, only: MULTIO_SUCCESS
+        ! Variable references from the project
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         character(:), allocatable, intent(out) :: version_str
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         type(c_ptr) :: tmp_str
         ! Private interface
@@ -158,27 +180,34 @@ contains
         ! Implementation
         err = c_multio_version(tmp_str)
         if (err == MULTIO_SUCCESS) version_str = fortranise_cstr(tmp_str)
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_version
 
 
-    !>
-    !! @brief return the git sha of multio
+    !> @brief Return the Git SHA of multio.
     !!
-    !! @param [out] git_sha1 - multio git sha
+    !! This function returns the Git SHA of the multio library.
     !!
-    !! @return error code
+    !! @param [out] git_sha1 The Git SHA string of multio.
+    !!
+    !! @return An error code indicating the operation's success.
     !!
     function multio_vcs_version(git_sha1) result(err)
+        ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding, only: c_ptr
         use, intrinsic :: iso_c_binding, only: c_int
-        use :: multio_constants_mod, only: MULTIO_SUCCESS
+        ! Variable references from the project
+        use :: multio_api_constants_mod, only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         character(:), allocatable, intent(out) :: git_sha1
         ! Function result
         integer :: err
+#if !defined(MULTIO_DUMMY_API)
         ! Local variables
         type(c_ptr) :: tmp_str
         integer(kind=c_int) :: c_err
@@ -195,31 +224,39 @@ contains
         end interface
         ! Implementation
         c_err = c_multio_vcs_version(tmp_str)
-        if (err == MULTIO_SUCCESS) git_sha1 = fortranise_cstr(tmp_str)
+        if (c_err == MULTIO_SUCCESS) git_sha1 = fortranise_cstr(tmp_str)
         ! Output cast and cleanup
         err = int(c_err,kind(err))
+#else
+        err = int(MULTIO_SUCCESS,kind(err))
+#endif
         ! Exit point
         return
     end function multio_vcs_version
 
 
-    !>
-    !! @brief return the version of multio
+    !> @brief Return the version of multio.
     !!
-    !! @param [in] err  - error code
-    !! @param [in] info - error info
+    !! This function returns the version of the multio library.
     !!
-    !! @return error string associated to err
+    !! @param [in] err  The error code.
+    !! @param [in] info The error info.
+    !!
+    !! @return The error string associated with the provided error code.
     !!
     function multio_error_string(err, info) result(error_string)
-        use, intrinsic :: iso_c_binding, only: c_int
-        use :: multio_error_handling_mod, only: multio_failure_info
+        ! Variable references from the fortran language standard modules
+        use, intrinsic :: iso_c_binding,      only: c_int
+        ! Variable references from the project
+        use :: multio_api_error_handling_mod, only: multio_failure_info
+        use :: multio_api_constants_mod,      only: MULTIO_SUCCESS
     implicit none
         ! Dummy arguments
         integer,                              intent(in) :: err
         class(multio_failure_info), optional, intent(in) :: info
         ! Function result
         character(:), allocatable, target :: error_string
+#if !defined(MULTIO_DUMMY_API)
         ! Local variablees
         integer(kind=c_int) :: c_err
         ! Private interfaces
@@ -249,8 +286,11 @@ contains
         else
             error_string = fortranise_cstr(c_multio_error_string(c_err))
         end if
+#else
+        error_string = 'MULTIO DUMMY API IS ENABLED'
+#endif
         ! Exit point
         return
     end function multio_error_string
 
-end module multio_utils_mod
+end module multio_api_utils_mod

@@ -19,8 +19,8 @@
 #include "eckit/io/FileHandle.h"
 #include "eckit/testing/Test.h"
 
-#include "multio/api/multio_c.h"
-#include "multio/api/multio_c_cpp_utils.h"
+#include "multio/api/c/multio_capi.h"
+#include "multio/api/c/multio_capi_cpp_utils.h"
 #include "multio/message/Metadata.h"
 #include "multio/multio_version.h"
 
