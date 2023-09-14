@@ -13,6 +13,7 @@
 #include "multio/message/Message.h"
 #include "multio/transport/TransportRegistry.h"
 #include "multio/util/logfile_name.h"
+#include "multio/config/PlanBuilder.h"
 
 using multio::message::Message;
 using multio::message::Peer;
@@ -35,7 +36,7 @@ eckit::LocalConfiguration getClientConf(const MultioConfiguration& multioConf) {
 
     std::ostringstream oss;
     oss << "Configuration 'client' not found in configuration file " << multioConf.configFile();
-    throw eckit::UserError(oss.str());
+    throw eckit::UserError(oss.str(), Here());
 }
 
 }  // namespace
@@ -57,8 +58,9 @@ MultioClient::MultioClient(const eckit::LocalConfiguration& conf, MultioConfigur
 
     LOG_DEBUG_LIB(multio::LibMultio) << "Client config: " << conf << std::endl;
     for (auto&& cfg : conf.getSubConfigurations("plans")) {
-        eckit::Log::debug<LibMultio>() << cfg << std::endl;
-        plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(cfg), multioConfig())))
+        auto planCfg = config::PlanBuilder( std::move(cfg), multioConfig());
+        eckit::Log::debug<LibMultio>() << planCfg << std::endl;
+        plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(planCfg), multioConfig())))
             ->matchedFields(activeSelectors_);
     }
 
