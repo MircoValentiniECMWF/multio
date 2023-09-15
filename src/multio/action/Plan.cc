@@ -60,7 +60,7 @@ std::tuple<ComponentConfiguration, std::string> getPlanConfiguration(const Compo
         return std::make_tuple(ComponentConfiguration(config::PlanBuilder(file.content,compConf.multioConfig()), compConf.multioConfig()),
                                file.content.has("name") ? file.content.getString("name") : file.source.asString());
     }
-    return std::make_tuple(compConf, compConf.parsedConfig().has("name") ? compConf.parsedConfig().getString("name")
+    return std::make_tuple(ComponentConfiguration(config::PlanBuilder(compConf.parsedConfig(),compConf.multioConfig()),compConf.multioConfig()), compConf.parsedConfig().has("name") ? compConf.parsedConfig().getString("name")
                                                                          : std::string("anonymous"));
 }
 
