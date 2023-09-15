@@ -116,7 +116,7 @@ static void fillMap(std::map<std::string, std::string>& map,
 
 // class Requirement;
 
-eckit::LocalConfiguration parseDisseminationFile(  const std::string& uri ) {
+eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguration& componentConfig, const std::string& uri ) {
     // std::vector<Requirement> requirements;
     std::ifstream file(uri);
     if (!file) {
@@ -151,7 +151,67 @@ eckit::LocalConfiguration parseDisseminationFile(  const std::string& uri ) {
 
     // generateRequirements(requirements, retrieve, uris, expand, postproc, sink, 0);
 
-    return eckit::LocalConfiguration{};
+    auto generate_select_action = [&](const eckit::LocalConfiguration& componentConfig) -> eckit::LocalConfiguration {
+        eckit::LocalConfiguration select_action;
+        select_action.set("type","select");
+        select_action.set("param",133);
+        return select_action;
+    };
+
+    auto generate_interpolate_action = [&](const eckit::LocalConfiguration& componentConfig) -> eckit::LocalConfiguration {
+        eckit::LocalConfiguration interpolate_action;
+        eckit::LocalConfiguration interpolate_options;
+        interpolate_options.set("caching", true );
+        interpolate_action.set("type","interpolate");
+        interpolate_action.set("input","O1280");
+        std::vector<double> grid={0.5,0.5};
+        interpolate_action.set("grid",grid);
+        std::vector<long> area={80,0,-80,360};
+        interpolate_action.set("area",area);
+        interpolate_action.set("interpolation","linear");
+        interpolate_action.set("options",interpolate_options);
+        return interpolate_action;
+    };
+
+    auto generate_encode_action = [&](const eckit::LocalConfiguration& componentConfig) -> eckit::LocalConfiguration {
+        eckit::LocalConfiguration encode_action;
+        encode_action.set("type","encode");
+        encode_action.set("format","grib");
+        encode_action.set("template","MARS_reduced_gg_to_grid_0.50_0.50_area.grib");
+        return encode_action;
+    };
+
+    auto generate_sink_action = [&](const eckit::LocalConfiguration& componentConfig) -> eckit::LocalConfiguration {
+        eckit::LocalConfiguration sink_action;
+        sink_action.set("type","sink");
+        std::vector<eckit::LocalConfiguration> sinks;
+        eckit::LocalConfiguration file_sink;
+        file_sink.set("type","file");
+        file_sink.set("append",false);
+        file_sink.set("per-server",false);
+        file_sink.set("path","MultIO_reduced_gg_to_grid_0.50_0.50_area.grib");
+        sinks.push_back( file_sink );
+        sink_action.set("type","sink");
+        sink_action.set("sinks",sinks);
+        return sink_action;
+    };
+
+    std::vector<eckit::LocalConfiguration> actions;
+
+    actions.push_back( generate_select_action     ( componentConfig ) );
+    actions.push_back( generate_interpolate_action( componentConfig ) );
+    actions.push_back( generate_encode_action     ( componentConfig ) );
+    actions.push_back( generate_sink_action       ( componentConfig ) );
+
+    eckit::LocalConfiguration plan;
+
+    plan.set( "name", "test" );
+    plan.set( "actions", actions );
+
+
+    std::cout << plan << std::endl;
+
+    return plan;
 }
 
 eckit::LocalConfiguration
@@ -159,12 +219,9 @@ BuildDisseminationPlan(const eckit::LocalConfiguration& componentConfig, const M
 
     // Get the name of the dissemination file
     std::string disseminationFile = multioConf.replaceCurly(componentConfig.getString("dissemination"));
-
-    // generate requirements
-    auto requirements = parseDisseminationFile( disseminationFile );
-
+    
     // Generate requirements
-    return eckit::LocalConfiguration{};    
+    return parseDisseminationFile( componentConfig, disseminationFile );
 
 
 
@@ -176,6 +233,7 @@ eckit::LocalConfiguration
 PlanBuilder(const eckit::LocalConfiguration& componentConfig, const MultioConfiguration& multioConf){
 
     if ( componentConfig.has("actions") ){
+        std::cout << componentConfig << std::endl;
         return componentConfig;
     }
     else if ( componentConfig.has("dissemination") ){
@@ -183,7 +241,7 @@ PlanBuilder(const eckit::LocalConfiguration& componentConfig, const MultioConfig
     }
     else{
         std::ostringstream oss;
-        oss << "Unable to build a plan with the provided configuration" << componentConfig;
+        oss << "Unable to build a plan with the provided configuration : " << componentConfig;
         throw eckit::UserError(oss.str(), Here());        
     }
 
