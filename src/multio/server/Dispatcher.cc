@@ -12,10 +12,13 @@
 
 #include "multio/util/ScopedTimer.h"
 #include "multio/util/logfile_name.h"
+#include "multio/config/PlanBuilder.h"
 
 using eckit::LocalConfiguration;
 
 namespace multio::server {
+
+using config::ComponentConfiguration;
 
 Dispatcher::Dispatcher(const config::ComponentConfiguration& compConf, eckit::Queue<message::Message>& queue) :
     FailureAware(compConf), queue_{queue} {
@@ -24,9 +27,14 @@ Dispatcher::Dispatcher(const config::ComponentConfiguration& compConf, eckit::Qu
     eckit::Log::debug<LibMultio>() << compConf.parsedConfig() << std::endl;
 
     config::ComponentConfiguration::SubComponentConfigurations plans = compConf.subComponents("plans");
-    for (auto&& subComp : plans) {
-        eckit::Log::debug<LibMultio>() << subComp.parsedConfig() << std::endl;
-        plans_.emplace_back(std::make_unique<action::Plan>(std::move(subComp)));
+    for (auto&& cfg : plans) {
+        // In case of pgen dissemination files a single plan can be used as a template for multiple
+        // multioPlans
+        auto planCfgs = config::PlanBuilder( std::move(cfg.parsedConfig()), compConf.multioConfig());
+        for ( auto& pcfg : planCfgs ){
+            eckit::Log::debug<LibMultio>() << pcfg << std::endl;
+            plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(pcfg), compConf.multioConfig())));
+        }
     }
 }
 

@@ -15,6 +15,7 @@
 #include "multio/config/ConfigurationPath.h"
 #include "multio/message/Message.h"
 #include "multio/tools/MultioTool.h"
+#include "multio/config/PlanBuilder.h"
 
 using multio::action::Plan;
 using multio::config::ComponentConfiguration;
@@ -195,7 +196,13 @@ void MultioEncodeOcean::executePlan() {
     auto multioConfig = test_configuration();
     std::vector<std::unique_ptr<Plan>> plans;
     for (auto&& cfg : multioConfig.parsedConfig().getSubConfigurations("plans")) {
-        plans.emplace_back(std::make_unique<Plan>(ComponentConfiguration(std::move(cfg), multioConfig)));
+        // In case of pgen dissemination files a single plan can be used as a template for multiple
+        // multioPlans
+        auto planCfgs = ::multio::config::PlanBuilder( std::move(cfg), multioConfig);
+        for ( auto& pcfg : planCfgs ){
+            eckit::Log::debug<multio::LibMultio>() << pcfg << std::endl;
+                plans.emplace_back(std::make_unique<Plan>(ComponentConfiguration(std::move(cfg), multioConfig)));
+        }
     }
 
     Message msg{Message::Header{Message::Tag::Grib, Peer{"", 0}, Peer{"", 0}}, eckit::Buffer{buf, sz}};

@@ -58,10 +58,14 @@ MultioClient::MultioClient(const eckit::LocalConfiguration& conf, MultioConfigur
 
     LOG_DEBUG_LIB(multio::LibMultio) << "Client config: " << conf << std::endl;
     for (auto&& cfg : conf.getSubConfigurations("plans")) {
-        auto planCfg = config::PlanBuilder( std::move(cfg), multioConfig());
-        eckit::Log::debug<LibMultio>() << planCfg << std::endl;
-        plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(planCfg), multioConfig())))
-            ->matchedFields(activeSelectors_);
+        // In case of pgen dissemination files a single plan can be used as a template for multiple
+        // multioPlans
+        auto planCfgs = config::PlanBuilder( std::move(cfg), multioConfig());
+        for ( auto& pcfg : planCfgs ){
+            eckit::Log::debug<LibMultio>() << pcfg << std::endl;
+            plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(pcfg), multioConfig())))
+                ->matchedFields(activeSelectors_);
+        }
     }
 
     if (multioConfig().parsedConfig().has("active-matchers")) {

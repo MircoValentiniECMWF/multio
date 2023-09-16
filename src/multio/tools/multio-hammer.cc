@@ -31,6 +31,7 @@
 #include "multio/transport/ThreadTransport.h"
 #include "multio/util/ScopedTimer.h"
 #include "multio/util/print_buffer.h"
+#include "multio/config/PlanBuilder.h"
 
 using multio::LibMultio;
 using multio::action::Plan;
@@ -677,9 +678,14 @@ void MultioHammer::executePlans(const eckit::option::CmdArgs& args) {
 
     std::vector<std::unique_ptr<Plan>> plans;
     for (auto&& subComp : conf_.getSubConfigurations("plans")) {
-        eckit::Log::debug<multio::LibMultio>() << subComp << std::endl;
-        plans.emplace_back(
-            std::make_unique<Plan>(ComponentConfiguration(std::move(subComp), testPolicy_->multioConfig())));
+        // In case of pgen dissemination files a single plan can be used as a template for multiple
+        // multioPlans
+        auto planCfgs = multio::config::PlanBuilder( std::move(subComp), testPolicy_->multioConfig());
+        for ( auto& pcfg : planCfgs ){
+            eckit::Log::debug<LibMultio>() << pcfg << std::endl;
+            plans.emplace_back(
+                std::make_unique<Plan>(ComponentConfiguration(std::move(pcfg), testPolicy_->multioConfig())));
+        }
     }
 
     std::string expver = "xxxx";

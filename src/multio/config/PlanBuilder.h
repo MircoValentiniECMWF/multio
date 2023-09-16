@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 
 #include "eckit/config/LocalConfiguration.h"
 
@@ -8,6 +9,6 @@
 
 namespace multio::config {
 
-eckit::LocalConfiguration PlanBuilder(const eckit::LocalConfiguration& componentConfig, const MultioConfiguration& multioConf);
+std::vector<eckit::LocalConfiguration> PlanBuilder(const eckit::LocalConfiguration& componentConfig, const MultioConfiguration& multioConf);
 
 }

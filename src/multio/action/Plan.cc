@@ -22,7 +22,7 @@
 #include "multio/util/ScopedTimer.h"
 #include "multio/util/Substitution.h"
 #include "multio/util/logfile_name.h"
-#include "multio/config/PlanBuilder.h"
+// #include "multio/config/PlanBuilder.h"
 
 using eckit::LocalConfiguration;
 
@@ -54,13 +54,8 @@ LocalConfiguration rootConfig(const LocalConfiguration& config, const std::strin
 }
 
 std::tuple<ComponentConfiguration, std::string> getPlanConfiguration(const ComponentConfiguration& compConf) {
-    if (compConf.parsedConfig().has("file")) {
-        const auto& file = compConf.multioConfig().getConfigFile(
-            compConf.multioConfig().replaceCurly(compConf.parsedConfig().getString("file")));
-        return std::make_tuple(ComponentConfiguration(config::PlanBuilder(file.content,compConf.multioConfig()), compConf.multioConfig()),
-                               file.content.has("name") ? file.content.getString("name") : file.source.asString());
-    }
-    return std::make_tuple(ComponentConfiguration(config::PlanBuilder(compConf.parsedConfig(),compConf.multioConfig()),compConf.multioConfig()), compConf.parsedConfig().has("name") ? compConf.parsedConfig().getString("name")
+    return std::make_tuple( ComponentConfiguration(compConf.parsedConfig(),compConf.multioConfig()), 
+                            compConf.parsedConfig().has("name") ? compConf.parsedConfig().getString("name")
                                                                          : std::string("anonymous"));
 }
 
