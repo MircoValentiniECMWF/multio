@@ -271,7 +271,7 @@ eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguratio
         std::string levtype = requestGet<std::string>( "levtype", request );
         for ( auto& t : templates ){
             if ( t.has(levtype) ) {
-                std::string templatName = outputPath + "/" + t.getString(levtype);
+                std::string templatName = templatesPath + "/" + t.getString(levtype);
                 encode_action.set("template", templatName );
             }
         }
