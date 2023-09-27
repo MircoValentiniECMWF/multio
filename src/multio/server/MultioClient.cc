@@ -62,7 +62,7 @@ MultioClient::MultioClient(const eckit::LocalConfiguration& conf, MultioConfigur
         // multioPlans
         auto planCfgs = config::PlanBuilder( std::move(cfg), multioConfig());
         for ( auto& pcfg : planCfgs ){
-            eckit::Log::debug<LibMultio>() << pcfg << std::endl;
+	    LOG_DEBUG_LIB(multio::LibMultio) << pcfg << std::endl;
             plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(pcfg), multioConfig())))
                 ->matchedFields(activeSelectors_);
         }

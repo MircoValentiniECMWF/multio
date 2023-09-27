@@ -4,6 +4,10 @@
 #include <vector>
 #include <fstream>
 #include <regex>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+
 
 #include "eckit/exception/Exceptions.h"
 #include "eckit/utils/StringTools.h"
@@ -128,10 +132,15 @@ std::vector<long> requestParseLongArray( const std::string& param, const MarsReq
 }
  
 
-eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguration& componentConfig, const MultioConfiguration& multioConf, const metkit::mars::MarsParsedRequest& request, const std::string& planName ) {
+eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguration& componentConfig, const MultioConfiguration& multioConf, const metkit::mars::MarsParsedRequest& request, const std::string& planName, long planId ) {
 
     std::vector<std::string> params;
     request.getParams(params);
+
+    std::string sId;
+    std::ostringstream s;
+    s << std::setfill('0') << std::setw(4) << planId;
+    sId = s.str();
 
     // Get templates Path
     std::string templatesPath;
@@ -156,6 +165,7 @@ eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguratio
     else {
         outputPath = ".";
     }
+    outputPath = outputPath + "/" + planName + "/" + sId;
     eckit::PathName{outputPath}.mkdir();
 
     // The objective is to construct something like this starting from a metkit mars request
@@ -204,7 +214,8 @@ eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguratio
         eckit::LocalConfiguration matcher;
         std::vector<eckit::LocalConfiguration> matchers;
         if ( request.has("param") ){
-            matcher.set("param",requestParseLongArray("param",request));
+            // matcher.set("param",requestParseLongArray("param",request));
+            matcher.set("param",requestGetStringArray("param",request));
         }
         if ( request.has("levtype") ){
             matcher.set("levtype",requestGetStringArray("levtype",request));
@@ -216,6 +227,15 @@ eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguratio
         select_action.set("type","select");
         select_action.set("match",matchers);
         return select_action;
+    };
+
+    auto generate_print_action = [&](const eckit::LocalConfiguration& componentConfig, const std::string& suffix) -> eckit::LocalConfiguration {
+        eckit::LocalConfiguration print_action;
+	print_action.set("type", "print");
+	print_action.set("prefix", " -> " + planName + "_" + sId + "-" + suffix + " :: ");
+	print_action.set("stream", "cout");
+	print_action.set("only-fields", true);
+        return print_action;
     };
 
     auto generate_interpolate_action = [&](const eckit::LocalConfiguration& componentConfig) -> eckit::LocalConfiguration {
@@ -285,9 +305,9 @@ eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguratio
         eckit::LocalConfiguration file_sink;
         file_sink.set("type","file");
         file_sink.set("append",false);
-        file_sink.set("per-server",false);
+        file_sink.set("per-server",true);
         // Default name
-        std::string fname = outputPath + "/" + planName + ".grib";
+        std::string fname = outputPath + "/" + planName + "_" + sId + ".grib";
         file_sink.set("path",fname);
         // Override1 Name
         if ( componentConfig.has("output-name") ){
@@ -296,7 +316,7 @@ eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguratio
         }
         // Override2 Name
         if ( request.has("target") ){
-            std::string fname = outputPath + "/" + planName + "-" + requestGet<std::string>( "target", request ) + ".grib";
+            std::string fname = outputPath + "/" + planName + "_" + sId + "-" + requestGet<std::string>( "target", request ) + ".grib";
             file_sink.set("path",fname);
         }
         sinks.push_back( file_sink );
@@ -305,20 +325,40 @@ eckit::LocalConfiguration parseDisseminationFile( const eckit::LocalConfiguratio
         return sink_action;
     };
 
+
+    // Create the Plan
     std::vector<eckit::LocalConfiguration> actions;
 
+    // Select action
     actions.push_back( generate_select_action     ( componentConfig ) );
+
+    // Print before interpolate
+    if ( componentConfig.has("debug") && componentConfig.getLong("debug")>0 ){
+    	actions.push_back( generate_print_action      ( componentConfig, "before" ) );
+    }
+
+    // Interpolate action
     actions.push_back( generate_interpolate_action( componentConfig ) );
+
+    // Print after interpolate
+    if ( componentConfig.has("debug") && componentConfig.getLong("debug")>1 ){
+    	actions.push_back( generate_print_action      ( componentConfig, "after" ) );
+    }
+
+    // Encode action
     actions.push_back( generate_encode_action     ( componentConfig ) );
+
+    // Sink action
     actions.push_back( generate_sink_action       ( componentConfig ) );
 
     eckit::LocalConfiguration plan;
 
-    plan.set( "name", planName );
+    plan.set( "name", planName+"_"+sId );
     plan.set( "actions", actions );
 
 
-    LOG_DEBUG_LIB(multio::LibMultio) << plan << std::endl;
+    // Output the generated plan
+    std::cout << plan << std::endl;
 
     return plan;
 }
@@ -343,8 +383,8 @@ std::vector<eckit::LocalConfiguration> parseDisseminationFiles( const eckit::Loc
     std::vector<eckit::LocalConfiguration> plans;
     long cnt = 0;
     for ( auto& request : requests ){
-        std::string planName =  componentConfig.getString("name") + "_" + std::to_string( cnt++ );
-        plans.push_back( parseDisseminationFile( componentConfig, multioConf, request, planName ) );
+        std::string planName =  componentConfig.getString("name"); //  + "_" + std::to_string( cnt++ );
+        plans.push_back( parseDisseminationFile( componentConfig, multioConf, request, planName, cnt++ ) );
     }
 
     return plans;
