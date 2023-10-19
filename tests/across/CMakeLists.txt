@@ -1,3 +1,5 @@
+if( HAVE_MIR )
+
 set(PREFIX multio_tests_across_dissemination)
 
 list( APPEND _across_test_data
@@ -94,3 +96,6 @@ ecbuild_add_test(
     ARGS         -P -T10 Reference_test-across-dissemination-multiple_0-ZZ1-M1.grib test-across-dissemination-multiple/0001/test-across-dissemination-multiple_0001-ZZ1:M1.grib
     COMMAND      grib_compare
 )
+
+
+endif()
