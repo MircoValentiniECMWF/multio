@@ -424,7 +424,7 @@ std::vector<eckit::LocalConfiguration> optimizeDisseminationPlans(
 }
 
 
-std::vector<eckit::LocalConfiguration> BuildDisseminationPlan(const eckit::LocalConfiguration& componentConfig,
+std::vector<eckit::LocalConfiguration> buildDisseminationPlan(const eckit::LocalConfiguration& componentConfig,
                                                               const MultioConfiguration& multioConf) {
 
     // Get the name of the dissemination file
@@ -485,7 +485,7 @@ std::vector<eckit::LocalConfiguration> make_plans_configurations(const eckit::Lo
 
     if (cfg.has("dissemination")) {
         LOG_DEBUG_LIB(multio::LibMultio) << cfg << std::endl;
-        return BuildDisseminationPlan(cfg, multioConf);
+        return buildDisseminationPlan(cfg, multioConf);
     }
 
     // Error
