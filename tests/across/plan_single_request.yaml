@@ -4,6 +4,7 @@ plans:
     input: O80
     templates-path: "."
     output-path: "."
+    per-server: false
     templates:
       - ml:  regular_ll_pl_grib2.tmpl
       - pl:  regular_ll_ml_grib2.tmpl

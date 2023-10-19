@@ -249,8 +249,14 @@ eckit::LocalConfiguration generate_sink_action(const metkit::mars::MarsParsedReq
     std::vector<eckit::LocalConfiguration> sinks;
     eckit::LocalConfiguration file_sink;
     file_sink.set("type", "file");
-    file_sink.set("append", false);
-    file_sink.set("per-server", true);
+    if ( componentConfig.getBool("per-server", true ) ){
+        file_sink.set("append", false);
+        file_sink.set("per-server", true);
+    }
+    else {
+        file_sink.set("append", false);
+        file_sink.set("per-server", false);
+    }
     // Default name
     std::string fname = outputPath + "/" + planName + "_" + sId + ".grib";
     file_sink.set("path", fname);
