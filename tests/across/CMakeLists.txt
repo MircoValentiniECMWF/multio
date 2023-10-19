@@ -1,7 +1,7 @@
 set(PREFIX multio_tests_across_dissemination)
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/single_request.diss    ${CMAKE_BINARY_DIR}/multio/tests/across/single_request.diss    )
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/multiple_requests.diss ${CMAKE_BINARY_DIR}/multio/tests/across/multiple_requests.diss )
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/single_request.diss    DESTINATION ${CMAKE_BINARY_DIR}/multio/tests/across/ )
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/multiple_requests.diss DESTINATION ${CMAKE_BINARY_DIR}/multio/tests/across/ )
 
 
 list( APPEND _across_test_data
