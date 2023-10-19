@@ -13,7 +13,6 @@
 #include "multio/message/Message.h"
 #include "multio/transport/TransportRegistry.h"
 #include "multio/util/logfile_name.h"
-#include "multio/config/PlanBuilder.h"
 
 using multio::message::Message;
 using multio::message::Peer;
@@ -57,16 +56,7 @@ MultioClient::MultioClient(const eckit::LocalConfiguration& conf, MultioConfigur
 
 
     LOG_DEBUG_LIB(multio::LibMultio) << "Client config: " << conf << std::endl;
-    for (auto&& cfg : conf.getSubConfigurations("plans")) {
-        // In case of pgen dissemination files a single plan can be used as a template for multiple
-        // multioPlans
-        auto planCfgs = config::PlanBuilder( std::move(cfg), multioConfig());
-        for ( auto& pcfg : planCfgs ){
-	    LOG_DEBUG_LIB(multio::LibMultio) << pcfg << std::endl;
-            plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(pcfg), multioConfig())))
-                ->matchedFields(activeSelectors_);
-        }
-    }
+    plans_ = action::Plan::make_plans( conf.getSubConfigurations("plans"), multioConfig() );
 
     if (multioConfig().parsedConfig().has("active-matchers")) {
         for (const auto& m : multioConfig().parsedConfig().getSubConfigurations("active-matchers")) {

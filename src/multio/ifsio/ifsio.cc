@@ -38,7 +38,6 @@
 
 #include "metkit/codes/CodesContent.h"
 #include "multio/sink/MultIO.h"
-#include "multio/config/PlanBuilder.h"
 
 using namespace eckit;
 using namespace metkit;
@@ -129,13 +128,7 @@ private:
         FailureAware(ComponentConfiguration(conf, multioConfig())),
         log_(false),
         dirty_(false) {
-        for (auto&& cfg : conf.getSubConfigurations("plans")) {
-            auto planCfgs = config::PlanBuilder( std::move(cfg), multioConfig());
-            for ( auto& pcfg : planCfgs ){
-                eckit::Log::debug<LibMultio>() << pcfg << std::endl;
-                plans_.emplace_back(std::make_unique<action::Plan>(ComponentConfiguration(std::move(pcfg), multioConfig())));
-            }
-        }
+        plans_ = action::Plan::make_plans( conf.getSubConfigurations("plans"), multioConf );
         bpv_ = std::make_unique<EncodeBitsPerValue>(conf);
     }
 
