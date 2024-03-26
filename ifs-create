@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+# Give deprecation warning and call ifs-bundle build
+echo "WARN: This script is deprecated, use 'ifs-bundle create <args>'"
+
+scriptdir=$(dirname $0)
+$scriptdir/ifs-bundle create "$@"

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+# BOOTSTRAP ecbundle-build or ecbundle-create,
+# and pass arguments to it.
+
+# Check at least one argument was provided:
+if [[ $# -eq 0 ]]; then
+  echo "FAIL: At least one argument expected: 'build' or 'create'"
+  exit 1
+fi
+
+ecbundle_VERSION=2.0.1
+
+BUNDLE_DIR="$( cd $( dirname "${BASH_SOURCE[0]}" ) && pwd -P )"
+
+# Download ecbundle scripts if not already available
+command_exists () { type "$1" &> /dev/null ; }
+if ! command_exists ecbundle ; then
+    if [[ ! -d ${BUNDLE_DIR}/ecbundle ]]; then
+        git clone https://github.com/ecmwf/ecbundle ${BUNDLE_DIR}/ecbundle
+        ( cd ${BUNDLE_DIR}/ecbundle && git checkout ${ecbundle_VERSION} )
+    else
+        ( cd ${BUNDLE_DIR}/ecbundle && [[ -d .git ]] && git fetch -q && git checkout -q ${ecbundle_VERSION} \
+              && git show-ref -q --verify refs/heads/${ecbundle_VERSION} && git pull -q)
+    fi
+
+    export PATH=${BUNDLE_DIR}/ecbundle/bin:${PATH}
+fi
+
+# Make sure python has version 3.0
+if command_exists python3 ; then
+  python_version_ok=$(python3 -c "import sys; print( sys.version_info[:3] >= tuple(map(int, '3.0'.split('.'))))")
+else
+  python_version_ok=False
+fi
+if [[ "${python_version_ok}" != "True" ]]; then
+    { module unload python; module unload python3; module load python3; } 2>/dev/null
+    if ! command_exists python3 ; then
+        echo "ERROR: Installed python requires version \"3\""
+        exit 1
+    fi
+fi
+
+ecbundle "$@"

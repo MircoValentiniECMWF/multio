@@ -1,0 +1,85 @@
+---
+### Bundle
+
+name    : multio-develop-bundle
+version : 0.3.0
+cmake   : >
+    ECBUILD_INSTALL_LIBRARY_HEADERS=OFF
+    ECBUILD_INSTALL_FORTRAN_MODULES=OFF
+    CMAKE_LINK_DEPENDS_NO_SHARED=ON
+
+projects :
+
+    - ecbuild :
+        git     : ${BITBUCKET}/ecsdk/ecbuild
+        version : develop
+        bundle  : false
+
+    - eccodes :
+        git     : ${BITBUCKET}/eccodes/eccodes
+        version : develop
+        cmake   : >
+            ENABLE_ECCODES_THREADS=ON
+            ENABLE_NETCDF=OFF
+            ENABLE_FORTRAN=ON
+            ENABLE_MEMFS=ON
+            ECCODES_INSTALL_EXTRA_TOOLS=ON
+            ECCODES_ENABLE_PYTHON2=OFF
+            ECCODES_ENABLE_AEC=ON
+
+    - eckit :
+        git     : ${BITBUCKET}/ecsdk/eckit
+        version : develop
+        cmake   : >
+            ENABLE_VIENNACL=OFF
+            ENABLE_EIGEN=OFF
+            ENABLE_ARMADILLO=OFF
+            ENABLE_CUDA=OFF
+            ENABLE_SANDBOX=OFF
+            ENABLE_MPI=ON
+
+    - fckit :
+        git     : ${BITBUCKET}/ecsdk/fckit
+        version : develop
+        require : eckit
+        cmake   : FCKIT_ENABLE_FINAL=OFF
+
+    - metkit :
+        git     : ${BITBUCKET}/ecsdk/metkit
+        version : develop
+        require : eckit
+
+    - fdb5 :
+        git     : ${BITBUCKET}/mars/fdb5
+        version : develop
+        require : eckit metkit
+        cmake   : >
+            ENABLE_FDB_TOOLS=ON
+
+    - atlas :
+        git     : ${BITBUCKET}/atlas/atlas
+        version : develop
+        require : eckit
+        cmake   : ENABLE_TESSELATION=OFF ENABLE_TRANS=OFF ENABLE_CLANG_TIDY=OFF ENABLE_GRIDTOOLS_STORAGE=OFF
+
+    - mir :
+        git     : ${BITBUCKET}/mir/mir
+        version : develop
+        require : atlas
+
+    - pgen :
+        git     : ${BITBUCKET}/prodgen/pgen
+        version : develop
+        require : eckit metkit
+
+    - multio :
+        git     : ${BITBUCKET}/mars/multio
+        version : develop
+        cmake   : >
+            ENABLE_MULTIO_SERVER=ON
+            ENABLE_LEGACY_IFSIO=ON
+
+    - atlas-orca :
+        git     : ${BITBUCKET}/atlas/atlas-orca
+        version : develop
+        require : eckit
