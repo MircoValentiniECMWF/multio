@@ -1,8 +1,8 @@
 ---
 ### Bundle
 
-name    : maestro-bundle
-version : 0.3.0
+name    : ERA6-bundle
+version : 0.0.1
 cmake   : >
     ECBUILD_INSTALL_LIBRARY_HEADERS=OFF
     ECBUILD_INSTALL_FORTRAN_MODULES=OFF
@@ -23,9 +23,9 @@ projects :
             ENABLE_ECCODES_THREADS=ON
             ENABLE_NETCDF=OFF
             ENABLE_FORTRAN=ON
-            ENABLE_MEMFS=OFF
-            ENABLE_INSTALL_ECCODES_DEFINITIONS=OFF
-            ENABLE_INSTALL_ECCODES_SAMPLES=OFF
+            ENABLE_MEMFS=ON
+            ENABLE_INSTALL_ECCODES_DEFINITIONS=ON
+            ENABLE_INSTALL_ECCODES_SAMPLES=ON
             ENABLE_PYTHON=OFF
 
     - eckit :
@@ -56,8 +56,25 @@ projects :
         require : eckit fckit
         cmake   : ENABLE_TESSELATION=OFF ENABLE_TRANS=OFF ENABLE_CLANG_TIDY=OFF ENABLE_GRIDTOOLS_STORAGE=OFF
 
+    - fdb5 :
+        git     : ${BITBUCKET}/mars/fdb5
+        version : develop
+        require : eckit metkit
+        cmake   : >
+             ENABLE_FDB_TOOLS=ON
+
+    - mir :
+        git     : https://github.com/ecmwf/mir
+        version : develop
+        require : atlas eckit metkit
+
+    - pgen :
+        git     : ${BITBUCKET}/prodgen/pgen
+        version : develop
+        require : eckit metkit
+
     - multio :
         git     : ${BITBUCKET}/mars/multio
-        version : hotfix/2.1.5
+        version : feaature/output-manager-preset
         cmake   : ENABLE_MULTIO_SERVER=ON ENABLE_LEGACY_IFSIO=ON ENABLE_MAESTRO=OFF
 

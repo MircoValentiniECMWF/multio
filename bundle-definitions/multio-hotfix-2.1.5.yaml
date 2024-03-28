@@ -1,0 +1,80 @@
+---
+### Bundle
+
+name    : ERA6-bundle
+version : 0.0.1
+cmake   : >
+    ECBUILD_INSTALL_LIBRARY_HEADERS=OFF
+    ECBUILD_INSTALL_FORTRAN_MODULES=OFF
+    CMAKE_LINK_DEPENDS_NO_SHARED=ON
+    MPI_ARGS="--oversubscribe"
+
+projects :
+
+    - ecbuild :
+        git     : ${BITBUCKET}/ecsdk/ecbuild
+        version : develop
+        bundle  : false
+
+    - eccodes :
+        git     : ${BITBUCKET}/eccodes/eccodes
+        version : develop # For ocean development
+        cmake   : >
+            ENABLE_ECCODES_THREADS=ON
+            ENABLE_NETCDF=OFF
+            ENABLE_FORTRAN=ON
+            ENABLE_MEMFS=ON
+            ENABLE_INSTALL_ECCODES_DEFINITIONS=ON
+            ENABLE_INSTALL_ECCODES_SAMPLES=ON
+            ENABLE_PYTHON=OFF
+
+    - eckit :
+        git     : ${BITBUCKET}/ecsdk/eckit
+        version : develop
+        cmake   : >
+            ENABLE_VIENNACL=OFF
+            ENABLE_EIGEN=OFF
+            ENABLE_ARMADILLO=OFF
+            ENABLE_CUDA=OFF
+            ENABLE_SANDBOX=OFF
+            ENABLE_MPI=ON
+
+    - fckit :
+        git     : ${BITBUCKET}/ecsdk/fckit
+        version : develop
+        require : eckit
+        cmake   : ENABLE_FINAL=OFF
+
+    - metkit :
+        git     : ${BITBUCKET}/ecsdk/metkit
+        version : develop
+        require : eckit
+
+    - atlas :
+        git     : ${BITBUCKET}/atlas/atlas
+        version : develop
+        require : eckit fckit
+        cmake   : ENABLE_TESSELATION=OFF ENABLE_TRANS=OFF ENABLE_CLANG_TIDY=OFF ENABLE_GRIDTOOLS_STORAGE=OFF
+
+    - fdb5 :
+        git     : ${BITBUCKET}/mars/fdb5
+        version : develop
+        require : eckit metkit
+        cmake   : >
+             ENABLE_FDB_TOOLS=ON
+
+    - mir :
+        git     : https://github.com/ecmwf/mir
+        version : develop
+        require : atlas eckit metkit
+
+    - pgen :
+        git     : ${BITBUCKET}/prodgen/pgen
+        version : develop
+        require : eckit metkit
+
+    - multio :
+        git     : ${BITBUCKET}/mars/multio
+        version : hotfix/2.1.5
+        cmake   : ENABLE_MULTIO_SERVER=ON ENABLE_LEGACY_IFSIO=ON ENABLE_MAESTRO=OFF
+
