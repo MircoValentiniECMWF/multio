@@ -6,17 +6,53 @@
 #if __linux__
 #include <sys/sysinfo.h>
 
-void om_get_mem_usage(uint64_t* total_memory_of_system, uint64_t* system_usage, uint64_t* task_usage) {
+typedef struct KeyBits {
+
+   uint32_t sid: 1;
+   uint32_t paramId: 27;
+   uint32_t id: 26;
+   uint32_t levtype: 4;
+   uint32_t repres: 2;
+   uint32_t model: 2;
+   uint32_t precision: 2;
+
+} KeyBits_t;
+
+typedef union Key {
+    int64_t key;
+    KeyBits_t bits;
+} Key_t;
+
+void to_field_hash( int32_t paramId, int32_t id, int32_t levtype, int32_t repres, int32_t model, int32_t precision, int64_t* hash) {
+
+  Key_t k;
+
+  k.bits.sid = id >= 0 ? 1 : 0;
+  k.bits.paramId = (uint32_t)paramId;
+  k.bits.id = id >= 0 ? id : -id;
+  k.bits.levtype   = (uint32_t)levtype;
+  k.bits.repres    = (uint32_t)repres;
+  k.bits.model   = (uint32_t)model;
+  k.bits.precision = (uint32_t)precision;
+
+  *hash = k.key;
+
+ return;
+
+};
+
+
+void om_get_mem_usage( int64_t* total_memory_of_system, int64_t* system_usage, int64_t* task_usage) {
     // Retrieve total memory of the system
     struct sysinfo info;
     sysinfo(&info);
-    *total_memory_of_system = (uint64_t)info.totalram * info.mem_unit;
+    *total_memory_of_system = (int64_t)info.totalram * info.mem_unit;
 
     // Retrieve memory usage of the current process
     struct rusage usage;
     if (getrusage(RUSAGE_SELF, &usage) == 0) {
-        *system_usage = *total_memory_of_system - (uint64_t)info.freeram * info.mem_unit;
-        *task_usage = (uint64_t)usage.ru_maxrss * 1024;  // Convert to bytes
+        *system_usage = *total_memory_of_system - (int64_t)info.freeram * info.mem_unit;
+        *task_usage = (int64_t)usage.ru_maxrss * 1024;  // Convert to bytes
     }
     else {
         // Error handling

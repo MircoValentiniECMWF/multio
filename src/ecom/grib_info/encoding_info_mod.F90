@@ -405,6 +405,204 @@ END SUBROUTINE ENCODING_INFO_ACCESS_OR_CREATE
 #undef PP_PROCEDURE_TYPE
 
 
+!>
+!> @brief function used to get the grib informations given the grib
+!>        index
+!>
+!> @param [in] grib index of the field
+!>
+!> @result pointer to the grib informations
+!>
+!> @see SUGRIB_INFO
+!> @see ENCODING_INFO_FREE
+!>
+#define PP_PROCEDURE_TYPE 'SUBROUTINE'
+#define PP_PROCEDURE_NAME 'ENCODING_INFO_ACCESS_OR_CREATE_02'
+SUBROUTINE ENCODING_INFO_ACCESS_OR_CREATE_02( MAP, HASH, MODEL_PARAMS, EI )
+
+  ! Symbols imported from other modules within the project.
+  USE :: OM_CORE_MOD,               ONLY: JPIB_K
+  USE :: OM_CORE_MOD,               ONLY: MODEL_PAR_T
+  USE :: OM_CORE_MOD,               ONLY: LOOKUP_TABLE
+  USE :: OM_CORE_MOD,               ONLY: OM_SET_CURRENT_GRIB_INFO
+  USE :: OM_CORE_MOD,               ONLY: CAPACITY
+  USE :: OM_CORE_MOD,               ONLY: GRIB_INFO_T
+  USE :: MAP_MOD,                   ONLY: MAP_GET
+  USE :: MAP_MOD,                   ONLY: MAP_INSERT
+  USE :: MAP_MOD,                   ONLY: KEY_T
+  USE :: YAML_RULES_MOD,            ONLY: MATCH_RULES
+  USE :: YAML_RULES_MOD,            ONLY: DEFINITIONS_T
+  USE :: MSG_UTILS_MOD,             ONLY: IPREFIX2ILEVTYPE
+  USE :: YAML_TIME_ASSUMPTIONS_MOD, ONLY: MATCH_ASSUMPTIONS_RULES
+  USE :: YAML_TIME_ASSUMPTIONS_MOD, ONLY: TIME_ASSUMPTIONS_T
+  USE :: YAML_TIME_ASSUMPTIONS_MOD, ONLY: LEVEL_ASSUMPTIONS_T
+  USE :: GENERAL_ASSUMPTIONS_MOD,   ONLY: IS_ENSAMBLE_SIMULATION
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  TYPE(MAP_T),                    INTENT(INOUT) :: MAP
+  INTEGER(KIND=INT64),            INTENT(IN)    :: HASH
+  TYPE(MODEL_PAR_T),              INTENT(IN)    :: MODEL_PARAMS
+  TYPE(ENCODING_INFO_T), POINTER, INTENT(OUT)   :: EI
+
+  ! Local variables
+  TYPE(TIME_ASSUMPTIONS_T)   :: TIME_ASSUMPTIONS
+  TYPE(LEVEL_ASSUMPTIONS_T)  :: LEVEL_ASSUMPTIONS
+  TYPE(GRIB_INFO_T), POINTER :: GRIB_INFO
+  INTEGER(KIND=JPIB_K) :: IDX
+  INTEGER(KIND=JPIB_K) :: LEV_TYPE
+  TYPE(DEFINITIONS_T), DIMENSION(:), ALLOCATABLE :: DEFINITIONS
+  TYPE(KEY_T) :: KEY
+  CLASS(*), POINTER :: VALUE
+  LOGICAL :: EX
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Get encoding info
+  EX = MAP_GET( MAP, HASH, VALUE )
+
+  IF ( EX ) THEN
+
+    SELECT TYPE ( A => VALUE )
+
+    CLASS IS ( ENCODING_INFO_T )
+
+      ! Set output variables
+      EI => A
+
+    CLASS DEFAULT
+
+      ! Error handling
+      PP_DEBUG_DEVELOP_THROW( 4 )
+
+    END SELECT
+
+  ELSE
+
+    ! Allocate new encoding info
+    EI => ENCODING_INFO_NEW( )
+
+    IF ( ALLOCATED(DEFINITIONS) ) THEN
+
+      ! Extract definitions from encding rules
+      CALL MATCH_RULES( PARAM_ID, LEV_TYPE, REPRES, LEVEL, DEFINITIONS )
+
+      ALLOCATE(EI%GRIB_INFO(SIZE(DEFINITIONS)))
+
+      ! Get all the definitions we need to encode
+      DO I = 1, SIZE(DEFINITIONS)
+
+        ! Current grib info
+        GRIB_INFO => EI%GRIB_INFO(I)
+
+        ! Time assumptions for the specified field
+        CALL MATCH_ASSUMPTIONS_RULES( PARAM_ID, LEV_TYPE, REPRES, LEVEL, IS_ENSAMBLE_SIMULATION( MODEL_PARAMS ), TIME_ASSUMPTIONS, LEVEL_ASSUMPTIONS )
+
+        ! Fill grib info
+        GRIB_INFO%PRODUCT_DEFINITION_TEMPLATE_NUMBER_ = TIME_ASSUMPTIONS%PRODUCT_DEFINITION_TEMPLATE_NUMBER
+        GRIB_INFO%TYPE_OF_STATISTICAL_PROCESS_        = TIME_ASSUMPTIONS%TYPE_OF_STATISTICAL_PROCESSING
+        GRIB_INFO%TYPE_OF_TIME_RANGE_                 = TIME_ASSUMPTIONS%TYPE_OF_TIME_RANGE
+        GRIB_INFO%OVERALL_LENGTH_OF_TIME_RANGE_       = TIME_ASSUMPTIONS%LENGTH_OF_TIME_RANGE_IN_SECONDS
+        GRIB_INFO%IS_STEP0_VALID_                     = TIME_ASSUMPTIONS%EMIT_STEP_ZERO
+
+        IF ( LEVEL_ASSUMPTIONS%CUSTOM_LEVELS_ENCODING ) THEN
+          GRIB_INFO%CUSTOM_LEVELS_ENCODING = .TRUE.
+          GRIB_INFO%TYPE_OF_FIRST_FIXED_SURFACE          = LEVEL_ASSUMPTIONS%TYPE_OF_FIRST_FIXED_SURFACE
+          GRIB_INFO%SCALE_FACTOR_OF_FIRST_FIXED_SURFACE  = LEVEL_ASSUMPTIONS%SCALE_FACTOR_OF_FIRST_FIXED_SURFACE
+          GRIB_INFO%SCALE_VALUE_OF_FIRST_FIXED_SURFACE   = LEVEL_ASSUMPTIONS%SCALE_VALUE_OF_FIRST_FIXED_SURFACE
+          GRIB_INFO%TYPE_OF_SECOND_FIXED_SURFACE         = LEVEL_ASSUMPTIONS%TYPE_OF_SECOND_FIXED_SURFACE
+          GRIB_INFO%SCALE_FACTOR_OF_SECOND_FIXED_SURFACE = LEVEL_ASSUMPTIONS%SCALE_FACTOR_OF_SECOND_FIXED_SURFACE
+          GRIB_INFO%SCALE_VALUE_OF_SECOND_FIXED_SURFACE  = LEVEL_ASSUMPTIONS%SCALE_VALUE_OF_SECOND_FIXED_SURFACE
+        ENDIF
+
+        ! Initialize and create grib info (Grib info is created using the definitions extracted from the rules and assumptions)
+        CALL INITIALIZE_GRIB_INFO( MODEL_PARAMS, PARAM_ID, PREFIX, LEV_TYPE, &
+&                REPRES, LEVEL, DEFINITIONS(I), EI%GRIB_INFO )
+
+        CALL PACKING_ENCODING_TABLE_ENTRY( PARAM_ID, REPRES, LEV_TYPE, LEVEL, &
+&                PREFIX, GRIB_INFO%BITS_PER_VALUE, GRIB_INFO%PACKING_TYPE )
+
+        CALL TIME_ENCODING_TABLE_ENTRY( PARAM_ID, REPRES, LEV_TYPE, LEVEL, PREFIX, EI%GRIB_INFO   )
+
+      END DO
+
+      ! Initialize and update time history
+      CALL EI%TIME_HISTORY%INIT( CAPACITY )
+
+      ! Match rules and assumptions
+      VALUE => EI
+
+      CALL MAP_INSERT( ENCODING_INFO(IDX,LEV_TYPE,REPRES), KEY, VALUE )
+
+    ENDIF
+
+  ENDIF
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ErrorHandler: BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+    CHARACTER(LEN=128) :: CGRIB_ID
+
+    ! HAndle different errors
+    SELECT CASE(ERRIDX)
+    CASE (1)
+      CGRIB_ID = REPEAT( ' ', 128 )
+      WRITE(CGRIB_ID,'(I12)') PARAM_ID
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'Grib_ID out of bounds. Greater than upper bound: '//TRIM(ADJUSTL(CGRIB_ID)) )
+    CASE (2)
+      CGRIB_ID = REPEAT( ' ', 128 )
+      WRITE(CGRIB_ID,'(I12)') PARAM_ID
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'Grib_ID out of bounds. Lower than lower bound: '//TRIM(ADJUSTL(CGRIB_ID)) )
+    CASE (3)
+      CGRIB_ID = REPEAT( ' ', 128 )
+      WRITE(CGRIB_ID,'(I12)') PARAM_ID
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'Grib info not associated to the grib_ID: '//TRIM(ADJUSTL(CGRIB_ID)) )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK ErrorHandler
+
+  ! Exit point on error
+  RETURN
+
+END SUBROUTINE ENCODING_INFO_ACCESS_OR_CREATE_02
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+
 #define PP_PROCEDURE_TYPE 'SUBROUTINE'
 #define PP_PROCEDURE_NAME 'INITIALIZE_GRIB_INFO'
 SUBROUTINE INITIALIZE_GRIB_INFO( MODEL_PARAMS, PARAM_ID, PREFIX, LEV_TYPE, REPRES, LEVEL, DEFINITIONS, GRIB_INFO )

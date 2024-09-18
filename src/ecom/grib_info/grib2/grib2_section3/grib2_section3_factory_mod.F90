@@ -1,0 +1,170 @@
+! Include preprocessor utils
+#include "output_manager_preprocessor_utils.h"
+#include "output_manager_preprocessor_trace_utils.h"
+#include "output_manager_preprocessor_logging_utils.h"
+#include "output_manager_preprocessor_errhdl_utils.h"
+
+
+#define PP_FILE_NAME 'grib2_section3_factory_mod.F90'
+#define PP_SECTION_TYPE 'MODULE'
+#define PP_SECTION_NAME 'GRIB2_SECTION3_000_MOD'
+MODULE GRIB2_SECTION3_FACTORY_MOD
+
+IMPLICIT NONE
+
+!>
+!> Default symbols visibility
+PRIVATE
+
+!> Public symbols (dataTypes)
+PUBLIC :: GRIB2_SECTION3_FACTORY
+
+CONTAINS
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_SECTION3_FACTORY'
+FUNCTION GRIB2_SECTION3_FACTORY( GRIB_SECTION3, PARAMS, ID, CFG, VERBOSE ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  PP_USE_L('P') :: OM_CORE_MOD,            ONLY: JPIB_K
+  PP_USE_L('T') :: GRIB2_SECTION3_040_MOD, ONLY: GRIB2_SECTION3_040_T
+  PP_USE_L('T') :: GRIB2_SECTION3_050_MOD, ONLY: GRIB2_SECTION3_050_T
+  PP_USE_L('T') :: GRIB2_SECTION3_101_MOD, ONLY: GRIB2_SECTION3_101_T
+  PP_USE_L('T') :: YAML_CORE_UTILS_MOD,    ONLY: YAML_CONFIGURATION_T
+  PP_USE_L('T') :: OM_DATA_TYPES_MOD,      ONLY: MODEL_PAR_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  CLASS(GRIB_SECTION_BASE_A), POINTER, INTENT(INOUT) :: GRIB_SECTION3
+  TYPE(MODEL_PAR_T),                   INTENT(IN)    :: PARAMS
+  INTEGER(KIND=JPIB_K),                INTENT(IN)    :: ID
+  TYPE(YAML_CONFIGURATION_T),          INTENT(IN)    :: CFG
+  LOGICAL,                             INTENT(IN)    :: VERBOSE
+
+  ! Function result
+  INTEGER(KIND=ERR_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: ALLOC_STATUS
+  CHARACTER(LEN=:), ALLOCATABLE :: ERRMSG
+
+   ! Local error codes
+  INTEGER(KIND=ERR_K), PARAMETER :: ERRFLAG_UNKNOWN_SECTION_3=1_ERR_K
+  INTEGER(KIND=ERR_K), PARAMETER :: ERRFLAG_ALLOCATION_ERROR=2_ERR_K
+  INTEGER(KIND=ERR_K), PARAMETER :: ERRFLAG_INITIALIZATION_ERROR=3_ERR_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Initialize the section
+  SELECT CASE( ID )
+
+  CASE( 40 )
+
+    ALLOCATE( GRIB2_SECTION3_040_T::GRIB_SECTION3, STAT=ALLOC_STATUS, ERRMSG=ERRMSG )
+    PP_DEBUG_CRITICAL_COND_THROW( ALLOC_STATUS.NE.0, ERRFLAG_ALLOCATION_ERROR )
+
+  CASE( 50 )
+
+    ALLOCATE( GRIB2_SECTION3_050_T::GRIB_SECTION3, STAT=ALLOC_STATUS, ERRMSG=ERRMSG )
+    PP_DEBUG_CRITICAL_COND_THROW( ALLOC_STATUS.NE.0, ERRFLAG_ALLOCATION_ERROR )
+
+  CASE( 101 )
+
+    ALLOCATE( GRIB2_SECTION3_101_T::GRIB_SECTION3, STAT=ALLOC_STATUS, ERRMSG=ERRMSG )
+    PP_DEBUG_CRITICAL_COND_THROW( ALLOC_STATUS.NE.0, ERRFLAG_ALLOCATION_ERROR )
+
+  CASE DEFAULT
+
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_SECTION_3 )
+
+  END SELECT
+
+  !> Initialization of the section
+  PP_TRYCALL(ERRFLAG_INITIALIZATION_ERROR)  GRIB2_SECTION3%INIT( PARAMS, CFG, VERBOSE )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+    CHARACTER(LEN=32) :: TMP
+
+    TMP = REPEAT(' ', 32)
+    WRITE(TMP,'(I32)')  ID
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNKNOWN_SECTION_3)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'Unknown section3 number: '//TRIM(ADJUSTL(TMP)) )
+    CASE (ERRFLAG_ALLOCATION_ERROR)
+      IF ( .NOT.ALLOCATED(ERRMSG) ) THEN
+        PP_DEBUG_CREATE_ERROR_MSG( STR, 'error allocating section3 number: '//TRIM(ADJUSTL(TMP)) )
+      ELSE
+        PP_DEBUG_CREATE_ERROR_MSG( STR, 'error allocating section3 number: '//TRIM(ADJUSTL(TMP))//' : '//TRIM(ADJUSTL(ERRMSG)) )
+        DEALLOCATE(ERRMSG)
+      ENDIF
+    CASE (ERRFLAG_INITIALIZATION_ERROR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'error initializing section3 number: '//TRIM(ADJUSTL(TMP)) )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_SECTION3_FACTORY
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+END MODULE GRIB2_SECTION3_FACTORY_MOD
+#undef PP_SECTION_NAME
+#undef PP_SECTION_TYPE
+#undef PP_FILE_NAME

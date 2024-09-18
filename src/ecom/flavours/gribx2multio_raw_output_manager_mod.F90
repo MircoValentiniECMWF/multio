@@ -26,6 +26,8 @@ MODULE GRIBX2MULTIO_RAW_MOD
   USE :: GRIB_METADATA_MOD,        ONLY: GRIB_METADATA_T
   USE :: MULTIO_METADATA_MOD,      ONLY: MULTIO_METADATA_T
   USE :: OM_PROFILE_MOD,           ONLY: PROFILE_T
+  USE :: MAP_MOD,                  ONLY: MAP_T
+  USE :: GRIB_ENCODER_MANAGER_MOD, ONLY: GRIB_ENCODER_CONTAINER_T
 
   ! Symbols imported from other libraries
   USE :: FCKIT_CONFIGURATION_MODULE, ONLY: FCKIT_CONFIGURATION
@@ -90,6 +92,11 @@ TYPE, EXTENDS(OUTPUT_MANAGER_BASE_A) :: GRIBX2MULTIO_RAW_OUTPUT_MANAGER_T
   !> Multio Handle used to interact with multio
   TYPE(MULTIO_HANDLE) :: MIO_
 
+  !> Container for all the encoding information
+  TYPE(MAP_T) :: ENCODING_INFO_
+
+  !> Container for all the encoders
+  TYPE(GRIB_ENCODER_CONTAINER_T), DIMENSION(:), ALLOCATABLE :: ENCODERS_
 
 CONTAINS
 
@@ -310,6 +317,7 @@ SUBROUTINE GRIBX2MULTIO_RAW_SETUP( THIS, YAMLFNAME, PROCESSOR_TOPO, MODEL_PARAMS
   USE :: OM_GENERAL_UTILS_MOD,     ONLY: OM_GET_HOSTNAME
   USE :: OM_PROFILE_MOD,           ONLY: PROFILE_START_SIMULATION
   USE :: OM_GENERAL_UTILS_MOD,     ONLY: TOLOWER
+  USE :: MAP_MOD,                  ONLY: MAP_INIT
 
 
   ! Symbols imported from other libraries
@@ -375,10 +383,10 @@ IMPLICIT NONE
   CALL THIS%READ_CFG_FROM_YAML( CFG )
 
   ! Initialize enconding informations
-  CALL SUENCODING_INFO( CFG, PROCESSOR_TOPO, MODEL_PARAMS, THIS%VERBOSE_ )
+  CALL SUENCODING_INFO( CFG, PROCESSOR_TOPO, MODEL_PARAMS, THIS%VERBOSE_, THIS%ENCODING_INFO_ )
 
   ! Initialise all the encoders
-  CALL MAKE_ENCODERS( CFG, MODEL_PARAMS, 'GRIB', THIS%VERBOSE_ )
+  CALL MAKE_ENCODERS( CFG, MODEL_PARAMS, 'GRIB', THIS%VERBOSE_, THIS%ENCODERS_ )
 
   ! Destroy the fckit configuration object
   CALL CFG%FINAL()
@@ -504,9 +512,10 @@ IMPLICIT NONE
 
   ! Local variables
   TYPE(TIME_HISTORY_T) :: TIME_HIST
-  TYPE(ENCODING_INFO_T), POINTER :: ENCODING_INFO
+  TYPE(ENCODING_INFO_T), DIMENSION(:), POINTER :: ENCODING_INFO
   CLASS(METADATA_BASE_A), POINTER :: PGMD
   TYPE(MULTIO_METADATA), POINTER :: MMD
+  INTEGER(KIND=JPIB_K) :: FIELD_HASH
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_LOG_DECL_VARS
@@ -531,73 +540,122 @@ IMPLICIT NONE
   ! Error handling
   PP_DEBUG_CRITICAL_COND_THROW( SIZE(VALUES_DP).LT.YDMSG%NVALUES_, 1 )
 
+  ! Mapping from prefix to levtype
+  LEV_TYPE = IPREFIX2ILEVTYPE( PREFIX, PARAM_ID, LEVEL, REPRES )
+
   ! Get encoding info
-  PP_LOG_DEVELOP_STR( 'Collect grib info of the current field' )
-  CALL ENCODING_INFO_ACCESS_OR_CREATE( THIS%MODEL_PAR_, YDMSG%PARAM_ID_, YDMSG%IPREF_, &
-&                                      YDMSG%IREPRES_,  YDMSG%IUID_, ENCODING_INFO )
+  IF( .NOT. ACCESS_OR_CREATE_ATM( THIS%LOCAL_MAP_, THIS%MODEL_PAR_, YDMSG%PARAM_ID_, YDMSG%IPREF_, &
+&                            YDMSG%IREPRES_,  LEV_TYPE, ENCODING_INFO ) ) THEN
 
-  ! Associate the pointers to the metadata
-  PGMD => THIS%GMD_
-  PP_METADATA_INIT_LOGGING( PGMD, YDMSG%ISTEP_, YDMSG%PARAM_ID_, YDMSG%IUID_, YDMSG%IPREF_, YDMSG%IREPRES_ )
-
-  !
-  ! Encode throws an error if an error happens, and return false if the field does not need to be emitted
-  IF ( ENCODE_ATM( THIS%MODEL_PAR_, ENCODING_INFO, YDMSG, TIME_HIST, PGMD ) ) THEN
-
-    ! If needed log message
-    IF ( THIS%VERBOSE_ ) THEN
-      CALL LOG_CURR_TIME( THIS%LOG_UNIT_, 'WRITE ATMOSPHERE MESSAGE USING DOUBLE PRECISION VALUES' )
-      CALL MSG_PRINT_ATM( YDMSG, THIS%LOG_UNIT_ )
-      CALL GRIB_INFO_PRINT( ENCODING_INFO%GRIB_INFO, THIS%LOG_UNIT_ )
-      CALL TRACK_TIME_PRINT( TIME_HIST, THIS%LOG_UNIT_ )
-    ENDIF
-
-    IF ( ENCODING_INFO%GRIB_INFO%DIRECT_TO_FDB ) THEN
-
-      ! Set values into the grib handle
-      CALL THIS%GMD_%SET( 'values', VALUES_DP(1:YDMSG%NVALUES_) )
-
-      ! Write the encoded grib file to FDB using multIO
-      CALL MULTIO_WRITE_BINARY_GRIB( THIS%MIO_, THIS%MESSAGE_DATA_, THIS%GMD_%GET_HANDLE() )
-
-    ELSE
-
-      ! Initialize loggin for multio metadata
-      PP_METADATA_INIT_LOGGING( THIS%MMD_, YDMSG%ISTEP_, YDMSG%PARAM_ID_, YDMSG%IUID_, YDMSG%IPREF_, YDMSG%IREPRES_ )
-
-      ! Create multio metadata from a grib metadata
-      CALL THIS%MMD_%INIT_FROM_METADATA( PGMD )
-
-      ! Get the multio Metadata
-      MMD => THIS%MMD_%GET_MULTIO_METADATA()
-
-      ! Inject parameters in the metadata
-      CALL MULTIO_INJECT_PARAMETERS( THIS%MODEL_PAR_, MMD )
-
-      ! Write to multio plans
-      CALL MULTIO_WRITE_VALUES_DP( THIS%MIO_, MMD, VALUES_DP )
-    ENDIF
+    CALL ENCODING_INFO_POPULATE_ATM( THIS%MODEL_PAR_, THIS%MODEL_PAR_, ENCODING_INFO, YDMS )
 
   ENDIF
 
+  ! All the possible ways to encode the same field (Different units, different editions)
+  ! This is related to the rules configuration file with more than 1 encoding rule for the same field.
+  LoopOverMultipleChices: DO I = 1, SIZE( ENCODING_INFO )
 
-  ! Destroy the metadata objects
-  IF ( THIS%GMD_%INITIALIZED() ) THEN
-    IF ( THIS%SAVE_REPORT_ .AND. ENCODING_INFO%GRIB_INFO%DIRECT_TO_FDB ) THEN
-      PP_METADATA_FINALISE_LOGGING( PGMD )
+    ! Check if the message needs to be encoded. Needs to be done here because some fields don't need
+    ! encoding just because the step is not supposed to be emitted
+    IF ( TO_BE_ENCODED( THIS%ENCODERS_, THIS%MODEL_PAR_,  ENCODING_INFO(I), YDMSG ) ) THEN
+
+      ! Push encoding info to the debug module
+      CALL OM_SET_CURRENT_GRIB_INFO( ENCODING_INFO(I)%GRIB_INFO, GRIB_INFO_PRINT )
+
+      ! Associate the pointers to the metadata
+      PGMD => THIS%GMD_
+
+      ! Logging
+      PP_METADATA_INIT_LOGGING( PGMD, YDMSG%ISTEP_, YDMSG%PARAM_ID_, YDMSG%IUID_, YDMSG%IPREF_, YDMSG%IREPRES_ )
+
+      !
+      ! Encode throws an error if an error happens, and return false if the field does not need to be emitted
+      IF ( ENCODE_ATM( THIS%ENCODERS_, THIS%MODEL_PAR_, ENCODING_INFO(I), YDMSG, PGMD ) ) THEN
+
+        ! If needed log message
+        IF ( THIS%VERBOSE_ ) THEN
+          CALL LOG_CURR_TIME( THIS%LOG_UNIT_, 'WRITE ATMOSPHERE MESSAGE USING DOUBLE PRECISION VALUES' )
+          CALL MSG_PRINT_ATM( YDMSG, THIS%LOG_UNIT_ )
+          CALL GRIB_INFO_PRINT( ENCODING_INFO(I)%GRIB_INFO, THIS%LOG_UNIT_ )
+          CALL TRACK_TIME_PRINT( ENCODING_INFO(I)%TIME_HIST, THIS%LOG_UNIT_ )
+        ENDIF
+
+        IF ( ENCODING_INFO%GRIB_INFO%DIRECT_TO_FDB ) THEN
+
+          ! Set values into the grib handle
+          IF ( ENCODING_INFO(I)%GRIB_INFO%NEED_SCALE ) THEN
+            IF (ALLOCATED(THIS%TMP_VALUES_DP)) THEN
+              IF ( SIZE(THIS%TMP_VALUES_DP) .LT. YDMSG%NVALUES_ ) THEN
+                DEALLOCATE(THIS%TMP_VALUES_DP)
+                ALLOCATE(THIS%TMP_VALUES_DP(YDMSG%NVALUES_))
+              ENDIF
+            ELSE
+              ALLOCATE(THIS%TMP_VALUES_DP(YDMSG%NVALUES_))
+            ENDIF
+            THIS%TMP_VALUES_DP(1:YDMSG%NVALUES_) = VALUES_DP(1:YDMSG%NVALUES_)*ENCODING_INFO(I)%GRIB_INFO%SCALE_FACTOR
+            CALL THIS%GMD_%SET( 'values', THIS%TMP_VALUES_DP(1:YDMSG%NVALUES_) )
+          ELSE
+            CALL THIS%GMD_%SET( 'values', VALUES_DP(1:YDMSG%NVALUES_) )
+          ENDIF
+
+          ! Write the encoded grib file to FDB using multIO
+          CALL MULTIO_WRITE_BINARY_GRIB( THIS%MIO_, GRIB_INFO(I)%TAG, THIS%MESSAGE_DATA_, THIS%GMD_%GET_HANDLE() )
+
+        ELSE
+
+          ! Initialize loggin for multio metadata
+          PP_METADATA_INIT_LOGGING( THIS%MMD_, YDMSG%ISTEP_, YDMSG%PARAM_ID_, YDMSG%IUID_, YDMSG%IPREF_, YDMSG%IREPRES_ )
+
+          ! Create multio metadata from a grib metadata
+          CALL THIS%MMD_%INIT_FROM_METADATA( PGMD )
+
+          ! Get the multio Metadata
+          MMD => THIS%MMD_%GET_MULTIO_METADATA()
+
+          ! Inject parameters in the metadata
+          CALL MULTIO_INJECT_PARAMETERS( THIS%MODEL_PAR_, GRIB_INFO(I)%TAG, MMD )
+
+          ! Write to multio plans
+          IF ( ENCODING_INFO(I)%GRIB_INFO%NEED_SCALE ) THEN
+            IF (ALLOCATED(THIS%TMP_VALUES_DP)) THEN
+              IF ( SIZE(THIS%TMP_VALUES_DP) .LT. YDMSG%NVALUES_ ) THEN
+                DEALLOCATE(THIS%TMP_VALUES_DP)
+                ALLOCATE(THIS%TMP_VALUES_DP(YDMSG%NVALUES_))
+              ENDIF
+            ELSE
+              ALLOCATE(THIS%TMP_VALUES_DP(YDMSG%NVALUES_))
+            ENDIF
+            THIS%TMP_VALUES_DP(1:YDMSG%NVALUES_) = VALUES_DP(1:YDMSG%NVALUES_)*ENCODING_INFO(I)%GRIB_INFO%SCALE_FACTOR
+            CALL MULTIO_WRITE_VALUES_DP( THIS%MIO_, MMD, THIS%TMP_VALUES_DP(1:YDMSG%NVALUES_) )
+          ELSE
+            CALL MULTIO_WRITE_VALUES_DP( THIS%MIO_, MMD, VALUES_DP(1:YDMSG%NVALUES_) )
+          ENDIF
+
+        ENDIF
+
+      ENDIF
+
+
+      ! Destroy the metadata objects
+      IF ( THIS%GMD_%INITIALIZED() ) THEN
+        IF ( THIS%SAVE_REPORT_ .AND. ENCODING_INFO%GRIB_INFO%DIRECT_TO_FDB ) THEN
+          PP_METADATA_FINALISE_LOGGING( PGMD )
+        ENDIF
+        CALL THIS%GMD_%DESTROY()
+      ENDIF
+
+      IF ( THIS%MMD_%INITIALIZED() ) THEN
+        IF ( THIS%SAVE_REPORT_ .AND. .NOT.ENCODING_INFO%GRIB_INFO%DIRECT_TO_FDB ) THEN
+          PP_METADATA_FINALISE_LOGGING( THIS%MMD_ )
+        ENDIF
+        CALL THIS%MMD_%DESTROY()
+      ENDIF
+
+      ! Reset encdoing info (Debug purposes)
+      CALL OM_RESET_ENCODING_INFO()
+
     ENDIF
-    CALL THIS%GMD_%DESTROY()
-  ENDIF
-
-  IF ( THIS%MMD_%INITIALIZED() ) THEN
-    IF ( THIS%SAVE_REPORT_ .AND. .NOT.ENCODING_INFO%GRIB_INFO%DIRECT_TO_FDB ) THEN
-      PP_METADATA_FINALISE_LOGGING( THIS%MMD_ )
-    ENDIF
-    CALL THIS%MMD_%DESTROY()
-  ENDIF
-
-  ! Reset encdoing info
-  CALL OM_RESET_ENCODING_INFO()
+  ENDDO LoopOverMultipleChices
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -1228,6 +1286,9 @@ IMPLICIT NONE
     CALL PROFILE_FLUSH( THIS%PROFILE_DATA_, KSTEP )
   ENDIF
 
+  ! Commit encoding info to the global map
+  CALL ENCODING_INFO_COMMIT( THIS%LOCAL_MAP_ )
+
   ! If needed log step
   IF ( THIS%VERBOSE_ ) THEN
     CLTMP = REPEAT(' ',128)
@@ -1254,7 +1315,7 @@ END SUBROUTINE GRIBX2MULTIO_RAW_FLUSH_STEP
 !> As a `NOOP` output manager, this routine is intentionally left empty.
 !>
 !> @param [inout] this  The object to be initialized.
-!> @param [in]    kstep Step at which teh function has been called
+!> @param [in]    kstep Step at which the function has been called
 !>
 #define PP_PROCEDURE_TYPE 'SUBROUTINE'
 #define PP_PROCEDURE_NAME 'GRIBX2MULTIO_RAW_FLUSH_LAST_STEP'
@@ -1288,6 +1349,9 @@ IMPLICIT NONE
   IF ( THIS%PROFILE_ ) THEN
     CALL PROFILE_FLUSH_LAST_STEP( THIS%PROFILE_DATA_, KSTEP )
   ENDIF
+
+  ! Commit encoding info to the global map
+  CALL ENCODING_INFO_COMMIT( THIS%LOCAL_MAP_ )
 
   ! If needed log step
   IF ( THIS%VERBOSE_ ) THEN
@@ -1351,6 +1415,8 @@ IMPLICIT NONE
     CALL PROFILE_FLUSH_AND_RESTART( THIS%PROFILE_DATA_, KSTEP )
   ENDIF
 
+  ! Commit encoding info to the global map
+  CALL ENCODING_INFO_COMMIT( THIS%LOCAL_MAP_ )
 
   ! If needed log step and restart
   IF ( THIS%VERBOSE_ ) THEN

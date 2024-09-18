@@ -43,14 +43,150 @@ encoding-rules:
 
   rules:
     - rule: 'grib1_surfaces_gridded'
-      filter:
+
+      filter: # mandatory
         levtype: ['sfc']
-        repres: ['gridded']
+        repres:  ['gridded']
         paramId: [ 31, 34, 49, 78, 134, 136, 137, 142, 144, 151, 165, 166, 168, 169, 175, 176, 177, 178, 179, 180, 181, 205, 228, 228029, 228216, 228218, 228219 ]
 
-      encode:
-        gribEdition: 1
-        packingType: 'grid_simple'
+      tag: 'GRIB1' # optional
+
+      mapping-rules: # optional
+        - recipe:
+          from:
+            paramId: 31
+            level: 0
+            levtype: 'sfc'
+          to:
+            paramId: 160350
+            level: 4
+            levtype: 'sfc'
+            values-scale-factor: 0.01
+
+      # grib-structure: # optional
+      #   local-definition-template-number: 2
+      #   grid-definition-template-number: 2
+      #   product-definition-template-number: 2
+      #   data-definition-template-number: 2
+      #
+      #
+      #
+      edition: # mandatory
+        use-paramId-ecmf: false
+        grib-edition: 1
+
+      packing: # optional
+        packing-type: 'grid_simple'
+
+
+encoding-rules:
+
+  default-rules:
+    -rule: 'default-rule-that-should-work-almost-always'
+       ...
+
+  special-rules:
+   - rule: 'grib1_surfaces_gridded'
+
+        # Select messages
+      - type: filter
+        match:
+          levtype: ['sfc']
+          repres:  ['gridded']
+          paramId: [ 31, 34, 49, 78, 134, 136, 137, 142, 144, 151, 165, 166, 168, 169, 175, 176, 177, 178, 179, 180, 181, 205, 228, 228029, 228216, 228218, 228219 ]
+
+        # This can be used to convert prefix to levtype
+      - type: mapping
+        recipes:
+          - recipe:
+            from:
+              paramId: 31
+              level: 0
+              levtype: 'sfc'
+            to:
+              paramId: 160350
+              level: 4
+              levtype: 'sfc'
+              values-scale-factor: 0.01
+
+        # Sample to be loaded fro this rule (should be shared between the rules)
+      - type: load-sample
+        sample-path: <>
+        sample-name: <>
+        options:
+          strip-values: true
+          strip-bitmask: true
+          strip-section2: true
+          strip-section3: true
+
+        # Everything that can be done once should be done once and then cached.
+        # First time a message with a specific hash arrive for the first time (not in the map),
+        # The sample is loaded and preset and then added to the map.
+      - type: lazy-preset
+        presets:
+
+          - type: local-definition-section
+            template-number: [2, <metkit::map-name> ]
+            options:
+              bla: <specific configurations to be set for the grib2 section2 number 2>
+
+          - type: grid-definition-section
+            template-number:  [40, <metkit::map-name> ]
+            options:
+              bla: ...
+
+          - type: product-definition-section
+            template-number: [ 1, <metkit::map-name> ]
+            options:
+              bla: ...
+
+          - type: data-definition-section
+            template-number: [ 2, <metkit::map-name> ]
+            options:
+              bla: ...
+
+        # When a fully preset template is in the map, the only euntime change are the values and the time configuration.
+        # Values may need a scaling due to the mapping (i.e. change units)
+      - type: runtime-configurations
+        runtime-cfg:
+          - type: time-configuration
+            options:
+              bla: ...
+
+          - type: values-configuration
+            options:
+              bla: ...
+
+
+      - type: sink
+        sinks:
+          - type: grib-msg-to-file
+            options:
+              bla: ...
+
+          - type: grib-msg-to-multio
+            option:
+              bla: ...
+
+          - type: grib-msg-to-multio
+            option:
+              bla: ...
+
+
+      # grib-structure: # optional
+      #   local-definition-template-number: 2
+      #   grid-definition-template-number: 2
+      #   product-definition-template-number: 2
+      #   data-definition-template-number: 2
+      #
+      #
+      #
+      edition: # mandatory
+        use-paramId-ecmf: false
+        grib-edition: 1
+
+      packing: # optional
+        packing-type: 'grid_simple'
 
 
     - rule: 'grib1_height_level_gridded'
