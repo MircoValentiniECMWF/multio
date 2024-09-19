@@ -1,3 +1,15 @@
+!>
+!> @file grib2_factory_mod.F90
+!>
+!> @brief Module containing the factory function for creating or initializing GRIB2 sections.
+!>
+!> The `GRIB2_FACTORY_MOD` provides a factory function that creates or initializes
+!> GRIB2 sections from 0 to 6, using their respective section-specific factories.
+!> The factory function initializes GRIB sections based on the provided parameters,
+!> section ID, and configuration. This module is equipped with debugging, logging,
+!> and tracing capabilities that can be enabled during runtime if needed.
+!>
+
 ! Include preprocessor utils
 #include "output_manager_preprocessor_utils.h"
 #include "output_manager_preprocessor_trace_utils.h"
@@ -21,7 +33,44 @@ PUBLIC :: GRIB2_FACTORY
 
 CONTAINS
 
-
+!>
+!> @brief Factory function for creating or initializing GRIB2 sections.
+!>
+!> This function serves as the main factory for creating or initializing GRIB2 sections,
+!> selecting the appropriate factory function for each section based on the provided `SEC` value.
+!> It initializes a GRIB section object (`GRIB_SECTION`) using model parameters,
+!> section ID, and YAML configuration. Debugging, logging, and tracing functionalities
+!> are available if verbose mode is enabled.
+!>
+!> @param [inout] GRIB_SECTION Pointer to the GRIB section object to be created or initialized.
+!>                             Must be of type `GRIB_SECTION_BASE_A`.
+!> @param [in] PARAMS Model parameters structure of type `MODEL_PAR_T`.
+!> @param [in] SEC Integer indicating the section number (0 to 6) to be initialized.
+!> @param [in] ID Integer identifier for the GRIB2 section object.
+!> @param [in] CFG YAML configuration object used to configure the GRIB2 section.
+!> @param [in] VERBOSE Logical flag indicating whether verbose output is enabled (`.TRUE.`)
+!>                     for debugging purposes.
+!>
+!> @return Integer error code (`RET`) indicating success or failure of the operation.
+!>         Possible values:
+!>           - `0`: Success
+!>           - `1`: Failure
+!>
+!> @section local dependencies
+!>   - @dependency [PARAMETER] OM_CORE_MOD::JPIB_K
+!>   - @dependency [PROCEDURE] GRIB2_SECTION0_FACTORY_MOD::GRIB2_SECTION0_FACTORY
+!>   - @dependency [PROCEDURE] GRIB2_SECTION1_FACTORY_MOD::GRIB2_SECTION1_FACTORY
+!>   - @dependency [PROCEDURE] GRIB2_SECTION2_FACTORY_MOD::GRIB2_SECTION2_FACTORY
+!>   - @dependency [PROCEDURE] GRIB2_SECTION3_FACTORY_MOD::GRIB2_SECTION3_FACTORY
+!>   - @dependency [PROCEDURE] GRIB2_SECTION4_FACTORY_MOD::GRIB2_SECTION4_FACTORY
+!>   - @dependency [PROCEDURE] GRIB2_SECTION5_FACTORY_MOD::GRIB2_SECTION5_FACTORY
+!>   - @dependency [PROCEDURE] GRIB2_SECTION6_FACTORY_MOD::GRIB2_SECTION6_FACTORY
+!>   - @dependency [TYPE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATION_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME 'GRIB2_SECTION5_FACTORY'
 FUNCTION GRIB2_FACTORY( GRIB_SECTION, PARAMS, SEC, ID, CFG, VERBOSE ) RESULT(RET)

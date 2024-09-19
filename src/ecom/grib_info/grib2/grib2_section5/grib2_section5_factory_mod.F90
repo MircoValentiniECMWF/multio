@@ -1,3 +1,31 @@
+!>
+!> @file grib2_section5_factory_mod.F90
+!>
+!> @brief Module containing the factory function for creating or initializing GRIB2 Section 5 objects.
+!>
+!> The `GRIB2_SECTION5_FACTORY_MOD` provides a factory function that creates or initializes
+!> instances of GRIB2 Section 5 objects. The function relies on various data structures and
+!> types defined within the model's core and data types modules, as well as a YAML configuration
+!> for initializing the section's parameters. Debugging, logging, and tracing features are enabled
+!> via preprocessor directives to allow additional output when needed.
+!>
+!> @section local dependencies
+!>   - @dependency [PARAMETER] OM_CORE_MOD::JPIB_K
+!>   - @dependency [TYPE] GRIB2_SECTION5_001_MOD::GRIB2_SECTION5_001_T
+!>   - @dependency [TYPE] GRIB2_SECTION5_042_MOD::GRIB2_SECTION5_042_T
+!>   - @dependency [TYPE] GRIB2_SECTION5_051_MOD::GRIB2_SECTION5_051_T
+!>   - @dependency [TYPE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATION_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>
+!> @section special dependencies
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @author Mirco Valentini
+!> @date   August, 2024
+!>
+
 ! Include preprocessor utils
 #include "output_manager_preprocessor_utils.h"
 #include "output_manager_preprocessor_trace_utils.h"
@@ -21,6 +49,52 @@ PUBLIC :: GRIB2_SECTION5_FACTORY
 
 CONTAINS
 
+!>
+!> @brief Factory function for creating or initializing GRIB2 Section 5 objects.
+!>
+!> This function acts as a factory for creating or initializing a GRIB2 Section 5 object
+!> based on the provided parameters. It assigns the proper type (`GRIB2_SECTION0_000_T`)
+!> to the `GRIB_SECTION5` object and configures it using the provided model parameters,
+!> ID, and YAML configuration. If verbose mode is enabled, additional debug information
+!> is output during the process.
+!>
+!> @param [inout] GRIB_SECTION5 The GRIB2 Section 5 object that will be created or initialized.
+!>                              It must be a pointer of type `GRIB_SECTION_BASE_A`.
+!> @param [in] PARAMS The model parameters structure of type `MODEL_PAR_T`.
+!> @param [in] ID Integer identifier for the GRIB2 Section 5 object.
+!> @param [in] CFG YAML configuration object used to configure the GRIB2 Section 5 object.
+!> @param [in] VERBOSE Logical flag indicating whether verbose output is enabled (`.TRUE.`)
+!>                     for debugging purposes.
+!>
+!> @return Integer error code (`RET`) indicating success or failure of the operation.
+!>         Possible values:
+!>           - `0`: Success
+!>           - `1`: Failure
+!>
+!> @section Section that can be constructed with this factory
+!>   - `GRIB2_SECTION5_001_T`
+!>   - `GRIB2_SECTION5_042_T`
+!>   - `GRIB2_SECTION5_051_T`
+!>
+!> @section Dependencies of this function:
+!>
+!> @subsection local dependencies
+!>   - @dependency [PARAMETER] OM_CORE_MOD::JPIB_K
+!>   - @dependency [TYPE] GRIB2_SECTION5_001_MOD::GRIB2_SECTION5_001_T
+!>   - @dependency [TYPE] GRIB2_SECTION5_042_MOD::GRIB2_SECTION5_042_T
+!>   - @dependency [TYPE] GRIB2_SECTION5_051_MOD::GRIB2_SECTION5_051_T
+!>   - @dependency [TYPE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATION_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>
+!> @subsection special dependencies
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_SECTION3_040_T
+!> @see GRIB2_SECTION3_050_T
+!> @see GRIB2_SECTION3_101_T
+!>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME 'GRIB2_SECTION5_FACTORY'
 FUNCTION GRIB2_SECTION5_FACTORY( GRIB_SECTION5, PARAMS, ID, CFG, VERBOSE ) RESULT(RET)

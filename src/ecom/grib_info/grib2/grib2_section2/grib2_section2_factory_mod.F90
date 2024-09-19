@@ -1,3 +1,41 @@
+!>
+!> @file grib2_section2_factory_mod.F90
+!>
+!> @brief Module containing the factory function for creating or initializing GRIB2 Section 2 objects.
+!>
+!> The `GRIB2_SECTION2_FACTORY_MOD` provides a factory function that creates or initializes
+!> instances of GRIB2 Section 2 objects. The function relies on various data structures and
+!> types defined within the model's core and data types modules, as well as a YAML configuration
+!> for initializing the section's parameters. Debugging, logging, and tracing features are enabled
+!> via preprocessor directives to allow additional output when needed.
+!>
+!> @section local dependencies
+!>   - @dependency [PARAMETER] OM_CORE_MOD::JPIB_K
+!>   - @dependency [TYPE] GRIB2_SECTION2_000_MOD::GRIB2_SECTION2_000_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_001_MOD::GRIB2_SECTION2_001_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_007_MOD::GRIB2_SECTION2_007_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_009_MOD::GRIB2_SECTION2_009_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_015_MOD::GRIB2_SECTION2_015_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_018_MOD::GRIB2_SECTION2_018_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_023_MOD::GRIB2_SECTION2_023_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_024_MOD::GRIB2_SECTION2_024_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_026_MOD::GRIB2_SECTION2_026_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_027_MOD::GRIB2_SECTION2_027_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_030_MOD::GRIB2_SECTION2_030_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_036_MOD::GRIB2_SECTION2_036_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_192_MOD::GRIB2_SECTION2_192_T
+!>   - @dependency [TYPE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATION_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>
+!> @section special dependencies
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @author Mirco Valentini
+!> @date   August, 2024
+!>
+
 ! Include preprocessor utils
 #include "output_manager_preprocessor_utils.h"
 #include "output_manager_preprocessor_trace_utils.h"
@@ -21,6 +59,83 @@ PUBLIC :: GRIB2_SECTION2_FACTORY
 
 CONTAINS
 
+
+!>
+!> @brief Factory function for creating or initializing GRIB2 Section 2 objects.
+!>
+!> This function acts as a factory for creating or initializing a GRIB2 Section 2 object
+!> based on the provided parameters. It assigns the proper type (`GRIB2_SECTION0_000_T`)
+!> to the `GRIB_SECTION2` object and configures it using the provided model parameters,
+!> ID, and YAML configuration. If verbose mode is enabled, additional debug information
+!> is output during the process.
+!>
+!> @param [inout] GRIB_SECTION2 The GRIB2 Section 2 object that will be created or initialized.
+!>                              It must be a pointer of type `GRIB_SECTION_BASE_A`.
+!> @param [in] PARAMS The model parameters structure of type `MODEL_PAR_T`.
+!> @param [in] ID Integer identifier for the GRIB2 Section 2 object.
+!> @param [in] CFG YAML configuration object used to configure the GRIB2 Section 2 object.
+!> @param [in] VERBOSE Logical flag indicating whether verbose output is enabled (`.TRUE.`)
+!>                     for debugging purposes.
+!>
+!> @return Integer error code (`RET`) indicating success or failure of the operation.
+!>         Possible values:
+!>           - `0`: Success
+!>           - `1`: Failure
+!>
+!> @section Section that can be constructed with this factory
+!>   - `GRIB2_SECTION2_000_T`
+!>   - `GRIB2_SECTION2_001_T`
+!>   - `GRIB2_SECTION2_007_T`
+!>   - `GRIB2_SECTION2_009_T`
+!>   - `GRIB2_SECTION2_015_T`
+!>   - `GRIB2_SECTION2_018_T`
+!>   - `GRIB2_SECTION2_023_T`
+!>   - `GRIB2_SECTION2_024_T`
+!>   - `GRIB2_SECTION2_026_T`
+!>   - `GRIB2_SECTION2_027_T`
+!>   - `GRIB2_SECTION2_030_T`
+!>   - `GRIB2_SECTION2_036_T`
+!>   - `GRIB2_SECTION2_192_T`
+!>
+!> @section Dependencies of this function:
+!>
+!> @subsection local dependencies
+!>   - @dependency [PARAMETER] OM_CORE_MOD::JPIB_K
+!>   - @dependency [TYPE] GRIB2_SECTION2_000_MOD::GRIB2_SECTION2_000_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_001_MOD::GRIB2_SECTION2_001_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_007_MOD::GRIB2_SECTION2_007_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_009_MOD::GRIB2_SECTION2_009_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_015_MOD::GRIB2_SECTION2_015_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_018_MOD::GRIB2_SECTION2_018_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_023_MOD::GRIB2_SECTION2_023_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_024_MOD::GRIB2_SECTION2_024_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_026_MOD::GRIB2_SECTION2_026_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_027_MOD::GRIB2_SECTION2_027_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_030_MOD::GRIB2_SECTION2_030_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_036_MOD::GRIB2_SECTION2_036_T
+!>   - @dependency [TYPE] GRIB2_SECTION2_192_MOD::GRIB2_SECTION2_192_T
+!>   - @dependency [TYPE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATION_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>
+!> @subsection special dependencies
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_SECTION2_000_T
+!> @see GRIB2_SECTION2_001_T
+!> @see GRIB2_SECTION2_007_T
+!> @see GRIB2_SECTION2_009_T
+!> @see GRIB2_SECTION2_015_T
+!> @see GRIB2_SECTION2_018_T
+!> @see GRIB2_SECTION2_023_T
+!> @see GRIB2_SECTION2_024_T
+!> @see GRIB2_SECTION2_026_T
+!> @see GRIB2_SECTION2_027_T
+!> @see GRIB2_SECTION2_030_T
+!> @see GRIB2_SECTION2_036_T
+!> @see GRIB2_SECTION2_192_T
+!>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME 'GRIB2_SECTION2_FACTORY'
 FUNCTION GRIB2_SECTION2_FACTORY( GRIB_SECTION2, PARAMS, ID, CFG, VERBOSE ) RESULT(RET)

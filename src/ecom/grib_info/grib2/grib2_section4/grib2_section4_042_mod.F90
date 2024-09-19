@@ -1,15 +1,15 @@
 !>
-!> @file grib2_section5_042_mod.F90
+!> @file grib2_section4_042_mod.F90
 !>
-!> @brief Module for managing GRIB2 Section 5 operations.
+!> @brief Module for managing GRIB2 Section 4 operations.
 !>
-!> The `GRIB2_SECTION5_042_MOD` module contains procedures to initialize, allocate,
-!> preset, run, and clean up the resources associated with GRIB2 Section 5 objects.
+!> The `GRIB2_SECTION4_042_MOD` module contains procedures to initialize, allocate,
+!> preset, run, and clean up the resources associated with GRIB2 Section 4 objects.
 !> This module provides thread-safe operations and includes extensive use of debugging,
 !> logging, and tracing capabilities, making it robust for production and testing.
 !>
 !> The key operations covered by this module include:
-!>   - Initialization of GRIB2 Section 5 objects.
+!>   - Initialization of GRIB2 Section 4 objects.
 !>   - Allocation of resources.
 !>   - Presetting internal parameters.
 !>   - Managing runtime operations based on input parameters.
@@ -18,12 +18,12 @@
 !> @section interface
 !>
 !> The module exports the following procedures:
-!>   - @see GRIB2_SECTION5_042_INIT
-!>   - @see GRIB2_SECTION5_042_ALLOCATE
-!>   - @see GRIB2_SECTION5_042_PRESET
-!>   - @see GRIB2_SECTION5_042_RUNTIME
-!>   - @see GRIB2_SECTION5_042_TO_BE_ENCODED
-!>   - @see GRIB2_SECTION5_042_FREE
+!>   - @see GRIB2_SECTION4_042_INIT
+!>   - @see GRIB2_SECTION4_042_ALLOCATE
+!>   - @see GRIB2_SECTION4_042_PRESET
+!>   - @see GRIB2_SECTION4_042_RUNTIME
+!>   - @see GRIB2_SECTION4_042_TO_BE_ENCODED
+!>   - @see GRIB2_SECTION4_042_FREE
 !>
 !> @section dependencies
 !>
@@ -52,10 +52,10 @@
 #include "output_manager_preprocessor_errhdl_utils.h"
 
 
-#define PP_FILE_NAME 'grib2_section5_042_mod.F90'
+#define PP_FILE_NAME 'grib2_section4_042_mod.F90'
 #define PP_SECTION_TYPE 'MODULE'
-#define PP_SECTION_NAME 'GRIB2_SECTION5_042_MOD'
-MODULE GRIB2_SECTION5_042_MOD
+#define PP_SECTION_NAME 'GRIB2_SECTION4_042_MOD'
+MODULE GRIB2_SECTION4_042_MOD
 
   !> Symbols imported from other modules within the project.
   PP_USE_L('T') :: GRIB_SECTION_MOD, ONLY: GRIB_SECTION_BASE_A
@@ -67,87 +67,87 @@ IMPLICIT NONE
 PRIVATE
 
 !>
-!> @brief Type definition for GRIB2 Section 5 handler.
+!> @brief Type definition for GRIB2 Section 4 handler.
 !>
-!> The `GRIB2_SECTION5_042_T` type extends the base class `GRIB_SECTION_BASE_A` and
+!> The `GRIB2_SECTION4_042_T` type extends the base class `GRIB_SECTION_BASE_A` and
 !> provides concrete implementations of initialization, allocation, preset, runtime,
-!> encoding checks, and cleanup operations for GRIB2 Section 5 objects.
+!> encoding checks, and cleanup operations for GRIB2 Section 4 objects.
 !>
 !> This type ensures that the required resources are properly managed through thread-safe,
 !> non-overridable methods, providing robustness in both multi-threaded and single-threaded
 !> environments.
 !>
-TYPE, EXTENDS(GRIB_SECTION_BASE_A) :: GRIB2_SECTION5_042_T
+TYPE, EXTENDS(GRIB_SECTION_BASE_A) :: GRIB2_SECTION4_042_T
 
 CONTAINS
 
   !>
-  !> @brief Initializes the GRIB2 Section 5 object.
+  !> @brief Initializes the GRIB2 Section 4 object.
   !>
   !> This procedure sets up the necessary parameters and prepares the
   !> object for use.
   !>
-  PUBLIC, PASS, NON_OVERRIDABLE :: INIT => GRIB2_SECTION5_042_INIT
+  PUBLIC, PASS, NON_OVERRIDABLE :: INIT => GRIB2_SECTION4_042_INIT
 
   !>
-  !> @brief Allocates resources for the GRIB2 Section 5 object.
+  !> @brief Allocates resources for the GRIB2 Section 4 object.
   !>
   !> This procedure allocates memory and other necessary resources for
   !> the object based on provided parameters.
   !>
-  PUBLIC, PASS, NON_OVERRIDABLE :: ALLOCATE => GRIB2_SECTION5_042_ALLOCATE
+  PUBLIC, PASS, NON_OVERRIDABLE :: ALLOCATE => GRIB2_SECTION4_042_ALLOCATE
 
   !>
-  !> @brief Presets the parameters of the GRIB2 Section 5 object.
+  !> @brief Presets the parameters of the GRIB2 Section 4 object.
   !>
   !> This procedure configures the internal parameters of the object
   !> before runtime execution.
   !>
-  PUBLIC, PASS, NON_OVERRIDABLE :: PRESET => GRIB2_SECTION5_042_PRESET
+  PUBLIC, PASS, NON_OVERRIDABLE :: PRESET => GRIB2_SECTION4_042_PRESET
 
   !>
-  !> @brief Manages the runtime execution of GRIB2 Section 5 operations.
+  !> @brief Manages the runtime execution of GRIB2 Section 4 operations.
   !>
   !> This procedure handles operations and computations during runtime,
   !> making use of time and metadata information.
   !>
-  PUBLIC, PASS, NON_OVERRIDABLE :: RUNTIME => GRIB2_SECTION5_042_RUNTIME
+  PUBLIC, PASS, NON_OVERRIDABLE :: RUNTIME => GRIB2_SECTION4_042_RUNTIME
 
   !>
-  !> @brief Determines if the GRIB2 Section 5 object needs to be encoded.
+  !> @brief Determines if the GRIB2 Section 4 object needs to be encoded.
   !>
   !> This procedure checks whether the object should be encoded based
   !> on the provided parameters and internal state.
   !>
-  PUBLIC, PASS, NON_OVERRIDABLE :: TO_BE_ENCODED => GRIB2_SECTION5_042_TO_BE_ENCODED
+  PUBLIC, PASS, NON_OVERRIDABLE :: TO_BE_ENCODED => GRIB2_SECTION4_042_TO_BE_ENCODED
 
   !>
-  !> @brief Frees resources allocated for the GRIB2 Section 5 object.
+  !> @brief Frees resources allocated for the GRIB2 Section 4 object.
   !>
   !> This procedure deallocates resources and performs cleanup after
   !> the object has been used.
   !>
-  PUBLIC, PASS, NON_OVERRIDABLE :: FREE => GRIB2_SECTION5_042_FREE
+  PUBLIC, PASS, NON_OVERRIDABLE :: FREE => GRIB2_SECTION4_042_FREE
 
 END TYPE
 
 
 !>
 !> Public symbols (dataTypes)
-PUBLIC :: GRIB2_SECTION5_042_T
+PUBLIC :: GRIB2_SECTION4_042_T
 
 CONTAINS
 
 !>
-!> @brief Initializes GRIB2 Section 5 for a given object using the provided parameters.
+!> @brief Initializes GRIB2 Section 4 for a given object using the provided parameters.
 !>
-!> This function initializes a GRIB2 Section 5 object (`THIS`) using the provided model parameters (`PARAMS`)
+!> This function initializes a GRIB2 Section 4 object (`THIS`) using the provided model parameters (`PARAMS`)
 !> and configuration data (`CFG`). The process can be run in verbose mode if specified. The function
 !> is thread-safe and returns an error code indicating the success or failure of the operation.
 !>
 !> @section interface
 !>
-!> @param [inout] THIS    GRIB2 Section 5 object to be initialized.
+!> @param [inout] THIS    GRIB2 Section 4 object to be initialized.
 !> @param [in]    PARAMS  Model parameters used during initialization.
 !> @param [in]    CFG     YAML configuration data for initialization.
 !> @param [in]    VERBOSE Logical flag for verbose output during initialization.
@@ -169,16 +169,16 @@ CONTAINS
 !>   - @dependency [*] PP_LOG_USE_VARS::*
 !>   - @dependency [*] PP_TRACE_USE_VARS::*
 !>
-!> @see GRIB2_SECTION5_042_INIT
-!> @see GRIB2_SECTION5_042_ALLOCATE
-!> @see GRIB2_SECTION5_042_PRESET
-!> @see GRIB2_SECTION5_042_RUNTIME
-!> @see GRIB2_SECTION5_042_TO_BE_ENCODED
-!> @see GRIB2_SECTION5_042_FREE
+!> @see GRIB2_SECTION4_042_INIT
+!> @see GRIB2_SECTION4_042_ALLOCATE
+!> @see GRIB2_SECTION4_042_PRESET
+!> @see GRIB2_SECTION4_042_RUNTIME
+!> @see GRIB2_SECTION4_042_TO_BE_ENCODED
+!> @see GRIB2_SECTION4_042_FREE
 !>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'GRIB2_SECTION5_042_INIT'
-__THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_INIT( THIS, PARAMS, &
+#define PP_PROCEDURE_NAME 'GRIB2_SECTION4_042_INIT'
+__THREAD_SAFE__ FUNCTION GRIB2_SECTION4_042_INIT( THIS, PARAMS, &
 &          CFG, VERBOSE ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
@@ -197,7 +197,7 @@ __THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_INIT( THIS, PARAMS, &
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(GRIB2_SECTION5_042_T), INTENT(INOUT) :: THIS
+  CLASS(GRIB2_SECTION4_042_T), INTENT(INOUT) :: THIS
   TYPE(MODEL_PAR_T),           INTENT(IN)    :: PARAMS
   TYPE(YAML_CONFIGURATION_T),  INTENT(IN)    :: CFG
   LOGICAL,                     INTENT(IN)    :: VERBOSE
@@ -260,21 +260,21 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION GRIB2_SECTION5_042_INIT
+END FUNCTION GRIB2_SECTION4_042_INIT
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
 
 !>
-!> @brief Allocates resources for GRIB2 Section 5 using the provided parameters.
+!> @brief Allocates resources for GRIB2 Section 4 using the provided parameters.
 !>
-!> This function allocates resources for a GRIB2 Section 5 object (`THIS`) using the provided model parameters (`PARAMS`),
+!> This function allocates resources for a GRIB2 Section 4 object (`THIS`) using the provided model parameters (`PARAMS`),
 !> message structure (`MSG`), and metadata (`METADATA`). The process can be run in verbose mode if specified.
 !> The function is thread-safe and returns an error code indicating the success or failure of the allocation process.
 !>
 !> @section interface
 !>
-!> @param [in]    THIS      GRIB2 Section 5 object for which resources are allocated.
+!> @param [in]    THIS      GRIB2 Section 4 object for which resources are allocated.
 !> @param [in]    PARAMS    Model parameters required for allocation.
 !> @param [in]    MSG       Message structure providing necessary information.
 !> @param [inout] METADATA  Pointer to metadata used during allocation.
@@ -298,16 +298,16 @@ END FUNCTION GRIB2_SECTION5_042_INIT
 !>   - @dependency [*] PP_LOG_USE_VARS::*
 !>   - @dependency [*] PP_TRACE_USE_VARS::*
 !>
-!> @see GRIB2_SECTION5_042_ALLOCATE
-!> @see GRIB2_SECTION5_042_INIT
-!> @see GRIB2_SECTION5_042_PRESET
-!> @see GRIB2_SECTION5_042_RUNTIME
-!> @see GRIB2_SECTION5_042_TO_BE_ENCODED
-!> @see GRIB2_SECTION5_042_FREE
+!> @see GRIB2_SECTION4_042_ALLOCATE
+!> @see GRIB2_SECTION4_042_INIT
+!> @see GRIB2_SECTION4_042_PRESET
+!> @see GRIB2_SECTION4_042_RUNTIME
+!> @see GRIB2_SECTION4_042_TO_BE_ENCODED
+!> @see GRIB2_SECTION4_042_FREE
 !>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'GRIB2_SECTION5_042_ALLOCATE'
-__THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_ALLOCATE( THIS, PARAMS, &
+#define PP_PROCEDURE_NAME 'GRIB2_SECTION4_042_ALLOCATE'
+__THREAD_SAFE__ FUNCTION GRIB2_SECTION4_042_ALLOCATE( THIS, PARAMS, &
 &  MSG,  METADATA, VERBOSE ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
@@ -327,7 +327,7 @@ __THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_ALLOCATE( THIS, PARAMS, &
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(GRIB2_SECTION5_042_T),     INTENT(IN)    :: THIS
+  CLASS(GRIB2_SECTION4_042_T),     INTENT(IN)    :: THIS
   TYPE(MODEL_PAR_T),               INTENT(IN)    :: PARAMS
   TYPE(MESSAGE_T),                 INTENT(IN)    :: MSG
   CLASS(METADATA_BASE_A), POINTER, INTENT(INOUT) :: METADATA
@@ -391,21 +391,21 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION GRIB2_SECTION5_042_ALLOCATE
+END FUNCTION GRIB2_SECTION4_042_ALLOCATE
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
 
 !>
-!> @brief Presets GRIB2 Section 5 using the provided parameters and message data.
+!> @brief Presets GRIB2 Section 4 using the provided parameters and message data.
 !>
-!> This function presets a GRIB2 Section 5 object (`THIS`) using the provided model parameters (`PARAMS`),
+!> This function presets a GRIB2 Section 4 object (`THIS`) using the provided model parameters (`PARAMS`),
 !> message structure (`MSG`), and metadata (`METADATA`). The process can be run in verbose mode if specified.
 !> The function is thread-safe and returns an error code indicating the success or failure of the preset operation.
 !>
 !> @section interface
 !>
-!> @param [in]    THIS      GRIB2 Section 5 object to be preset.
+!> @param [in]    THIS      GRIB2 Section 4 object to be preset.
 !> @param [in]    PARAMS    Model parameters used during the preset process.
 !> @param [in]    MSG       Message structure providing necessary information.
 !> @param [inout] METADATA  Pointer to metadata involved in the preset process.
@@ -429,16 +429,16 @@ END FUNCTION GRIB2_SECTION5_042_ALLOCATE
 !>   - @dependency [*] PP_LOG_USE_VARS::*
 !>   - @dependency [*] PP_TRACE_USE_VARS::*
 !>
-!> @see GRIB2_SECTION5_042_PRESET
-!> @see GRIB2_SECTION5_042_ALLOCATE
-!> @see GRIB2_SECTION5_042_INIT
-!> @see GRIB2_SECTION5_042_RUNTIME
-!> @see GRIB2_SECTION5_042_TO_BE_ENCODED
-!> @see GRIB2_SECTION5_042_FREE
+!> @see GRIB2_SECTION4_042_PRESET
+!> @see GRIB2_SECTION4_042_ALLOCATE
+!> @see GRIB2_SECTION4_042_INIT
+!> @see GRIB2_SECTION4_042_RUNTIME
+!> @see GRIB2_SECTION4_042_TO_BE_ENCODED
+!> @see GRIB2_SECTION4_042_FREE
 !>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'GRIB2_SECTION5_042_PRESET'
-__THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_PRESET( THIS, PARAMS, &
+#define PP_PROCEDURE_NAME 'GRIB2_SECTION4_042_PRESET'
+__THREAD_SAFE__ FUNCTION GRIB2_SECTION4_042_PRESET( THIS, PARAMS, &
 &   MSG, METADATA, VERBOSE ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
@@ -458,7 +458,7 @@ __THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_PRESET( THIS, PARAMS, &
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(GRIB2_SECTION5_042_T),     INTENT(IN)    :: THIS
+  CLASS(GRIB2_SECTION4_042_T),     INTENT(IN)    :: THIS
   TYPE(MODEL_PAR_T),               INTENT(IN)    :: PARAMS
   TYPE(MESSAGE_T),                 INTENT(IN)    :: MSG
   CLASS(METADATA_BASE_A), POINTER, INTENT(INOUT) :: METADATA
@@ -522,22 +522,22 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION GRIB2_SECTION5_042_PRESET
+END FUNCTION GRIB2_SECTION4_042_PRESET
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
 
 !>
-!> @brief Executes runtime processing for GRIB2 Section 5 using provided parameters, message data, and time history.
+!> @brief Executes runtime processing for GRIB2 Section 4 using provided parameters, message data, and time history.
 !>
-!> This function performs runtime operations for a GRIB2 Section 5 object (`THIS`) using the provided model parameters (`PARAMS`),
+!> This function performs runtime operations for a GRIB2 Section 4 object (`THIS`) using the provided model parameters (`PARAMS`),
 !> message structure (`MSG`), current time (`CURR_TIME`), time history (`TIME_HISTORY`), and metadata (`METADATA`).
 !> The process can be run in verbose mode if specified. The function is thread-safe and returns an error code indicating
 !> the success or failure of the runtime operation.
 !>
 !> @section interface
 !>
-!> @param [in]    THIS          GRIB2 Section 5 object for runtime execution.
+!> @param [in]    THIS          GRIB2 Section 4 object for runtime execution.
 !> @param [in]    PARAMS        Model parameters used during the runtime process.
 !> @param [in]    MSG           Message structure providing necessary information.
 !> @param [in]    CURR_TIME     Current time used in the runtime process.
@@ -565,16 +565,16 @@ END FUNCTION GRIB2_SECTION5_042_PRESET
 !>   - @dependency [*] PP_LOG_USE_VARS::*
 !>   - @dependency [*] PP_TRACE_USE_VARS::*
 !>
-!> @see GRIB2_SECTION5_042_RUNTIME
-!> @see GRIB2_SECTION5_042_ALLOCATE
-!> @see GRIB2_SECTION5_042_INIT
-!> @see GRIB2_SECTION5_042_PRESET
-!> @see GRIB2_SECTION5_042_TO_BE_ENCODED
-!> @see GRIB2_SECTION5_042_FREE
+!> @see GRIB2_SECTION4_042_RUNTIME
+!> @see GRIB2_SECTION4_042_ALLOCATE
+!> @see GRIB2_SECTION4_042_INIT
+!> @see GRIB2_SECTION4_042_PRESET
+!> @see GRIB2_SECTION4_042_TO_BE_ENCODED
+!> @see GRIB2_SECTION4_042_FREE
 !>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'GRIB2_SECTION5_042_RUNTIME'
-__THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_RUNTIME( THIS, PARAMS, &
+#define PP_PROCEDURE_NAME 'GRIB2_SECTION4_042_RUNTIME'
+__THREAD_SAFE__ FUNCTION GRIB2_SECTION4_042_RUNTIME( THIS, PARAMS, &
 &       MSG, CURR_TIME, TIME_HISTORY, METADATA, VERBOSE ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
@@ -596,7 +596,7 @@ __THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_RUNTIME( THIS, PARAMS, &
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(GRIB2_SECTION5_042_T),     INTENT(IN)    :: THIS
+  CLASS(GRIB2_SECTION4_042_T),     INTENT(IN)    :: THIS
   TYPE(MODEL_PAR_T),               INTENT(IN)    :: PARAMS
   TYPE(MESSAGE_T),                 INTENT(IN)    :: MSG
   TYPE(TIME_HISTORY_T),            INTENT(IN)    :: TIME_HIST
@@ -662,22 +662,22 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION GRIB2_SECTION5_042_RUNTIME
+END FUNCTION GRIB2_SECTION4_042_RUNTIME
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
 
 !>
-!> @brief Prepares GRIB2 Section 5 for encoding based on provided parameters, message data, and time history.
+!> @brief Prepares GRIB2 Section 4 for encoding based on provided parameters, message data, and time history.
 !>
-!> This function determines whether GRIB2 Section 5 (`THIS`) is ready to be encoded. It processes the provided model parameters
+!> This function determines whether GRIB2 Section 4 (`THIS`) is ready to be encoded. It processes the provided model parameters
 !> (`PARAMS`), message structure (`MSG`), current time (`CURR_TIME`), time history (`TIME_HISTORY`), and updates the
 !> `TO_BE_ENCODED` flag accordingly. The function is thread-safe and returns an error code indicating the success or failure
 !> of the operation. The process can also be run in verbose mode if specified.
 !>
 !> @section interface
 !>
-!> @param [inout] THIS          GRIB2 Section 5 object to be checked for encoding readiness.
+!> @param [inout] THIS          GRIB2 Section 4 object to be checked for encoding readiness.
 !> @param [in]    PARAMS        Model parameters used during the encoding preparation.
 !> @param [in]    MSG           Message structure providing necessary information.
 !> @param [in]    CURR_TIME     Current time used in the encoding process.
@@ -704,16 +704,16 @@ END FUNCTION GRIB2_SECTION5_042_RUNTIME
 !>   - @dependency [*] PP_LOG_USE_VARS::*
 !>   - @dependency [*] PP_TRACE_USE_VARS::*
 !>
-!> @see GRIB2_SECTION5_042_TO_BE_ENCODED
-!> @see GRIB2_SECTION5_042_INIT
-!> @see GRIB2_SECTION5_042_ALLOCATE
-!> @see GRIB2_SECTION5_042_PRESET
-!> @see GRIB2_SECTION5_042_RUNTIME
-!> @see GRIB2_SECTION5_042_FREE
+!> @see GRIB2_SECTION4_042_TO_BE_ENCODED
+!> @see GRIB2_SECTION4_042_INIT
+!> @see GRIB2_SECTION4_042_ALLOCATE
+!> @see GRIB2_SECTION4_042_PRESET
+!> @see GRIB2_SECTION4_042_RUNTIME
+!> @see GRIB2_SECTION4_042_FREE
 !>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'GRIB2_SECTION5_042_TO_BE_ENCODED'
-__THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_TO_BE_ENCODED( THIS, PARAMS, &
+#define PP_PROCEDURE_NAME 'GRIB2_SECTION4_042_TO_BE_ENCODED'
+__THREAD_SAFE__ FUNCTION GRIB2_SECTION4_042_TO_BE_ENCODED( THIS, PARAMS, &
 &    MSG, CURR_TIME, TIME_HISTORY, TO_BE_ENCODED, VERBOSE ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
@@ -734,7 +734,7 @@ __THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_TO_BE_ENCODED( THIS, PARAMS, &
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(GRIB2_SECTION5_042_T),  INTENT(INOUT) :: THIS
+  CLASS(GRIB2_SECTION4_042_T),  INTENT(INOUT) :: THIS
   TYPE(MODEL_PAR_T),            INTENT(IN)    :: PARAMS
   TYPE(MESSAGE_T),              INTENT(IN)    :: MSG
   TYPE(TIME_HISTORY_T),         INTENT(IN)    :: TIME_HIST
@@ -800,21 +800,21 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION GRIB2_SECTION5_042_TO_BE_ENCODED
+END FUNCTION GRIB2_SECTION4_042_TO_BE_ENCODED
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
 
 !>
-!> @brief Frees resources associated with GRIB2 Section 5 object.
+!> @brief Frees resources associated with GRIB2 Section 4 object.
 !>
-!> This function deallocates and cleans up resources associated with the GRIB2 Section 5 object (`THIS`).
+!> This function deallocates and cleans up resources associated with the GRIB2 Section 4 object (`THIS`).
 !> The process can be run in verbose mode for additional output. The function is thread-safe and returns an
 !> error code indicating the success or failure of the operation.
 !>
 !> @section interface
 !>
-!> @param [inout] THIS    GRIB2 Section 5 object to be deallocated and freed.
+!> @param [inout] THIS    GRIB2 Section 4 object to be deallocated and freed.
 !> @param [in]    VERBOSE Logical flag for verbose output during resource cleanup.
 !>
 !> @return Integer error code (`RET`) indicating success or failure:
@@ -829,15 +829,15 @@ END FUNCTION GRIB2_SECTION5_042_TO_BE_ENCODED
 !>   - @dependency [*] PP_LOG_USE_VARS::*
 !>   - @dependency [*] PP_TRACE_USE_VARS::*
 !>
-!> @see GRIB2_SECTION5_042_INIT
-!> @see GRIB2_SECTION5_042_ALLOCATE
-!> @see GRIB2_SECTION5_042_PRESET
-!> @see GRIB2_SECTION5_042_RUNTIME
-!> @see GRIB2_SECTION5_042_TO_BE_ENCODED
+!> @see GRIB2_SECTION4_042_INIT
+!> @see GRIB2_SECTION4_042_ALLOCATE
+!> @see GRIB2_SECTION4_042_PRESET
+!> @see GRIB2_SECTION4_042_RUNTIME
+!> @see GRIB2_SECTION4_042_TO_BE_ENCODED
 !>
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'GRIB2_SECTION5_042_FREE'
-__THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_FREE( THIS, VERBOSE ) RESULT(RET)
+#define PP_PROCEDURE_NAME 'GRIB2_SECTION4_042_FREE'
+__THREAD_SAFE__ FUNCTION GRIB2_SECTION4_042_FREE( THIS, VERBOSE ) RESULT(RET)
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -851,7 +851,7 @@ __THREAD_SAFE__ FUNCTION GRIB2_SECTION5_042_FREE( THIS, VERBOSE ) RESULT(RET)
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(GRIB2_SECTION5_042_T), INTENT(INOUT) :: THIS
+  CLASS(GRIB2_SECTION4_042_T), INTENT(INOUT) :: THIS
   LOGICAL,                     INTENT(IN)    :: VERBOSE
 
   !> Function result
@@ -912,11 +912,11 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION GRIB2_SECTION5_042_FREE
+END FUNCTION GRIB2_SECTION4_042_FREE
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
-END MODULE GRIB2_SECTION5_042_MOD
+END MODULE GRIB2_SECTION4_042_MOD
 #undef PP_SECTION_NAME
 #undef PP_SECTION_TYPE
 #undef PP_FILE_NAME
