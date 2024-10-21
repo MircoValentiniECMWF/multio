@@ -1,0 +1,88 @@
+adiabaticCondensation,5,255,MISSING,MISSING,MISSING,MISSING
+atmosphere,10,255,MISSING,MISSING,MISSING,MISSING
+cloudBase,2,255,MISSING,MISSING,MISSING,MISSING
+cloudTop,3,255,MISSING,MISSING,MISSING,MISSING
+convectiveCondensation,15,255,MISSING,MISSING,MISSING,MISSING
+cumulonimbusBase,11,255,MISSING,MISSING,MISSING,MISSING
+cumulonimbusTop,12,255,MISSING,MISSING,MISSING,MISSING
+depthBelowLand,106,255,depth in metres (sv1),depth in metres (sf1),MISSING,MISSING
+depthBelowLandLayer,106,106,depth in metres,depth in metres,depth in metres,depth in metres
+depthBelowSea,160,255,MISSING,MISSING,MISSING,MISSING
+depthBelowSeaLayer,160,160,MISSING,MISSING,MISSING,MISSING
+entireAtmosphere,1,8,MISSING,MISSING,MISSING,MISSING
+entireLake,1,162,MISSING,MISSING,MISSING,MISSING
+entireMeltPond,188,189,MISSING,MISSING,MISSING,MISSING
+entireOcean,1,9,MISSING,MISSING,MISSING,MISSING
+eta,111,255,eta level,eta level,MISSING,MISSING
+freeConvection,14,255,MISSING,MISSING,MISSING,MISSING
+generalVertical,150,255,level,level,MISSING,MISSING
+generalVerticalLayer,150,150,level,level,level,level
+heightAboveGround,103,255,height in metres,height in metres,MISSING,MISSING
+heightAboveGroundLayer,103,103,height in metres,height in metres,height in metres,height in metres
+heightAboveSea,102,255,height in metres,height in metres,MISSING,MISSING
+heightAboveSeaLayer,102,102,height in metres,height in metres,height in metres,height in metres
+highCloudLayer,100,8,45000,0,MISSING,MISSING
+hybrid,105,255,model level,model level,MISSING,MISSING
+hybridHeight,118,255,probably height in metres ??,probably height in metres ??,MISSING,MISSING
+hybridLayer,105,105,model level,model level,model level,model level
+hybridPressure,119,255,probably a pressure ??,probably a pressure ??,MISSING,MISSING
+iceBottomOnWater,176,255,MISSING,MISSING,MISSING,MISSING
+iceLayerOnWater,174,176,MISSING,MISSING,MISSING,MISSING
+iceLayerUnderSnowOnWater,175,176,MISSING,MISSING,MISSING,MISSING
+iceTopOnWater,174,255,MISSING,MISSING,MISSING,MISSING
+iceTopUnderSnowOnWater,175,255,MISSING,MISSING,MISSING,MISSING
+indefiniteSoilDepth,177,255,MISSING,MISSING,MISSING,MISSING
+isobaricInhPa,100,255,pressure level,pressure level,MISSING,MISSING
+isobaricInPa,100,255,pressure level,pressure level,MISSING,MISSING
+isobaricLayer,100,100,pressure level,pressure level,pressure level,pressure level
+isothermal,20,255,isothermal level,isothermal level,MISSING,MISSING
+isothermZero,4,255,MISSING,MISSING,MISSING,MISSING
+lakeBottom,162,255,MISSING,MISSING,MISSING,MISSING
+lowCloudLayer,1,100,MISSING,MISSING,80000,0
+lowestLevelOfCloudCoverExceedance,19,255,MISSING,MISSING,MISSING,MISSING
+maxWind,6,255,MISSING,MISSING,MISSING,MISSING
+meanSea,101,255,MISSING,MISSING,MISSING,MISSING
+mediumCloudLayer,100,100,80000,0,45000,0
+meltPondBottom,189,255,MISSING,MISSING,MISSING,MISSING
+meltPondTop,188,255,MISSING,MISSING,MISSING,MISSING
+mixedLayerDepthByDensity,169,255,MISSING,MISSING,MISSING,MISSING
+mixedLayerDepthByDiffusivity,171,255,MISSING,MISSING,MISSING,MISSING
+mixedLayerDepthByTemperature,170,255,MISSING,MISSING,MISSING,MISSING
+mixedLayerDepthGeneric,117,255,MISSING,MISSING,MISSING,MISSING
+mixedLayerParcel,18,255,MISSING,MISSING,MISSING,MISSING
+mixingLayer,166,255,MISSING,MISSING,MISSING,MISSING
+mostUnstableParcel,17,255,MISSING,MISSING,MISSING,MISSING
+neutralBuoyancy,16,255,MISSING,MISSING,MISSING,MISSING
+nominalTop,8,255,MISSING,MISSING,MISSING,MISSING
+oceanModel,168,255,model level,model level,MISSING,MISSING
+oceanModelLayer,168,168,model level,model level,model level,model level
+oceanSurface,160,255,0,0,MISSING,MISSING
+oceanSurfaceToBottom,160,9,0,0,MISSING,MISSING
+potentialVorticity,109,255,pt level,pt level,MISSING,MISSING
+pressureFromGround,108,255,pressure level,pressure level,MISSING,MISSING
+pressureFromGroundLayer,108,108,pressure level,pressure level,pressure level,pressure level
+road,187,255,MISSING,MISSING,MISSING,MISSING
+roadLayer,187,187,MISSING,MISSING,MISSING,MISSING
+roof,185,255,MISSING,MISSING,MISSING,MISSING
+roofLayer,185,185,MISSING,MISSING,MISSING,MISSING
+rootZone,1,167,MISSING,MISSING,MISSING,MISSING
+seaBottom,9,255,MISSING,MISSING,MISSING,MISSING
+seaIce,152,255,sea ice level,sea ice level,MISSING,MISSING
+seaIceLayer,152,152,sea ice level,sea ice level,sea ice level,sea ice level
+sigma,104,255,sigma level,sigma level,MISSING,MISSING
+sigmaLayer,104,104,sigma level,sigma level,sigma level,sigma level
+snow,114,255,snow level,snow level,MISSING,MISSING
+snowLayer,114,114,snow level,snow level,snow level,snow level
+snowLayerOverIceOnWater,173,175,MISSING,MISSING,MISSING,MISSING
+snowTopOverIceOnWater,173,255,MISSING,MISSING,MISSING,MISSING
+soil,151,255,soil level,soil level,MISSING,MISSING
+soilLayer,151,151,soil level,soil level,soil level,soil level
+surface,1,255,MISSING,MISSING,MISSING,MISSING
+theta,107,255,theta level,theta level,MISSING,MISSING
+thetaLayer,107,107,theta level,theta level,theta level,theta level
+totalSoilLayer,1,151,MISSING,MISSING,soil level,soil level
+tropopause,7,255,MISSING,MISSING,MISSING,MISSING
+urbanCanyon,187,185,MISSING,MISSING,MISSING,MISSING
+wall,186,255,MISSING,MISSING,MISSING,MISSING
+wallLayer,186,186,MISSING,MISSING,MISSING,MISSING
+waterSurfaceToIsothermalOceanLayer,160,20,0,0,isothermal level,isothermal level

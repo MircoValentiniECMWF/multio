@@ -1,0 +1,1750 @@
+!>
+!> @file grib2_encoder_mod.F90
+!>
+!> @brief Module for managing GRIB2 Encoder operations.
+!>
+!> The `GRIB2_ENCODER_MOD` module contains procedures to initialize, allocate,
+!> preset, run, and clean up the resources associated with GRIB2 Encoder objects.
+!> This module provides thread-safe operations and includes extensive use of debugging,
+!> logging, and tracing capabilities, making it robust for production and testing.
+!>
+!> The key operations covered by this module include:
+!>   - Initialization of GRIB2 Encoder objects.
+!>   - Allocation of resources.
+!>   - Presetting internal parameters.
+!>   - Managing runtime operations based on input parameters.
+!>   - Cleaning up and deallocating resources after use.
+!>
+!> @section interface
+!>
+!> The module exports the following procedures:
+!>   - @see GRIB2_ENCODER_INIT
+!>   - @see GRIB2_ENCODER_ALLOCATE
+!>   - @see GRIB2_ENCODER_PRESET
+!>   - @see GRIB2_ENCODER_RUNTIME
+!>   - @see GRIB2_ENCODER_TO_BE_ENCODED
+!>   - @see GRIB2_ENCODER_FREE
+!>
+!> @section dependencies
+!>
+!> @subsection local dependencies
+!>
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MESSAGE_T
+!>   - @dependency [TYPE] METADATA_BASE_MOD::METADATA_BASE_A
+!>   - @dependency [TYPE] OM_CORE_MOD::TIME_HISTORY_T
+!>   - @dependency [TYPE] OM_CORE_MOD::CURR_TIME_T
+!>
+!> @subsection special dependencies
+!>
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @author Mirco Valentini
+!> @date   August, 2024
+!>
+
+! Include preprocessor utils
+#include "output_manager_preprocessor_utils.h"
+#include "output_manager_preprocessor_trace_utils.h"
+#include "output_manager_preprocessor_logging_utils.h"
+#include "output_manager_preprocessor_errhdl_utils.h"
+
+
+#define PP_FILE_NAME 'grib2_encoder_mod.F90'
+#define PP_SECTION_TYPE 'MODULE'
+#define PP_SECTION_NAME 'GRIB2_ENCODER_MOD'
+MODULE GRIB2_ENCODER_MOD
+
+  !> Symbols imported from other modules within the project.
+  USE :: GRIB_SECTION_BASE_MOD, ONLY: GRIB_SECTION_BASE_A
+
+IMPLICIT NONE
+
+!>
+!> Default symbols visibility
+PRIVATE
+
+!>
+!> @brief Type definition for GRIB2 Encoder handler.
+!>
+!> The `GRIB2_ENCODER_T` type extends the base class `GRIB_SECTION_BASE_A` and
+!> provides concrete implementations of initialization, allocation, preset, runtime,
+!> encoding checks, and cleanup operations for GRIB2 Encoder objects.
+!>
+!> This type ensures that the required resources are properly managed through thread-safe,
+!> non-overridable methods, providing robustness in both multi-threaded and single-threaded
+!> environments.
+!>
+TYPE, EXTENDS(GRIB_SECTION_BASE_A) :: GRIB2_ENCODER_T
+
+  !> Default visibility of the class members
+  PRIVATE
+
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: SEC0_ => NULL()
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: SEC1_ => NULL()
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: SEC2_ => NULL()
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: SEC3_ => NULL()
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: SEC4_ => NULL()
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: SEC5_ => NULL()
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: SEC6_ => NULL()
+
+CONTAINS
+
+  !>
+  !> @brief Initializes the GRIB2 Encoder object.
+  !>
+  !> This procedure sets up the necessary parameters and prepares the
+  !> object for use.
+  !>
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: INIT => GRIB2_ENCODER_INIT
+
+  !>
+  !> @brief Allocates resources for the GRIB2 Encoder object.
+  !>
+  !> This procedure allocates memory and other necessary resources for
+  !> the object based on provided parameters.
+  !>
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: ALLOCATE => GRIB2_ENCODER_ALLOCATE
+
+  !>
+  !> @brief Presets the parameters of the GRIB2 Encoder object.
+  !>
+  !> This procedure configures the internal parameters of the object
+  !> before runtime execution.
+  !>
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: PRESET => GRIB2_ENCODER_PRESET
+
+  !>
+  !> @brief Manages the runtime execution of GRIB2 Encoder operations.
+  !>
+  !> This procedure handles operations and computations during runtime,
+  !> making use of time and metadata information.
+  !>
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: RUNTIME => GRIB2_ENCODER_RUNTIME
+
+  !>
+  !> @brief Determines if the GRIB2 Encoder object needs to be encoded.
+  !>
+  !> This procedure checks whether the object should be encoded based
+  !> on the provided parameters and internal state.
+  !>
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: TO_BE_ENCODED => GRIB2_ENCODER_TO_BE_ENCODED
+
+  !>
+  !> @brief Frees resources allocated for the GRIB2 Encoder object.
+  !>
+  !> This procedure deallocates resources and performs cleanup after
+  !> the object has been used.
+  !>
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: FREE => GRIB2_ENCODER_FREE
+
+  !>
+  !> @brief Print informations related to the section
+  !>
+  !> This procedure print informatin about the section and eventually call
+  !> the print method of the nested sub-sections
+  !>
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: PRINT => GRIB2_ENCODER_PRINT
+
+END TYPE
+
+
+!>
+!> Public symbols (dataTypes)
+PUBLIC :: GRIB2_ENCODER_T
+
+CONTAINS
+
+!>
+!> @brief Initializes GRIB2 Encoder for a given object using the provided parameters.
+!>
+!> This function initializes a GRIB2 Encoder object (`THIS`) using the provided model parameters (`PARAMS`)
+!> and configuration data (`CFG`). The process can be run in verbose mode if specified. The function
+!> is thread-safe and returns an error code indicating the success or failure of the operation.
+!>
+!> @section interface
+!>
+!> @param [inout] THIS    GRIB2 Encoder object to be initialized.
+!> @param [in]    PARAMS  Model parameters used during initialization.
+!> @param [in]    CFG     YAML configuration data for initialization.
+!> @param [in]    VERBOSE Logical flag for verbose output during initialization.
+!>
+!> @return Integer error code (`RET`) indicating success or failure:
+!>         - `0`: Success
+!>         - `1`: Failure
+!>
+!> @section Dependencies of this function:
+!>
+!> @subsection local dependencies
+!>
+!>   - @dependency [PARAMETER] DATAKINDS_DEF_MOD::JPIB_K
+!>   - @dependency [TYPE] PARAMETRIZATION_MOD::PARAMETRIZATION_T
+!>   - @dependency [TYPE] GRIB_ENCODER_OPTIONS_MOD::GRIB_ENCODER_OPTIONS_T
+!>   - @dependency [TYPE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATION_T
+!>   - @dependency [TYPE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATIONS_T
+!>   - @dependency [PROCEDURE] YAML_CORE_UTILS_MOD::YAML_CONFIGURATION_HAS_KEY
+!>   - @dependency [PROCEDURE] YAML_CORE_UTILS_MOD::YAML_GET_SUBCONFIGURATIONS
+!>   - @dependency [PROCEDURE] YAML_CORE_UTILS_MOD::YAML_GET_CONFIGURATIONS_SIZE
+!>   - @dependency [PROCEDURE] YAML_CORE_UTILS_MOD::YAML_GET_CONFIGURATION_BY_ID
+!>   - @dependency [PROCEDURE] YAML_CORE_UTILS_MOD::YAML_READ_STRING
+!>   - @dependency [PROCEDURE] YAML_CORE_UTILS_MOD::STRING_IS_INTEGER
+!>   - @dependency [PROCEDURE] YAML_CORE_UTILS_MOD::STRING_TO_INTEGER
+!>   - @dependency [PROCEDURE] GRIB2_SECTION1_FACTORY_MOD::READ_GRIB2_SECTION0_TYPE
+!>   - @dependency [PROCEDURE] GRIB2_SECTION1_FACTORY_MOD::READ_GRIB2_SECTION1_TYPE
+!>   - @dependency [PROCEDURE] GRIB2_SECTION2_FACTORY_MOD::READ_GRIB2_SECTION2_TYPE
+!>   - @dependency [PROCEDURE] GRIB2_SECTION3_FACTORY_MOD::READ_GRIB2_SECTION3_TYPE
+!>   - @dependency [PROCEDURE] GRIB2_SECTION4_FACTORY_MOD::READ_GRIB2_SECTION4_TYPE
+!>   - @dependency [PROCEDURE] GRIB2_SECTION5_FACTORY_MOD::READ_GRIB2_SECTION5_TYPE
+!>   - @dependency [PROCEDURE] GRIB2_SECTION1_FACTORY_MOD::READ_GRIB2_SECTION6_TYPE
+!>   - @dependency [PROCEDURE] GRIB2_SECTION1_FACTORY_MOD::MAKE_GRIB2_SECTION0
+!>   - @dependency [PROCEDURE] GRIB2_SECTION1_FACTORY_MOD::MAKE_GRIB2_SECTION1
+!>   - @dependency [PROCEDURE] GRIB2_SECTION2_FACTORY_MOD::MAKE_GRIB2_SECTION2
+!>   - @dependency [PROCEDURE] GRIB2_SECTION3_FACTORY_MOD::MAKE_GRIB2_SECTION3
+!>   - @dependency [PROCEDURE] GRIB2_SECTION4_FACTORY_MOD::MAKE_GRIB2_SECTION4
+!>   - @dependency [PROCEDURE] GRIB2_SECTION5_FACTORY_MOD::MAKE_GRIB2_SECTION5
+!>   - @dependency [PROCEDURE] GRIB2_SECTION1_FACTORY_MOD::MAKE_GRIB2_SECTION6
+!>   - @dependency [TYPE] HOOKS_MOD::HOOKS_T
+!>
+!> @subsection special dependencies
+!>
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_ENCODER_INIT
+!> @see GRIB2_ENCODER_ALLOCATE
+!> @see GRIB2_ENCODER_PRESET
+!> @see GRIB2_ENCODER_RUNTIME
+!> @see GRIB2_ENCODER_TO_BE_ENCODED
+!> @see GRIB2_ENCODER_FREE
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_ENCODER_INIT'
+PP_THREAD_SAFE FUNCTION GRIB2_ENCODER_INIT( THIS, PAR, &
+&               CFG, OPT, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,          ONLY: JPIB_K
+  USE :: PARAMETRIZATION_MOD,        ONLY: PARAMETRIZATION_T
+  USE :: GRIB_ENCODER_OPTIONS_MOD,   ONLY: GRIB_ENCODER_OPTIONS_T
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_CONFIGURATION_T
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_CONFIGURATIONS_T
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_CONFIGURATION_HAS_KEY
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_GET_SUBCONFIGURATIONS
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_GET_CONFIGURATIONS_SIZE
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_GET_CONFIGURATION_BY_ID
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_DELETE_CONFIGURATION
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_DELETE_CONFIGURATIONS
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: YAML_READ_STRING
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: STRING_IS_INTEGER
+  USE :: YAML_CORE_UTILS_MOD,        ONLY: STRING_TO_INTEGER
+  USE :: GRIB2_SECTION0_FACTORY_MOD, ONLY: READ_GRIB2_SECTION0_TYPE
+  USE :: GRIB2_SECTION1_FACTORY_MOD, ONLY: READ_GRIB2_SECTION1_TYPE
+  USE :: GRIB2_SECTION2_FACTORY_MOD, ONLY: READ_GRIB2_SECTION2_TYPE
+  USE :: GRIB2_SECTION3_FACTORY_MOD, ONLY: READ_GRIB2_SECTION3_TYPE
+  USE :: GRIB2_SECTION4_FACTORY_MOD, ONLY: READ_GRIB2_SECTION4_TYPE
+  USE :: GRIB2_SECTION5_FACTORY_MOD, ONLY: READ_GRIB2_SECTION5_TYPE
+  USE :: GRIB2_SECTION6_FACTORY_MOD, ONLY: READ_GRIB2_SECTION6_TYPE
+  USE :: GRIB2_SECTION0_FACTORY_MOD, ONLY: MAKE_GRIB2_SECTION0
+  USE :: GRIB2_SECTION1_FACTORY_MOD, ONLY: MAKE_GRIB2_SECTION1
+  USE :: GRIB2_SECTION2_FACTORY_MOD, ONLY: MAKE_GRIB2_SECTION2
+  USE :: GRIB2_SECTION3_FACTORY_MOD, ONLY: MAKE_GRIB2_SECTION3
+  USE :: GRIB2_SECTION4_FACTORY_MOD, ONLY: MAKE_GRIB2_SECTION4
+  USE :: GRIB2_SECTION5_FACTORY_MOD, ONLY: MAKE_GRIB2_SECTION5
+  USE :: GRIB2_SECTION6_FACTORY_MOD, ONLY: MAKE_GRIB2_SECTION6
+  USE :: HOOKS_MOD,                  ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(GRIB2_ENCODER_T),       INTENT(INOUT) :: THIS
+  TYPE(PARAMETRIZATION_T),      INTENT(IN)    :: PAR
+  TYPE(GRIB_ENCODER_OPTIONS_T), INTENT(IN)    :: OPT
+  TYPE(YAML_CONFIGURATION_T),   INTENT(IN)    :: CFG
+  TYPE(HOOKS_T),                INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local variables
+  INTEGER(KIND=JPIB_K) :: N
+  INTEGER(KIND=JPIB_K) :: I
+  TYPE(YAML_CONFIGURATIONS_T) :: SECTIONS_CONFIGURATION
+  TYPE(YAML_CONFIGURATION_T)  :: SECTION_CONFIGURATION
+  LOGICAL :: CONFIGURATION_HAS_SECTIONS
+  LOGICAL :: CONFIGURATION_HAS_SECTION
+  LOGICAL :: SECTION0_IS_INTEGER
+  CHARACTER(LEN=:), ALLOCATABLE :: CSECTION_ID
+  INTEGER(KIND=JPIB_K) :: SECTION_ID
+  INTEGER(KIND=JPIB_K) :: SECTION_TYPE
+  INTEGER(KIND=JPIB_K) :: DEALLOC_STATUS
+  CHARACTER(LEN=:), ALLOCATABLE :: ERRMSG
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_CFG=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SECTIONS_UNDEFINED=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_WRONG_NUMBER_OF_SECTIONS=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SUBCFG=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_GET_SUBCFG_SIZE=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_CFG_BY_ID=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SECTION_ID=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SECTION_CFG=8_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_NOT_ALLOCATED_AFTER_READ=9_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_STRING_IS_INTEGER=10_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_STRING_TO_INTEGER=11_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_WRONG_SECTION_ID_OUT_OF_BOUNDS=12_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_KEY_IS_NOT_INTEGER=13_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SEC0_TYPE=14_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MAKE_SEC0=15_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SEC1_TYPE=16_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MAKE_SEC1=17_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SEC2_TYPE=18_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MAKE_SEC2=19_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SEC3_TYPE=20_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MAKE_SEC3=21_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SEC4_TYPE=22_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MAKE_SEC4=23_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SEC5_TYPE=24_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MAKE_SEC5=25_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_SEC6_TYPE=26_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MAKE_SEC6=27_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_DEALLOCATION_ERROR=28_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC0_ALREADY_ASSOCIATED=29_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC1_ALREADY_ASSOCIATED=30_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC2_ALREADY_ASSOCIATED=31_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC3_ALREADY_ASSOCIATED=32_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC4_ALREADY_ASSOCIATED=33_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC5_ALREADY_ASSOCIATED=34_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC6_ALREADY_ASSOCIATED=35_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SECTION_DEALLOCATION_ERROR=36_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SECTIONS_DEALLOCATION_ERROR=37_JPIB_K
+
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%SEC0_), ERRFLAG_SEC0_ALREADY_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%SEC1_), ERRFLAG_SEC1_ALREADY_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%SEC2_), ERRFLAG_SEC2_ALREADY_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%SEC3_), ERRFLAG_SEC3_ALREADY_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%SEC4_), ERRFLAG_SEC4_ALREADY_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%SEC5_), ERRFLAG_SEC5_ALREADY_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%SEC6_), ERRFLAG_SEC6_ALREADY_ASSOCIATED )
+
+  ! Initialise the section
+  THIS%NUMBER_ = 'ENCODER'
+  THIS%TYPE_   = 'GRIB2'
+
+  !> Read the encoder configuration
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_CFG) YAML_CONFIGURATION_HAS_KEY( CFG, 'sections', CONFIGURATION_HAS_SECTIONS, HOOKS )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. CONFIGURATION_HAS_SECTIONS, ERRFLAG_SECTIONS_UNDEFINED )
+
+  !> Read all the subconfigurations
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SUBCFG) YAML_GET_SUBCONFIGURATIONS( CFG, 'sections', SECTIONS_CONFIGURATION, HOOKS )
+
+  !> Get the sections size
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_GET_SUBCFG_SIZE) YAML_GET_CONFIGURATIONS_SIZE( SECTIONS_CONFIGURATION, N, HOOKS )
+  PP_DEBUG_CRITICAL_COND_THROW( N .NE. 7, ERRFLAG_WRONG_NUMBER_OF_SECTIONS )
+
+  !> Loop over sections
+  DO I = 1, N
+
+    !> Get section configuration by ID
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_CFG_BY_ID) YAML_GET_CONFIGURATION_BY_ID( SECTIONS_CONFIGURATION, I, SECTION_CONFIGURATION, HOOKS )
+
+    !> Check if configuration has the section keyword
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SECTION_CFG) YAML_CONFIGURATION_HAS_KEY( SECTION_CONFIGURATION, 'section', CONFIGURATION_HAS_SECTION, HOOKS )
+    PP_DEBUG_CRITICAL_COND_THROW( .NOT. CONFIGURATION_HAS_SECTION, ERRFLAG_UNABLE_TO_READ_SECTION_ID )
+
+    !> Get the section ID
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SECTION_ID) YAML_READ_STRING( SECTION_CONFIGURATION, 'section', CSECTION_ID, HOOKS )
+    PP_DEBUG_CRITICAL_COND_THROW( .NOT.ALLOCATED(CSECTION_ID), ERRFLAG_NOT_ALLOCATED_AFTER_READ )
+
+    !> Check the section ID
+    PP_TRYCALL( ERRFLAG_STRING_IS_INTEGER ) STRING_IS_INTEGER( CSECTION_ID, SECTION0_IS_INTEGER, HOOKS )
+    IF ( SECTION0_IS_INTEGER ) THEN
+      PP_TRYCALL( ERRFLAG_STRING_TO_INTEGER ) STRING_TO_INTEGER( CSECTION_ID, SECTION_ID, HOOKS )
+      PP_DEBUG_CRITICAL_COND_THROW( SECTION_ID .LT. 0, ERRFLAG_WRONG_SECTION_ID_OUT_OF_BOUNDS )
+      PP_DEBUG_CRITICAL_COND_THROW( SECTION_ID .GT. 6, ERRFLAG_WRONG_SECTION_ID_OUT_OF_BOUNDS )
+    ELSE
+      ! TODO: Somehow decide automatically whcih SECTION0 to use. String can be
+      !       a label for the method to use.
+      PP_DEBUG_CRITICAL_THROW( ERRFLAG_KEY_IS_NOT_INTEGER )
+    ENDIF
+
+    SELECT CASE (SECTION_ID)
+    CASE (0)
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SEC0_TYPE) READ_GRIB2_SECTION0_TYPE( SECTION_CONFIGURATION, SECTION_TYPE, HOOKS )
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_MAKE_SEC0) MAKE_GRIB2_SECTION0( THIS%SEC0_, SECTION_TYPE, PAR, SECTION_CONFIGURATION, OPT, HOOKS )
+    CASE (1)
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SEC1_TYPE) READ_GRIB2_SECTION1_TYPE( SECTION_CONFIGURATION, SECTION_TYPE, HOOKS )
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_MAKE_SEC1) MAKE_GRIB2_SECTION1( THIS%SEC1_, SECTION_TYPE, PAR, SECTION_CONFIGURATION, OPT, HOOKS )
+    CASE (2)
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SEC2_TYPE) READ_GRIB2_SECTION2_TYPE( SECTION_CONFIGURATION, SECTION_TYPE, HOOKS )
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_MAKE_SEC2) MAKE_GRIB2_SECTION2( THIS%SEC2_, SECTION_TYPE, PAR, SECTION_CONFIGURATION, OPT, HOOKS )
+    CASE (3)
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SEC3_TYPE) READ_GRIB2_SECTION3_TYPE( SECTION_CONFIGURATION, SECTION_TYPE, HOOKS )
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_MAKE_SEC3) MAKE_GRIB2_SECTION3( THIS%SEC3_, SECTION_TYPE, PAR, SECTION_CONFIGURATION, OPT, HOOKS )
+    CASE (4)
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SEC4_TYPE) READ_GRIB2_SECTION4_TYPE( SECTION_CONFIGURATION, SECTION_TYPE, HOOKS )
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_MAKE_SEC4) MAKE_GRIB2_SECTION4( THIS%SEC4_, SECTION_TYPE, PAR, SECTION_CONFIGURATION, OPT, HOOKS )
+    CASE (5)
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SEC5_TYPE) READ_GRIB2_SECTION5_TYPE( SECTION_CONFIGURATION, SECTION_TYPE, HOOKS )
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_MAKE_SEC5) MAKE_GRIB2_SECTION5( THIS%SEC5_, SECTION_TYPE, PAR, SECTION_CONFIGURATION, OPT, HOOKS )
+    CASE (6)
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_SEC6_TYPE) READ_GRIB2_SECTION6_TYPE( SECTION_CONFIGURATION, SECTION_TYPE, HOOKS )
+      PP_TRYCALL(ERRFLAG_UNABLE_TO_MAKE_SEC6) MAKE_GRIB2_SECTION6( THIS%SEC6_, SECTION_TYPE, PAR, SECTION_CONFIGURATION, OPT, HOOKS )
+    CASE DEFAULT
+      PP_DEBUG_CRITICAL_THROW( ERRFLAG_WRONG_SECTION_ID_OUT_OF_BOUNDS )
+    END SELECT
+
+    !> Deallocate of the section identifier
+    IF ( ALLOCATED( CSECTION_ID ) ) THEN
+      DEALLOCATE( CSECTION_ID, STAT=DEALLOC_STATUS, ERRMSG=ERRMSG)
+    PP_DEBUG_CRITICAL_COND_THROW( DEALLOC_STATUS.NE.0, ERRFLAG_DEALLOCATION_ERROR )
+    ENDIF
+
+    PP_TRYCALL( ERRFLAG_SECTION_DEALLOCATION_ERROR ) YAML_DELETE_CONFIGURATION( SECTION_CONFIGURATION, HOOKS )
+
+  ENDDO
+
+  !> Deallocate sections
+  PP_TRYCALL( ERRFLAG_SECTIONS_DEALLOCATION_ERROR ) YAML_DELETE_CONFIGURATIONS( SECTIONS_CONFIGURATION, HOOKS )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_UNABLE_TO_READ_CFG)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read configuration' )
+    CASE(ERRFLAG_SECTIONS_UNDEFINED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'sections undefined' )
+    CASE(ERRFLAG_WRONG_NUMBER_OF_SECTIONS)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'wrong number of sections' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SUBCFG)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read subconfigurations' )
+    CASE(ERRFLAG_UNABLE_TO_GET_SUBCFG_SIZE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to get subconfigurations size' )
+    CASE(ERRFLAG_UNABLE_TO_READ_CFG_BY_ID)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read configuration by ID' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SECTION_ID)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section ID' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SECTION_CFG)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section configuration' )
+    CASE(ERRFLAG_NOT_ALLOCATED_AFTER_READ)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'not allocated after read' )
+    CASE(ERRFLAG_STRING_IS_INTEGER)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'string is integer' )
+    CASE(ERRFLAG_STRING_TO_INTEGER)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'string to integer' )
+    CASE(ERRFLAG_WRONG_SECTION_ID_OUT_OF_BOUNDS)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'wrong section ID out of bounds' )
+    CASE(ERRFLAG_KEY_IS_NOT_INTEGER)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'key is not integer' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SEC0_TYPE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section 0 type' )
+    CASE(ERRFLAG_UNABLE_TO_MAKE_SEC0)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to make section 0' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SEC1_TYPE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section 1 type' )
+    CASE(ERRFLAG_UNABLE_TO_MAKE_SEC1)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to make section 1' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SEC2_TYPE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section 2 type' )
+    CASE(ERRFLAG_UNABLE_TO_MAKE_SEC2)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to make section 2' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SEC3_TYPE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section 3 type' )
+    CASE(ERRFLAG_UNABLE_TO_MAKE_SEC3)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to make section 3' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SEC4_TYPE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section 4 type' )
+    CASE(ERRFLAG_UNABLE_TO_MAKE_SEC4)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to make section 4' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SEC5_TYPE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section 5 type' )
+    CASE(ERRFLAG_UNABLE_TO_MAKE_SEC5)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to make section 5' )
+    CASE(ERRFLAG_UNABLE_TO_READ_SEC6_TYPE)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to read section 6 type' )
+    CASE(ERRFLAG_UNABLE_TO_MAKE_SEC6)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to make section 6' )
+    CASE(ERRFLAG_DEALLOCATION_ERROR)
+      IF ( .NOT.ALLOCATED(ERRMSG) ) THEN
+        PP_DEBUG_CREATE_ERROR_MSG( STR, 'error deallocating SECTION0 number' )
+      ELSE
+        PP_DEBUG_CREATE_ERROR_MSG( STR, 'error deallocating SECTION0 number: '//TRIM(ADJUSTL(ERRMSG)) )
+        DEALLOCATE(ERRMSG)
+      ENDIF
+    CASE (ERRFLAG_SEC0_ALREADY_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 0 already associated' )
+    CASE (ERRFLAG_SEC1_ALREADY_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 1 already associated' )
+    CASE (ERRFLAG_SEC2_ALREADY_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 2 already associated' )
+    CASE (ERRFLAG_SEC3_ALREADY_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 3 already associated' )
+    CASE (ERRFLAG_SEC4_ALREADY_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 4 already associated' )
+    CASE (ERRFLAG_SEC5_ALREADY_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 5 already associated' )
+    CASE (ERRFLAG_SEC6_ALREADY_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 6 already associated' )
+    CASE (ERRFLAG_SECTION_DEALLOCATION_ERROR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'Unable to deallocate section configuration' )
+    CASE (ERRFLAG_SECTIONS_DEALLOCATION_ERROR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'Unable to deallocate sections configuration' )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_ENCODER_INIT
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Allocates resources for GRIB2 Encoder using the provided parameters.
+!>
+!> This function allocates resources for a GRIB2 Encoder object (`THIS`) using the provided model parameters (`PARAMS`),
+!> message structure (`MSG`), and metadata (`METADATA`). The process can be run in verbose mode if specified.
+!> The function is thread-safe and returns an error code indicating the success or failure of the allocation process.
+!>
+!> @section interface
+!>
+!> @param [in]    THIS      GRIB2 Encoder object for which resources are allocated.
+!> @param [in]    PARAMS    Model parameters required for allocation.
+!> @param [in]    MSG       Message structure providing necessary information.
+!> @param [inout] METADATA  Pointer to metadata used during allocation.
+!> @param [in]    VERBOSE   Logical flag for verbose output during allocation.
+!>
+!> @return Integer error code (`RET`) indicating success or failure:
+!>         - `0`: Success
+!>         - `1`: Failure
+!>
+!> @section dependencies
+!>
+!> @subsection local dependencies
+!>
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MESSAGE_T
+!>   - @dependency [TYPE] METADATA_BASE_MOD::METADATA_BASE_A
+!>
+!> @subsection special dependencies
+!>
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_ENCODER_ALLOCATE
+!> @see GRIB2_ENCODER_INIT
+!> @see GRIB2_ENCODER_PRESET
+!> @see GRIB2_ENCODER_RUNTIME
+!> @see GRIB2_ENCODER_TO_BE_ENCODED
+!> @see GRIB2_ENCODER_FREE
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_ENCODER_ALLOCATE'
+PP_THREAD_SAFE FUNCTION GRIB2_ENCODER_ALLOCATE( THIS, PAR, &
+&  MSG,  METADATA, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,   ONLY: JPIB_K
+  USE :: PARAMETRIZATION_MOD, ONLY: PARAMETRIZATION_T
+  USE :: FORTRAN_MESSAGE_MOD, ONLY: FORTRAN_MESSAGE_T
+  USE :: METADATA_BASE_MOD,   ONLY: METADATA_BASE_A
+  USE :: HOOKS_MOD,           ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(GRIB2_ENCODER_T),          INTENT(INOUT) :: THIS
+  TYPE(PARAMETRIZATION_T),         INTENT(IN)    :: PAR
+  TYPE(FORTRAN_MESSAGE_T),         INTENT(IN)    :: MSG
+  CLASS(METADATA_BASE_A), POINTER, INTENT(INOUT) :: METADATA
+  TYPE(HOOKS_T),                   INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC0_ALLOC=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC1_ALLOC=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC2_ALLOC=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC3_ALLOC=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC4_ALLOC=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC5_ALLOC=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC6_ALLOC=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC0_NOT_ASSOCIATED=8_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC1_NOT_ASSOCIATED=9_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC2_NOT_ASSOCIATED=10_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC3_NOT_ASSOCIATED=11_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC4_NOT_ASSOCIATED=12_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC5_NOT_ASSOCIATED=13_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC6_NOT_ASSOCIATED=14_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_METADATA_NOT_ASSOCIATED=15_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED( METADATA ), ERRFLAG_METADATA_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC0_), ERRFLAG_SEC0_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC1_), ERRFLAG_SEC1_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC2_), ERRFLAG_SEC2_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC3_), ERRFLAG_SEC3_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC4_), ERRFLAG_SEC4_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC5_), ERRFLAG_SEC5_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC6_), ERRFLAG_SEC6_NOT_ASSOCIATED )
+
+  ! Allocate the sections
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC0_ALLOC) THIS%SEC0_%ALLOCATE( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC1_ALLOC) THIS%SEC1_%ALLOCATE( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC2_ALLOC) THIS%SEC2_%ALLOCATE( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC3_ALLOC) THIS%SEC3_%ALLOCATE( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC4_ALLOC) THIS%SEC4_%ALLOCATE( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC5_ALLOC) THIS%SEC5_%ALLOCATE( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC6_ALLOC) THIS%SEC6_%ALLOCATE( PAR, MSG, METADATA, HOOKS )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC0_ALLOC)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 0 allocation' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC1_ALLOC)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 1 allocation' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC2_ALLOC)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 2 allocation' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC3_ALLOC)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 3 allocation' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC4_ALLOC)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 4 allocation' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC5_ALLOC)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 5 allocation' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC6_ALLOC)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 6 allocation' )
+    CASE(ERRFLAG_SEC0_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 0 not associated' )
+    CASE(ERRFLAG_SEC1_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 1 not associated' )
+    CASE(ERRFLAG_SEC2_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 2 not associated' )
+    CASE(ERRFLAG_SEC3_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 3 not associated' )
+    CASE(ERRFLAG_SEC4_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 4 not associated' )
+    CASE(ERRFLAG_SEC5_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 5 not associated' )
+    CASE(ERRFLAG_SEC6_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 6 not associated' )
+    CASE(ERRFLAG_METADATA_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'metadata not associated' )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_ENCODER_ALLOCATE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Presets GRIB2 Encoder using the provided parameters and message data.
+!>
+!> This function presets a GRIB2 Encoder object (`THIS`) using the provided model parameters (`PARAMS`),
+!> message structure (`MSG`), and metadata (`METADATA`). The process can be run in verbose mode if specified.
+!> The function is thread-safe and returns an error code indicating the success or failure of the preset operation.
+!>
+!> @section interface
+!>
+!> @param [in]    THIS      GRIB2 Encoder object to be preset.
+!> @param [in]    PARAMS    Model parameters used during the preset process.
+!> @param [in]    MSG       Message structure providing necessary information.
+!> @param [inout] METADATA  Pointer to metadata involved in the preset process.
+!> @param [in]    VERBOSE   Logical flag for verbose output during the preset operation.
+!>
+!> @return Integer error code (`RET`) indicating success or failure:
+!>         - `0`: Success
+!>         - `1`: Failure
+!>
+!> @section dependencies
+!>
+!> @subsection local dependencies
+!>
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MESSAGE_T
+!>   - @dependency [TYPE] METADATA_BASE_MOD::METADATA_BASE_A
+!>
+!> @subsection special dependencies
+!>
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_ENCODER_PRESET
+!> @see GRIB2_ENCODER_ALLOCATE
+!> @see GRIB2_ENCODER_INIT
+!> @see GRIB2_ENCODER_RUNTIME
+!> @see GRIB2_ENCODER_TO_BE_ENCODED
+!> @see GRIB2_ENCODER_FREE
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_ENCODER_PRESET'
+PP_THREAD_SAFE FUNCTION GRIB2_ENCODER_PRESET( THIS, PAR, &
+&   MSG, METADATA, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,   ONLY: JPIB_K
+  USE :: PARAMETRIZATION_MOD, ONLY: PARAMETRIZATION_T
+  USE :: FORTRAN_MESSAGE_MOD, ONLY: FORTRAN_MESSAGE_T
+  USE :: METADATA_BASE_MOD,   ONLY: METADATA_BASE_A
+  USE :: HOOKS_MOD,           ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(GRIB2_ENCODER_T),          INTENT(INOUT) :: THIS
+  TYPE(PARAMETRIZATION_T),         INTENT(IN)    :: PAR
+  TYPE(FORTRAN_MESSAGE_T),         INTENT(IN)    :: MSG
+  CLASS(METADATA_BASE_A), POINTER, INTENT(INOUT) :: METADATA
+  TYPE(HOOKS_T),                   INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC0_PRESET=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC1_PRESET=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC2_PRESET=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC3_PRESET=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC4_PRESET=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC5_PRESET=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC6_PRESET=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC0_NOT_ASSOCIATED=8_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC1_NOT_ASSOCIATED=9_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC2_NOT_ASSOCIATED=10_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC3_NOT_ASSOCIATED=11_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC4_NOT_ASSOCIATED=12_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC5_NOT_ASSOCIATED=13_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC6_NOT_ASSOCIATED=14_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_METADATA_NOT_ASSOCIATED=15_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED( METADATA ), ERRFLAG_METADATA_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC0_), ERRFLAG_SEC0_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC1_), ERRFLAG_SEC1_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC2_), ERRFLAG_SEC2_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC3_), ERRFLAG_SEC3_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC4_), ERRFLAG_SEC4_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC5_), ERRFLAG_SEC5_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC6_), ERRFLAG_SEC6_NOT_ASSOCIATED )
+
+  ! Allocate the sections
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC0_PRESET) THIS%SEC0_%PRESET( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC1_PRESET) THIS%SEC1_%PRESET( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC2_PRESET) THIS%SEC2_%PRESET( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC3_PRESET) THIS%SEC3_%PRESET( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC4_PRESET) THIS%SEC4_%PRESET( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC5_PRESET) THIS%SEC5_%PRESET( PAR, MSG, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC6_PRESET) THIS%SEC6_%PRESET( PAR, MSG, METADATA, HOOKS )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC0_PRESET)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 0 preset' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC1_PRESET)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 1 preset' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC2_PRESET)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 2 preset' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC3_PRESET)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 3 preset' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC4_PRESET)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 4 preset' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC5_PRESET)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 5 preset' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC6_PRESET)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 6 preset' )
+    CASE(ERRFLAG_SEC0_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 0 not associated' )
+    CASE(ERRFLAG_SEC1_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 1 not associated' )
+    CASE(ERRFLAG_SEC2_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 2 not associated' )
+    CASE(ERRFLAG_SEC3_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 3 not associated' )
+    CASE(ERRFLAG_SEC4_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 4 not associated' )
+    CASE(ERRFLAG_SEC5_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 5 not associated' )
+    CASE(ERRFLAG_SEC6_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 6 not associated' )
+    CASE(ERRFLAG_METADATA_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'metadata not associated' )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_ENCODER_PRESET
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Executes runtime processing for GRIB2 Encoder using provided parameters, message data, and time history.
+!>
+!> This function performs runtime operations for a GRIB2 Encoder object (`THIS`) using the provided model parameters (`PARAMS`),
+!> message structure (`MSG`), current time (`CURR_TIME`), time history (`TIME_HISTORY`), and metadata (`METADATA`).
+!> The process can be run in verbose mode if specified. The function is thread-safe and returns an error code indicating
+!> the success or failure of the runtime operation.
+!>
+!> @section interface
+!>
+!> @param [in]    THIS          GRIB2 Encoder object for runtime execution.
+!> @param [in]    PARAMS        Model parameters used during the runtime process.
+!> @param [in]    MSG           Message structure providing necessary information.
+!> @param [in]    CURR_TIME     Current time used in the runtime process.
+!> @param [in]    TIME_HISTORY  Time history information for the runtime process.
+!> @param [inout] METADATA      Pointer to metadata involved in the runtime process.
+!> @param [in]    VERBOSE       Logical flag for verbose output during the runtime operation.
+!>
+!> @return Integer error code (`RET`) indicating success or failure:
+!>         - `0`: Success
+!>         - `1`: Failure
+!>
+!> @section dependencies
+!>
+!> @subsection local dependencies
+!>
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MESSAGE_T
+!>   - @dependency [TYPE] METADATA_BASE_MOD::METADATA_BASE_A
+!>   - @dependency [TYPE] OM_CORE_MOD::TIME_HISTORY_T
+!>   - @dependency [TYPE] OM_CORE_MOD::CURR_TIME_T
+!>
+!> @subsection special dependencies
+!>
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_ENCODER_RUNTIME
+!> @see GRIB2_ENCODER_ALLOCATE
+!> @see GRIB2_ENCODER_INIT
+!> @see GRIB2_ENCODER_PRESET
+!> @see GRIB2_ENCODER_TO_BE_ENCODED
+!> @see GRIB2_ENCODER_FREE
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_ENCODER_RUNTIME'
+PP_THREAD_SAFE FUNCTION GRIB2_ENCODER_RUNTIME( THIS, PAR, &
+&       MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,   ONLY: JPIB_K
+  USE :: PARAMETRIZATION_MOD, ONLY: PARAMETRIZATION_T
+  USE :: FORTRAN_MESSAGE_MOD, ONLY: FORTRAN_MESSAGE_T
+  USE :: METADATA_BASE_MOD,   ONLY: METADATA_BASE_A
+  USE :: TIME_UTILS_MOD,      ONLY: TIME_HISTORY_T
+  USE :: TIME_UTILS_MOD,      ONLY: CURR_TIME_T
+  USE :: HOOKS_MOD,           ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(GRIB2_ENCODER_T),          INTENT(INOUT) :: THIS
+  TYPE(PARAMETRIZATION_T),         INTENT(IN)    :: PAR
+  TYPE(FORTRAN_MESSAGE_T),         INTENT(IN)    :: MSG
+  TYPE(TIME_HISTORY_T),            INTENT(IN)    :: TIME_HIST
+  TYPE(CURR_TIME_T),               INTENT(IN)    :: CURR_TIME
+  CLASS(METADATA_BASE_A), POINTER, INTENT(INOUT) :: METADATA
+  TYPE(HOOKS_T),                   INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC0_RUNTIME=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC1_RUNTIME=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC2_RUNTIME=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC3_RUNTIME=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC4_RUNTIME=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC5_RUNTIME=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC6_RUNTIME=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC0_NOT_ASSOCIATED=8_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC1_NOT_ASSOCIATED=9_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC2_NOT_ASSOCIATED=10_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC3_NOT_ASSOCIATED=11_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC4_NOT_ASSOCIATED=12_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC5_NOT_ASSOCIATED=13_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC6_NOT_ASSOCIATED=14_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_METADATA_NOT_ASSOCIATED=15_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED( METADATA ), ERRFLAG_METADATA_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC0_), ERRFLAG_SEC0_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC1_), ERRFLAG_SEC1_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC2_), ERRFLAG_SEC2_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC3_), ERRFLAG_SEC3_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC4_), ERRFLAG_SEC4_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC5_), ERRFLAG_SEC5_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC6_), ERRFLAG_SEC6_NOT_ASSOCIATED )
+
+  ! Allocate the sections
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC0_RUNTIME) THIS%SEC0_%RUNTIME( PAR, MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC1_RUNTIME) THIS%SEC1_%RUNTIME( PAR, MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC2_RUNTIME) THIS%SEC2_%RUNTIME( PAR, MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC3_RUNTIME) THIS%SEC3_%RUNTIME( PAR, MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC4_RUNTIME) THIS%SEC4_%RUNTIME( PAR, MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC5_RUNTIME) THIS%SEC5_%RUNTIME( PAR, MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC6_RUNTIME) THIS%SEC6_%RUNTIME( PAR, MSG, CURR_TIME, TIME_HIST, METADATA, HOOKS )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC0_RUNTIME)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 0 runtime' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC1_RUNTIME)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 1 runtime' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC2_RUNTIME)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 2 runtime' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC3_RUNTIME)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 3 runtime' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC4_RUNTIME)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 4 runtime' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC5_RUNTIME)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 5 runtime' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC6_RUNTIME)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 6 runtime' )
+    CASE(ERRFLAG_SEC0_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 0 not associated' )
+    CASE(ERRFLAG_SEC1_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 1 not associated' )
+    CASE(ERRFLAG_SEC2_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 2 not associated' )
+    CASE(ERRFLAG_SEC3_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 3 not associated' )
+    CASE(ERRFLAG_SEC4_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 4 not associated' )
+    CASE(ERRFLAG_SEC5_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 5 not associated' )
+    CASE(ERRFLAG_SEC6_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 6 not associated' )
+    CASE(ERRFLAG_METADATA_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'metadata not associated' )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_ENCODER_RUNTIME
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Prepares GRIB2 Encoder for encoding based on provided parameters, message data, and time history.
+!>
+!> This function determines whether GRIB2 Encoder (`THIS`) is ready to be encoded. It processes the provided model parameters
+!> (`PARAMS`), message structure (`MSG`), current time (`CURR_TIME`), time history (`TIME_HISTORY`), and updates the
+!> `TO_BE_ENCODED` flag accordingly. The function is thread-safe and returns an error code indicating the success or failure
+!> of the operation. The process can also be run in verbose mode if specified.
+!>
+!> @section interface
+!>
+!> @param [inout] THIS          GRIB2 Encoder object to be checked for encoding readiness.
+!> @param [in]    PARAMS        Model parameters used during the encoding preparation.
+!> @param [in]    MSG           Message structure providing necessary information.
+!> @param [in]    CURR_TIME     Current time used in the encoding process.
+!> @param [in]    TIME_HISTORY  Time history information for the encoding process.
+!> @param [inout] TO_BE_ENCODED Logical flag indicating whether the section is ready to be encoded.
+!> @param [in]    VERBOSE       Logical flag for verbose output during the operation.
+!>
+!> @return Integer error code (`RET`) indicating success or failure:
+!>         - `0`: Success
+!>         - `1`: Failure
+!>
+!> @section dependencies
+!>
+!> @subsection local dependencies
+!>
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MODEL_PAR_T
+!>   - @dependency [TYPE] OM_DATA_TYPES_MOD::MESSAGE_T
+!>   - @dependency [TYPE] OM_CORE_MOD::TIME_HISTORY_T
+!>   - @dependency [TYPE] OM_CORE_MOD::CURR_TIME_T
+!>
+!> @subsection special dependencies
+!>
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_ENCODER_TO_BE_ENCODED
+!> @see GRIB2_ENCODER_INIT
+!> @see GRIB2_ENCODER_ALLOCATE
+!> @see GRIB2_ENCODER_PRESET
+!> @see GRIB2_ENCODER_RUNTIME
+!> @see GRIB2_ENCODER_FREE
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_ENCODER_TO_BE_ENCODED'
+PP_THREAD_SAFE FUNCTION GRIB2_ENCODER_TO_BE_ENCODED( THIS, PAR, &
+&    MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,   ONLY: JPIB_K
+  USE :: PARAMETRIZATION_MOD, ONLY: PARAMETRIZATION_T
+  USE :: FORTRAN_MESSAGE_MOD, ONLY: FORTRAN_MESSAGE_T
+  USE :: TIME_UTILS_MOD,      ONLY: TIME_HISTORY_T
+  USE :: TIME_UTILS_MOD,      ONLY: CURR_TIME_T
+  USE :: HOOKS_MOD,           ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(GRIB2_ENCODER_T),       INTENT(INOUT) :: THIS
+  TYPE(PARAMETRIZATION_T),      INTENT(IN)    :: PAR
+  TYPE(FORTRAN_MESSAGE_T),      INTENT(IN)    :: MSG
+  TYPE(TIME_HISTORY_T),         INTENT(IN)    :: TIME_HIST
+  TYPE(CURR_TIME_T),            INTENT(IN)    :: CURR_TIME
+  LOGICAL,                      INTENT(INOUT) :: TO_BE_ENCODED
+  TYPE(HOOKS_T),                INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC0_TO_BE_ENCODED=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC1_TO_BE_ENCODED=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC2_TO_BE_ENCODED=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC3_TO_BE_ENCODED=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC4_TO_BE_ENCODED=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC5_TO_BE_ENCODED=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC6_TO_BE_ENCODED=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC0_NOT_ASSOCIATED=8_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC1_NOT_ASSOCIATED=9_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC2_NOT_ASSOCIATED=10_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC3_NOT_ASSOCIATED=11_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC4_NOT_ASSOCIATED=12_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC5_NOT_ASSOCIATED=13_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC6_NOT_ASSOCIATED=14_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC0_), ERRFLAG_SEC0_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC1_), ERRFLAG_SEC1_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC2_), ERRFLAG_SEC2_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC3_), ERRFLAG_SEC3_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC4_), ERRFLAG_SEC4_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC5_), ERRFLAG_SEC5_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC6_), ERRFLAG_SEC6_NOT_ASSOCIATED )
+
+  ! Allocate the sections
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC0_TO_BE_ENCODED) THIS%SEC0_%TO_BE_ENCODED( PAR, MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC1_TO_BE_ENCODED) THIS%SEC1_%TO_BE_ENCODED( PAR, MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC2_TO_BE_ENCODED) THIS%SEC2_%TO_BE_ENCODED( PAR, MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC3_TO_BE_ENCODED) THIS%SEC3_%TO_BE_ENCODED( PAR, MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC4_TO_BE_ENCODED) THIS%SEC4_%TO_BE_ENCODED( PAR, MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC5_TO_BE_ENCODED) THIS%SEC5_%TO_BE_ENCODED( PAR, MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC6_TO_BE_ENCODED) THIS%SEC6_%TO_BE_ENCODED( PAR, MSG, CURR_TIME, TIME_HIST, TO_BE_ENCODED, HOOKS )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC0_TO_BE_ENCODED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 0 to be encoded' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC1_TO_BE_ENCODED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 1 to be encoded' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC2_TO_BE_ENCODED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 2 to be encoded' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC3_TO_BE_ENCODED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 3 to be encoded' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC4_TO_BE_ENCODED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 4 to be encoded' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC5_TO_BE_ENCODED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 5 to be encoded' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC6_TO_BE_ENCODED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 6 to be encoded' )
+    CASE(ERRFLAG_SEC0_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 0 not associated' )
+    CASE(ERRFLAG_SEC1_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 1 not associated' )
+    CASE(ERRFLAG_SEC2_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 2 not associated' )
+    CASE(ERRFLAG_SEC3_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 3 not associated' )
+    CASE(ERRFLAG_SEC4_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 4 not associated' )
+    CASE(ERRFLAG_SEC5_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 5 not associated' )
+    CASE(ERRFLAG_SEC6_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 6 not associated' )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_ENCODER_TO_BE_ENCODED
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Frees resources associated with GRIB2 Encoder object.
+!>
+!> This function deallocates and cleans up resources associated with the GRIB2 Encoder object (`THIS`).
+!> The process can be run in verbose mode for additional output. The function is thread-safe and returns an
+!> error code indicating the success or failure of the operation.
+!>
+!> @section interface
+!>
+!> @param [inout] THIS    GRIB2 Encoder object to be deallocated and freed.
+!> @param [in]    VERBOSE Logical flag for verbose output during resource cleanup.
+!>
+!> @return Integer error code (`RET`) indicating success or failure:
+!>         - `0`: Success
+!>         - `1`: Failure
+!>
+!> @section dependencies
+!>
+!> @subsection special dependencies
+!>
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>   - @dependency [*] PP_LOG_USE_VARS::*
+!>   - @dependency [*] PP_TRACE_USE_VARS::*
+!>
+!> @see GRIB2_ENCODER_INIT
+!> @see GRIB2_ENCODER_ALLOCATE
+!> @see GRIB2_ENCODER_PRESET
+!> @see GRIB2_ENCODER_RUNTIME
+!> @see GRIB2_ENCODER_TO_BE_ENCODED
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_ENCODER_FREE'
+PP_THREAD_SAFE FUNCTION GRIB2_ENCODER_FREE( THIS, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,   ONLY: JPIB_K
+  USE :: HOOKS_MOD,           ONLY: HOOKS_T
+  USE :: GRIB2_SECTION0_FACTORY_MOD, ONLY: DESTROY_GRIB2_SECTION0
+  USE :: GRIB2_SECTION1_FACTORY_MOD, ONLY: DESTROY_GRIB2_SECTION1
+  USE :: GRIB2_SECTION2_FACTORY_MOD, ONLY: DESTROY_GRIB2_SECTION2
+  USE :: GRIB2_SECTION3_FACTORY_MOD, ONLY: DESTROY_GRIB2_SECTION3
+  USE :: GRIB2_SECTION4_FACTORY_MOD, ONLY: DESTROY_GRIB2_SECTION4
+  USE :: GRIB2_SECTION5_FACTORY_MOD, ONLY: DESTROY_GRIB2_SECTION5
+  USE :: GRIB2_SECTION6_FACTORY_MOD, ONLY: DESTROY_GRIB2_SECTION6
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(GRIB2_ENCODER_T), INTENT(INOUT) :: THIS
+  TYPE(HOOKS_T),          INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC0_NOT_ASSOCIATED=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC1_NOT_ASSOCIATED=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC2_NOT_ASSOCIATED=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC3_NOT_ASSOCIATED=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC4_NOT_ASSOCIATED=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC5_NOT_ASSOCIATED=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC6_NOT_ASSOCIATED=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC0_DESTRUCTOR=8_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC1_DESTRUCTOR=9_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC2_DESTRUCTOR=10_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC3_DESTRUCTOR=11_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC4_DESTRUCTOR=12_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC5_DESTRUCTOR=13_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC6_DESTRUCTOR=14_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC0_), ERRFLAG_SEC0_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC1_), ERRFLAG_SEC1_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC2_), ERRFLAG_SEC2_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC3_), ERRFLAG_SEC3_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC4_), ERRFLAG_SEC4_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC5_), ERRFLAG_SEC5_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC6_), ERRFLAG_SEC6_NOT_ASSOCIATED )
+
+  ! Allocate the sections
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC0_DESTRUCTOR) DESTROY_GRIB2_SECTION0( THIS%SEC0_, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC1_DESTRUCTOR) DESTROY_GRIB2_SECTION1( THIS%SEC1_, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC2_DESTRUCTOR) DESTROY_GRIB2_SECTION2( THIS%SEC2_, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC3_DESTRUCTOR) DESTROY_GRIB2_SECTION3( THIS%SEC3_, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC4_DESTRUCTOR) DESTROY_GRIB2_SECTION4( THIS%SEC4_, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC5_DESTRUCTOR) DESTROY_GRIB2_SECTION5( THIS%SEC5_, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC6_DESTRUCTOR) DESTROY_GRIB2_SECTION6( THIS%SEC6_, HOOKS )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_SEC0_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 0 not associated' )
+    CASE(ERRFLAG_SEC1_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 1 not associated' )
+    CASE(ERRFLAG_SEC2_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 2 not associated' )
+    CASE(ERRFLAG_SEC3_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 3 not associated' )
+    CASE(ERRFLAG_SEC4_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 4 not associated' )
+    CASE(ERRFLAG_SEC5_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 5 not associated' )
+    CASE(ERRFLAG_SEC6_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 6 not associated' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC0_DESTRUCTOR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 0 destructor' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC1_DESTRUCTOR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 1 destructor' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC2_DESTRUCTOR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 2 destructor' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC3_DESTRUCTOR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 3 destructor' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC4_DESTRUCTOR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 4 destructor' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC5_DESTRUCTOR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 5 destructor' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC6_DESTRUCTOR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 6 destructor' )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_ENCODER_FREE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+
+!>
+!> @brief Print informations related to the grib section
+!>
+!> @section interface
+!>   @param [inout] THIS An object of type `GRIB_SECTION_BASE_A` representing the GRIB section to be freed.
+!>   @param [in]    UNIT The unit to which the information will be printed.
+!>   @param [in]    OFFSET The offset to be used for indentation.
+!>   @param [inout] HOOKS Utilities to be used for logging, debugging, tracing and option handling
+!>
+!> @return Integer error code (`RET`) indicating success or failure:
+!>         - `0`: Success
+!>         - `1`: Failure
+!>
+!> @section local dependencies
+!>   - @dependency [PARAMETER] DATAKINDS_DEF_MOD::JPIB_K
+!>   - @dependency [TYPE] PARAMETRIZATION_MOD::PARAMETRIZATION_T
+!>   - @dependency [TYPE] FORTRAN_MESSAGE_MOD::FORTRAN_MESSAGE_T
+!>   - @dependency [TYPE] HOOKS_MOD::HOOKS_T
+!>
+!> @section special dependencies
+!>   - @dependency [*] PP_DEBUG_USE_VARS::*
+!>
+!> @section intrinsic dependencies
+!>   None.
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GRIB2_ENCODER_PRINT'
+PP_THREAD_SAFE FUNCTION GRIB2_ENCODER_PRINT( THIS, UNIT, OFFSET, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(GRIB2_ENCODER_T), INTENT(INOUT) :: THIS
+  INTEGER(KIND=JPIB_K),   INTENT(IN)    :: UNIT
+  INTEGER(KIND=JPIB_K),   INTENT(IN)    :: OFFSET
+  TYPE(HOOKS_T),          INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC0_NOT_ASSOCIATED=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC1_NOT_ASSOCIATED=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC2_NOT_ASSOCIATED=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC3_NOT_ASSOCIATED=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC4_NOT_ASSOCIATED=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC5_NOT_ASSOCIATED=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SEC6_NOT_ASSOCIATED=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC0_PRINT=8_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC1_PRINT=9_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC2_PRINT=10_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC3_PRINT=11_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC4_PRINT=12_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC5_PRINT=13_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_SEC6_PRINT=14_JPIB_K
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: WRITE_STAT
+
+   ! Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_WRITE_ERROR=1_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC0_), ERRFLAG_SEC0_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC1_), ERRFLAG_SEC1_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC2_), ERRFLAG_SEC2_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC3_), ERRFLAG_SEC3_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC4_), ERRFLAG_SEC4_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC5_), ERRFLAG_SEC5_NOT_ASSOCIATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%SEC6_), ERRFLAG_SEC6_NOT_ASSOCIATED )
+
+  ! Write the section information
+  IF ( OFFSET .LE. 0 ) THEN
+    WRITE(UNIT,'(A,A,A,A)', IOSTAT=WRITE_STAT) 'GRIB2_ENCODER_T: ', TRIM(ADJUSTL(THIS%NUMBER_)), '::', TRIM(ADJUSTL(THIS%TYPE_))
+    PP_DEBUG_CRITICAL_COND_THROW(WRITE_STAT.NE.0, ERRFLAG_WRITE_ERROR )
+  ELSE
+    WRITE(UNIT,'(A,A,A,A,A)', IOSTAT=WRITE_STAT) REPEAT(' ',OFFSET), 'GRIB2_ENCODER_T: ', TRIM(ADJUSTL(THIS%NUMBER_)), '::', TRIM(ADJUSTL(THIS%TYPE_))
+    PP_DEBUG_CRITICAL_COND_THROW(WRITE_STAT.NE.0, ERRFLAG_WRITE_ERROR )
+  ENDIF
+
+  !> Call nested print sections
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC0_PRINT) THIS%SEC0_%PRINT( UNIT, OFFSET+2, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC1_PRINT) THIS%SEC1_%PRINT( UNIT, OFFSET+2, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC2_PRINT) THIS%SEC2_%PRINT( UNIT, OFFSET+2, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC3_PRINT) THIS%SEC3_%PRINT( UNIT, OFFSET+2, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC4_PRINT) THIS%SEC4_%PRINT( UNIT, OFFSET+2, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC5_PRINT) THIS%SEC5_%PRINT( UNIT, OFFSET+2, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_SEC6_PRINT) THIS%SEC6_%PRINT( UNIT, OFFSET+2, HOOKS )
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    CHARACTER(LEN=:), ALLOCATABLE :: STR
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_SEC0_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 0 not associated' )
+    CASE(ERRFLAG_SEC1_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 1 not associated' )
+    CASE(ERRFLAG_SEC2_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 2 not associated' )
+    CASE(ERRFLAG_SEC3_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 3 not associated' )
+    CASE(ERRFLAG_SEC4_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 4 not associated' )
+    CASE(ERRFLAG_SEC5_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 5 not associated' )
+    CASE(ERRFLAG_SEC6_NOT_ASSOCIATED)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'section 6 not associated' )
+    CASE (ERRFLAG_WRITE_ERROR)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'error writing to given unit' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC0_PRINT)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 0 print' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC1_PRINT)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 1 print' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC2_PRINT)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 2 print' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC3_PRINT)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 3 print' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC4_PRINT)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 4 print' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC5_PRINT)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 5 print' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_SEC6_PRINT)
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unable to call section 6 print' )
+    CASE DEFAULT
+      PP_DEBUG_CREATE_ERROR_MSG( STR, 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( STR )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION GRIB2_ENCODER_PRINT
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+END MODULE GRIB2_ENCODER_MOD
+#undef PP_SECTION_NAME
+#undef PP_SECTION_TYPE
+#undef PP_FILE_NAME

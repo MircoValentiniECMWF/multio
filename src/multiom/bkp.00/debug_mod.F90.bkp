@@ -1,0 +1,145 @@
+MODULE DEBUG_MOD
+    IMPLICIT NONE
+
+    ! Linked list node for error messages
+    TYPE :: ERROR_MSG_NODE
+        CHARACTER(LEN=:) :: MESSAGE
+        TYPE(ERROR_MSG_NODE), POINTER :: NEXT => NULL()
+    END TYPE ERROR_MSG_NODE
+
+    ! Linked list node for error frames
+    TYPE :: ERROR_FRAME_NODE
+        CHARACTER(LEN=128) :: FILENAME, SECTION_TYPE, SECTION_NAME
+        CHARACTER(LEN=128) :: PROCEDURE_TYPE, PROCEDURE_NAME
+        INTEGER :: LINE, ERRIDX
+        TYPE(ERROR_MSG_NODE), POINTER :: MSG_LIST => NULL()
+        TYPE(ERROR_FRAME_NODE), POINTER :: NEXT => NULL()
+    END TYPE ERROR_FRAME_NODE
+
+    ! Main debug type
+    TYPE :: DEBUG_T
+        
+        TYPE(ERROR_FRAME_NODE), POINTER :: FRAME_STACK => NULL()
+    CONTAINS
+        PROCEDURE :: INIT
+        PROCEDURE :: FREE
+        PROCEDURE :: PUSH_ERROR_FRAME
+        PROCEDURE :: PUSH_ERROR_MSG
+        PROCEDURE :: PRINT_ERROR_STACK
+    END TYPE DEBUG_T
+
+CONTAINS
+
+    ! Initialize the DEBUG_T structure
+    SUBROUTINE INIT(THIS)
+        CLASS(DEBUG_T), INTENT(INOUT) :: THIS
+        THIS%FRAME_STACK => NULL()
+    END SUBROUTINE INIT
+
+    ! Free the error stack (both frames and messages)
+    SUBROUTINE FREE(THIS)
+        CLASS(DEBUG_T), INTENT(INOUT) :: THIS
+        TYPE(ERROR_FRAME_NODE), POINTER :: CURRENT_FRAME, NEXT_FRAME
+        TYPE(ERROR_MSG_NODE), POINTER :: CURRENT_MSG, NEXT_MSG
+
+        CURRENT_FRAME => THIS%FRAME_STACK
+
+        ! Traverse all frames
+        DO WHILE (ASSOCIATED(CURRENT_FRAME))
+            NEXT_FRAME => CURRENT_FRAME%NEXT
+
+            ! Free all messages in the current frame
+            CURRENT_MSG => CURRENT_FRAME%MSG_LIST
+            DO WHILE (ASSOCIATED(CURRENT_MSG))
+                NEXT_MSG => CURRENT_MSG%NEXT
+                DEALLOCATE(CURRENT_MSG)
+                CURRENT_MSG => NEXT_MSG
+            END DO
+
+            ! Free the current frame
+            DEALLOCATE(CURRENT_FRAME)
+            CURRENT_FRAME => NEXT_FRAME
+        END DO
+
+        ! Reset frame stack
+        THIS%FRAME_STACK => NULL()
+    END SUBROUTINE FREE
+
+    ! Add an error frame to the stack
+    SUBROUTINE PUSH_ERROR_FRAME(THIS, FILENAME, SECTION_TYPE, SECTION_NAME, PROCEDURE_TYPE, PROCEDURE_NAME, LINE, ERRIDX)
+        CLASS(DEBUG_T), INTENT(INOUT) :: THIS
+        CHARACTER(LEN=*), INTENT(IN) :: FILENAME, SECTION_TYPE, SECTION_NAME
+        CHARACTER(LEN=*), INTENT(IN) :: PROCEDURE_TYPE, PROCEDURE_NAME
+        INTEGER, INTENT(IN) :: LINE, ERRIDX
+        TYPE(ERROR_FRAME_NODE), POINTER :: NEW_FRAME
+
+        ! Create a new error frame node
+        ALLOCATE(NEW_FRAME)
+        NEW_FRAME%FILENAME = FILENAME
+        NEW_FRAME%SECTION_TYPE = SECTION_TYPE
+        NEW_FRAME%SECTION_NAME = SECTION_NAME
+        NEW_FRAME%PROCEDURE_TYPE = PROCEDURE_TYPE
+        NEW_FRAME%PROCEDURE_NAME = PROCEDURE_NAME
+        NEW_FRAME%LINE = LINE
+        NEW_FRAME%ERRIDX = ERRIDX
+
+        ! Insert the new frame at the top of the frame stack
+        NEW_FRAME%NEXT => THIS%FRAME_STACK
+        THIS%FRAME_STACK => NEW_FRAME
+    END SUBROUTINE PUSH_ERROR_FRAME
+
+    ! Add an error message to the current frame
+    SUBROUTINE PUSH_ERROR_MSG(THIS, MSG)
+        CLASS(DEBUG_T), INTENT(INOUT) :: THIS
+        CHARACTER(LEN=*), INTENT(IN) :: MSG
+        TYPE(ERROR_MSG_NODE), POINTER :: NEW_MSG
+        TYPE(ERROR_FRAME_NODE), POINTER :: CURRENT_FRAME
+
+        ! Check if there is a current frame
+        CURRENT_FRAME => THIS%FRAME_STACK
+        IF (.NOT. ASSOCIATED(CURRENT_FRAME)) THEN
+            PRINT *, "ERROR: NO FRAME AVAILABLE TO ADD MESSAGE."
+            RETURN
+        END IF
+
+        ! Create a new message node
+        ALLOCATE(NEW_MSG)
+        NEW_MSG%MESSAGE = MSG
+
+        ! Insert the new message at the top of the message list in the current frame
+        NEW_MSG%NEXT => CURRENT_FRAME%MSG_LIST
+        CURRENT_FRAME%MSG_LIST => NEW_MSG
+    END SUBROUTINE PUSH_ERROR_MSG
+
+    ! Print all error frames and their messages
+    SUBROUTINE PRINT_ERROR_STACK(THIS)
+        CLASS(DEBUG_T), INTENT(IN) :: THIS
+        TYPE(ERROR_FRAME_NODE), POINTER :: CURRENT_FRAME
+        TYPE(ERROR_MSG_NODE), POINTER :: CURRENT_MSG
+
+        CURRENT_FRAME => THIS%FRAME_STACK
+
+        IF (.NOT. ASSOCIATED(CURRENT_FRAME)) THEN
+            PRINT *, "NO ERROR FRAMES IN THE STACK."
+            RETURN
+        END IF
+
+        PRINT *, "ERROR STACK (MOST RECENT FIRST):"
+        DO WHILE (ASSOCIATED(CURRENT_FRAME))
+            PRINT *, "-------------------------------------------------"
+            PRINT *, "FILE: ", CURRENT_FRAME%FILENAME
+            PRINT *, "SECTION: ", CURRENT_FRAME%SECTION_TYPE, " ", CURRENT_FRAME%SECTION_NAME
+            PRINT *, "PROCEDURE: ", CURRENT_FRAME%PROCEDURE_TYPE, " ", CURRENT_FRAME%PROCEDURE_NAME
+            PRINT *, "LINE: ", CURRENT_FRAME%LINE
+            PRINT *, "ERROR INDEX: ", CURRENT_FRAME%ERRIDX
+            PRINT *, "MESSAGES:"
+            CURRENT_MSG => CURRENT_FRAME%MSG_LIST
+            DO WHILE (ASSOCIATED(CURRENT_MSG))
+                PRINT *, " - ", CURRENT_MSG%MESSAGE
+                CURRENT_MSG => CURRENT_MSG%NEXT
+            END DO
+            CURRENT_FRAME => CURRENT_FRAME%NEXT
+        END DO
+    END SUBROUTINE PRINT_ERROR_STACK
+
+END MODULE DEBUG_MOD

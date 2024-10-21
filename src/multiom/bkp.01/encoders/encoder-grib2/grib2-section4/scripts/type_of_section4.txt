@@ -1,0 +1,33 @@
+000, instant,    deterministic,  base,         has-level,
+001, instant,    ensemble,       base,         has-level,
+008, statistics, deterministic,  base,         has-level,
+011, statistics, ensemble,       base,         has-level,
+099, instant,    deterministic,  wave_spectra, no-level,
+100, instant,    ensemble,       wave_spectra, no-level,
+103, statistics, deterministic,  wave_spectra, no-level,
+104, statistics, ensemble,       wave_spectra, no-level,
+032, instant,    deterministic,  satellite,    no-level,
+033, instant,    ensemble,       satellite,    no-level,
+
+
+
+
+040, instant,    deterministic,  chemical,     has-level,
+041, instant,    ensemble,       chemical,     has-level,
+042, statistics, deterministic,  chemical,     has-level,
+043, statistics, ensemble,       chemical,     has-level,
+050, instant,    deterministic,  aerosol,      has-level,
+045, instant,    ensemble,       aerosol,      has-level,
+046, statistics, deterministic,  aerosol,      has-level,
+047, statistics, ensemble,       aerosol,      has-level,
+
+
+044
+048
+049
+086  quantiles
+087  quantiles
+105 climatology
+107 climatology
+108 brightness temperature
+109 brightness temperature

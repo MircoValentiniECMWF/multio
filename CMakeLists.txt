@@ -31,21 +31,21 @@ endif()
 ### fdb5 plugin
 
 ecbuild_add_option( FEATURE FDB5
-                    DEFAULT ON
+                    DEFAULT OFF
                     DESCRIPTION "Send data to FDB5"
                     REQUIRED_PACKAGES "NAME fdb5 VERSION 5.11.20" )
 
 ### atlas-io plugin
 
 ecbuild_add_option( FEATURE ATLAS_IO
-                    DEFAULT ON
+                    DEFAULT OFF
                     DESCRIPTION "Use atlasIO for the restart"
                     REQUIRED_PACKAGES "NAME atlas_io VERSION 0.33" )
 
 ### interpolate action
 
 ecbuild_add_option( FEATURE MIR
-                    DEFAULT ON
+                    DEFAULT OFF
                     DESCRIPTION "Interpolate data using MIR"
                     REQUIRED_PACKAGES "NAME mir VERSION 1.17.0" )
 
@@ -102,7 +102,7 @@ ecbuild_add_option( FEATURE HEALPIX_EXAMPLES
 
 ###  Definitions used by the output manager
 ecbuild_add_option( FEATURE OUTPUT_MANAGER
-	            DEFAULT ON
+	                DEFAULT ON
                     DESCRIPTION "Build the output manager" )
 
 ecbuild_add_option( FEATURE OUTPUT_MANAGER_ENCODER_REPORT

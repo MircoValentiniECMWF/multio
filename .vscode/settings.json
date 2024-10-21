@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.yaml": "yaml",
         "__bit_reference": "cpp",
         "__bits": "cpp",
         "__config": "cpp",
@@ -78,7 +79,8 @@
         "algorithm": "cpp",
         "functional": "cpp",
         "iterator": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "*.in": "c"
     },
     "C_Cpp.dimInactiveRegions": false,
     "python.formatting.provider": "black"

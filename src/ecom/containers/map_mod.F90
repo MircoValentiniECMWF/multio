@@ -111,6 +111,7 @@ TYPE :: MAP_NODE_T
 
   !> Pointer to the right subtree
   TYPE(MAP_NODE_T), POINTER :: RIGHT  => NULL()
+
 END TYPE
 
 

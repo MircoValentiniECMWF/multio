@@ -1,0 +1,178 @@
+      CASE ('surface')
+        LEVEL_CONFIGURATOR_TYPE = 0_JPIB_K
+      CASE ('entireatmosphere')
+        LEVEL_CONFIGURATOR_TYPE = 1_JPIB_K
+      CASE ('entireocean')
+        LEVEL_CONFIGURATOR_TYPE = 2_JPIB_K
+      CASE ('entirelake')
+        LEVEL_CONFIGURATOR_TYPE = 3_JPIB_K
+      CASE ('cloudbase')
+        LEVEL_CONFIGURATOR_TYPE = 4_JPIB_K
+      CASE ('cloudtop')
+        LEVEL_CONFIGURATOR_TYPE = 5_JPIB_K
+      CASE ('isothermzero')
+        LEVEL_CONFIGURATOR_TYPE = 6_JPIB_K
+      CASE ('adiabaticcondensation')
+        LEVEL_CONFIGURATOR_TYPE = 7_JPIB_K
+      CASE ('maxwind')
+        LEVEL_CONFIGURATOR_TYPE = 8_JPIB_K
+      CASE ('tropopause')
+        LEVEL_CONFIGURATOR_TYPE = 9_JPIB_K
+      CASE ('nominaltop')
+        LEVEL_CONFIGURATOR_TYPE = 10_JPIB_K
+      CASE ('seabottom')
+        LEVEL_CONFIGURATOR_TYPE = 11_JPIB_K
+      CASE ('atmosphere')
+        LEVEL_CONFIGURATOR_TYPE = 12_JPIB_K
+      CASE ('cumulonimbusbase')
+        LEVEL_CONFIGURATOR_TYPE = 13_JPIB_K
+      CASE ('cumulonimbustop')
+        LEVEL_CONFIGURATOR_TYPE = 14_JPIB_K
+      CASE ('freeconvection')
+        LEVEL_CONFIGURATOR_TYPE = 15_JPIB_K
+      CASE ('convectivecondensation')
+        LEVEL_CONFIGURATOR_TYPE = 16_JPIB_K
+      CASE ('neutralbuoyancy')
+        LEVEL_CONFIGURATOR_TYPE = 17_JPIB_K
+      CASE ('mostunstableparcel')
+        LEVEL_CONFIGURATOR_TYPE = 18_JPIB_K
+      CASE ('mixedlayerparcel')
+        LEVEL_CONFIGURATOR_TYPE = 19_JPIB_K
+      CASE ('isothermal')
+        LEVEL_CONFIGURATOR_TYPE = 20_JPIB_K
+      CASE ('isobaricinpa')
+        LEVEL_CONFIGURATOR_TYPE = 21_JPIB_K
+      CASE ('isobaricinhpa')
+        LEVEL_CONFIGURATOR_TYPE = 22_JPIB_K
+      CASE ('isobariclayer')
+        LEVEL_CONFIGURATOR_TYPE = 23_JPIB_K
+      CASE ('lowcloudlayer')
+        LEVEL_CONFIGURATOR_TYPE = 24_JPIB_K
+      CASE ('mediumcloudlayer')
+        LEVEL_CONFIGURATOR_TYPE = 25_JPIB_K
+      CASE ('highcloudlayer')
+        LEVEL_CONFIGURATOR_TYPE = 26_JPIB_K
+      CASE ('meansea')
+        LEVEL_CONFIGURATOR_TYPE = 27_JPIB_K
+      CASE ('heightabovesea')
+        LEVEL_CONFIGURATOR_TYPE = 28_JPIB_K
+      CASE ('heightabovesealayer')
+        LEVEL_CONFIGURATOR_TYPE = 29_JPIB_K
+      CASE ('heightaboveground')
+        LEVEL_CONFIGURATOR_TYPE = 30_JPIB_K
+      CASE ('heightabovegroundlayer')
+        LEVEL_CONFIGURATOR_TYPE = 31_JPIB_K
+      CASE ('sigma')
+        LEVEL_CONFIGURATOR_TYPE = 32_JPIB_K
+      CASE ('sigmalayer')
+        LEVEL_CONFIGURATOR_TYPE = 33_JPIB_K
+      CASE ('hybrid')
+        LEVEL_CONFIGURATOR_TYPE = 34_JPIB_K
+      CASE ('hybridlayer')
+        LEVEL_CONFIGURATOR_TYPE = 35_JPIB_K
+      CASE ('depthbelowland')
+        LEVEL_CONFIGURATOR_TYPE = 36_JPIB_K
+      CASE ('depthbelowlandlayer')
+        LEVEL_CONFIGURATOR_TYPE = 37_JPIB_K
+      CASE ('theta')
+        LEVEL_CONFIGURATOR_TYPE = 38_JPIB_K
+      CASE ('thetalayer')
+        LEVEL_CONFIGURATOR_TYPE = 39_JPIB_K
+      CASE ('pressurefromground')
+        LEVEL_CONFIGURATOR_TYPE = 40_JPIB_K
+      CASE ('pressurefromgroundlayer')
+        LEVEL_CONFIGURATOR_TYPE = 41_JPIB_K
+      CASE ('potentialvorticity')
+        LEVEL_CONFIGURATOR_TYPE = 42_JPIB_K
+      CASE ('eta')
+        LEVEL_CONFIGURATOR_TYPE = 43_JPIB_K
+      CASE ('snow')
+        LEVEL_CONFIGURATOR_TYPE = 44_JPIB_K
+      CASE ('snowlayer')
+        LEVEL_CONFIGURATOR_TYPE = 45_JPIB_K
+      CASE ('mixedlayerdepthgeneric')
+        LEVEL_CONFIGURATOR_TYPE = 46_JPIB_K
+      CASE ('hybridheight')
+        LEVEL_CONFIGURATOR_TYPE = 47_JPIB_K
+      CASE ('hybridpressure')
+        LEVEL_CONFIGURATOR_TYPE = 48_JPIB_K
+      CASE ('generalvertical')
+        LEVEL_CONFIGURATOR_TYPE = 49_JPIB_K
+      CASE ('generalverticallayer')
+        LEVEL_CONFIGURATOR_TYPE = 50_JPIB_K
+      CASE ('soil')
+        LEVEL_CONFIGURATOR_TYPE = 51_JPIB_K
+      CASE ('soillayer')
+        LEVEL_CONFIGURATOR_TYPE = 52_JPIB_K
+      CASE ('seaice')
+        LEVEL_CONFIGURATOR_TYPE = 53_JPIB_K
+      CASE ('seaicelayer')
+        LEVEL_CONFIGURATOR_TYPE = 54_JPIB_K
+      CASE ('depthbelowsea')
+        LEVEL_CONFIGURATOR_TYPE = 55_JPIB_K
+      CASE ('oceansurface')
+        LEVEL_CONFIGURATOR_TYPE = 56_JPIB_K
+      CASE ('depthbelowsealayer')
+        LEVEL_CONFIGURATOR_TYPE = 57_JPIB_K
+      CASE ('oceansurfacetobottom')
+        LEVEL_CONFIGURATOR_TYPE = 58_JPIB_K
+      CASE ('lakebottom')
+        LEVEL_CONFIGURATOR_TYPE = 59_JPIB_K
+      CASE ('mixinglayer')
+        LEVEL_CONFIGURATOR_TYPE = 60_JPIB_K
+      CASE ('oceanmodel')
+        LEVEL_CONFIGURATOR_TYPE = 61_JPIB_K
+      CASE ('oceanmodellayer')
+        LEVEL_CONFIGURATOR_TYPE = 62_JPIB_K
+      CASE ('mixedlayerdepthbydensity')
+        LEVEL_CONFIGURATOR_TYPE = 63_JPIB_K
+      CASE ('mixedlayerdepthbytemperature')
+        LEVEL_CONFIGURATOR_TYPE = 64_JPIB_K
+      CASE ('mixedlayerdepthbydiffusivity')
+        LEVEL_CONFIGURATOR_TYPE = 65_JPIB_K
+      CASE ('snowtopovericeonwater')
+        LEVEL_CONFIGURATOR_TYPE = 66_JPIB_K
+      CASE ('snowlayerovericeonwater')
+        LEVEL_CONFIGURATOR_TYPE = 67_JPIB_K
+      CASE ('icetoponwater')
+        LEVEL_CONFIGURATOR_TYPE = 68_JPIB_K
+      CASE ('icelayeronwater')
+        LEVEL_CONFIGURATOR_TYPE = 69_JPIB_K
+      CASE ('icetopundersnowonwater')
+        LEVEL_CONFIGURATOR_TYPE = 70_JPIB_K
+      CASE ('icelayerundersnowonwater')
+        LEVEL_CONFIGURATOR_TYPE = 71_JPIB_K
+      CASE ('icebottomonwater')
+        LEVEL_CONFIGURATOR_TYPE = 72_JPIB_K
+      CASE ('indefinitesoildepth')
+        LEVEL_CONFIGURATOR_TYPE = 73_JPIB_K
+      CASE ('meltpondtop')
+        LEVEL_CONFIGURATOR_TYPE = 74_JPIB_K
+      CASE ('meltpondbottom')
+        LEVEL_CONFIGURATOR_TYPE = 75_JPIB_K
+      CASE ('entiremeltpond')
+        LEVEL_CONFIGURATOR_TYPE = 76_JPIB_K
+      CASE ('icelayerabovewatersurface')
+        LEVEL_CONFIGURATOR_TYPE = 77_JPIB_K
+      CASE ('watersurfacetoisothermaloceanlayer')
+        LEVEL_CONFIGURATOR_TYPE = 78_JPIB_K
+      CASE ('totalsoillayer')
+        LEVEL_CONFIGURATOR_TYPE = 79_JPIB_K
+      CASE ('rootzone')
+        LEVEL_CONFIGURATOR_TYPE = 80_JPIB_K
+      CASE ('roof')
+        LEVEL_CONFIGURATOR_TYPE = 81_JPIB_K
+      CASE ('rooflayer')
+        LEVEL_CONFIGURATOR_TYPE = 82_JPIB_K
+      CASE ('wall')
+        LEVEL_CONFIGURATOR_TYPE = 83_JPIB_K
+      CASE ('walllayer')
+        LEVEL_CONFIGURATOR_TYPE = 84_JPIB_K
+      CASE ('road')
+        LEVEL_CONFIGURATOR_TYPE = 85_JPIB_K
+      CASE ('roadlayer')
+        LEVEL_CONFIGURATOR_TYPE = 86_JPIB_K
+      CASE ('urbancanyon')
+        LEVEL_CONFIGURATOR_TYPE = 87_JPIB_K
+      CASE ('custom')
+        LEVEL_CONFIGURATOR_TYPE = 88_JPIB_K
