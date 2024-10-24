@@ -8,6 +8,8 @@ set(OFFSET ${OFFSET}${DOFFSET})
 
 
 set( MULTIOM_ENCODING_RULES_MAIN_SOURCES
+  ${MULTIOM_ENCODING_RULES_DIR}/cached_encoder_collection_mod.F90
+  ${MULTIOM_ENCODING_RULES_DIR}/cached_encoder_mod.F90
   ${MULTIOM_ENCODING_RULES_DIR}/encoding_rules_mod.F90
   ${MULTIOM_ENCODING_RULES_DIR}/encoding_rules_factory_mod.F90
   ${MULTIOM_ENCODING_RULES_DIR}/encoding_rules_collection_mod.F90

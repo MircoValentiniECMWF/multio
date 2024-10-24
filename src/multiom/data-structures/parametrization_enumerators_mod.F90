@@ -5,132 +5,61 @@
 #include "output_manager_preprocessor_errhdl_utils.h"
 
 
-#define PP_FILE_NAME 'parametrization_mod.F90'
+#define PP_FILE_NAME 'parametrization_enumerators_mod.F90'
 #define PP_SECTION_TYPE 'MODULE'
-#define PP_SECTION_NAME 'PARAMETRIZATION_MOD'
-MODULE PARAMETRIZATION_MOD
+#define PP_SECTION_NAME 'PARAMETRIZATION_ENUMERATORS_MOD'
+MODULE PARAMETRIZATION_ENUMERATORS_MOD
 
   !> Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPRD_K
-  USE :: ENUMERATORS_MOD,   ONLY: UNDEF_PARAM_E
 
 IMPLICIT NONE
 
 !> Default visibility of the module
 PRIVATE
 
-  !> Whitelist of public symbols
-  TYPE :: LEVEL_PAR_T
-    REAL(KIND=JPRD_K), DIMENSION(:), POINTER :: PV => NULL()
-  END TYPE
+  !> Intger enumerators
+  INTEGER(KIND=JPIB_K), PARAMETER :: PARINTFLD_TABLES_VERSION_E=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: PARINTFLD_INITIAL_STEP_E=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: N_PARINTFLDS=3_JPIB_K
 
-  !> Wave information I am not able to fit into mars message
-  TYPE :: WAVE_PAR_T
-    REAL(KIND=JPRD_K), POINTER, DIMENSION(:) :: DIRS_ => NULL()
-    REAL(KIND=JPRD_K), POINTER, DIMENSION(:) :: FREQ_ => NULL()
-  END TYPE
+  ! String enumerators
+  INTEGER(KIND=JPIB_K), PARAMETER :: N_PARSTRFLDS=0_JPIB_K
 
-  !> Ensemble information I am not able to fit into mars message
-  TYPE :: ENSEMBLE_PAR_T
-    INTEGER(KIND=JPIB_K) :: TYPE_OF_ENSEMBLE_FORECAST_= UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: PERTURBATION_NUMBER_=-1_JPIB_K
-    INTEGER(KIND=JPIB_K) :: NUMBER_OF_FORECAST_IN_ENSEMBLE_=-1_JPIB_K
-  END TYPE
-
-  !> Satellite infomration I am not able to fit into mars message
-  TYPE :: SATELLITE_PAR_T
-    INTEGER(KIND=JPIB_K) :: SATELLITE_SERIES = UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: SCALED_FACTOR_OF_CENTRAL_VAWENUMBER = UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: SCALED_VALUE_OF_CENTRAL_VAWENUMBER = UNDEF_PARAM_E
-  END TYPE
-
-  TYPE :: GEOMETRY_GG_T
-    CHARACTER(LEN=8) :: NAME
-    INTEGER(KIND=JPIB_K) :: TYPE=UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: NPTS=UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: NLAT=UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: NLON=UNDEF_PARAM_E
-    REAL(KIND=JPRD_K) :: NORTH=0.0_JPRD_K
-    REAL(KIND=JPRD_K) :: SOUTH=0.0_JPRD_K
-    REAL(KIND=JPRD_K) :: EAST=0.0_JPRD_K
-    REAL(KIND=JPRD_K) :: WEST=0.0_JPRD_K
-    INTEGER(KIND=JPIB_K), DIMENSION(:), POINTER :: PL => NULL()
-  END TYPE
-
-  TYPE :: GEOMETRY_SH_T
-    CHARACTER(LEN=8) :: NAME
-    INTEGER(KIND=JPIB_K) :: TYPE=UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: NFREQ=UNDEF_PARAM_E
-    REAL(KIND=JPRD_K) :: STREATCHING_FACTOR=0.0_JPRD_K
-    REAL(KIND=JPRD_K) :: LAT_STRET_DEG=0.0_JPRD_K
-    REAL(KIND=JPRD_K) :: LON_STRET_DEG=0.0_JPRD_K
-  END TYPE
+  ! Float enumerators
+  INTEGER(KIND=JPIB_K), PARAMETER :: PARFLOATFLD_SCALEFACTOR_E=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: N_PARFLOATFLDS=0_JPIB_K
 
 
-  !> Geometry parametrization
-  TYPE :: GEOMETRY_T
-    TYPE(GEOMETRY_GG_T), POINTER, DIMENSION(:) :: GG => NULL()
-    ! TYPE(GEOMETRY_LL_T), POINTER, DIMENSION(:) :: LL => NULL()
-    TYPE(GEOMETRY_SH_T), POINTER, DIMENSION(:) :: SH => NULL()
-  END TYPE
+  !> White list of public symbols (enumerators)
+  PUBLIC :: PARINTFLD_TABLES_VERSION_E
+  PUBLIC :: PARINTFLD_INITIAL_STEP_E
+  PUBLIC :: PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E
+  PUBLIC :: N_PARINTFLDS
+  PUBLIC :: N_PARSTRFLDS
+  PUBLIC :: PARFLOATFLD_SCALEFACTOR_E
+  PUBLIC :: N_PARFLOATFLDS
 
-  !> Collection of all information I am not able to fit into mars message
-  TYPE :: PARAMETRIZATION_T
+  !> Whitelist of public symbols (procedures)
+  PUBLIC :: IPARINTFLDS2CPARINTFLDS
+  PUBLIC :: CPARINTFLDS2IPARINTFLDS
 
-    ! Tables version
-    INTEGER(KIND=JPIB_K) :: TABLES_VERSION=UNDEF_PARAM_E
+  PUBLIC :: IPARFLOATFLDS2CPARFLOATFLDS
+  PUBLIC :: CPARFLOATFLDS2IPARFLOATFLDS
 
-    ! Scalar parameters
-    INTEGER(KIND=JPIB_K) :: INITIAL_STEP=UNDEF_PARAM_E
-    INTEGER(KIND=JPIB_K) :: LENGTH_OF_TIME_STEP_IN_SECONDS=UNDEF_PARAM_E
-    REAL(KIND=JPRD_K)    :: VALUES_SCALE_FACTOR=0.0_JPRD_K
-
-    ! Configorations to be descussed and eventually to be integrated in the MARS keywords
-    TYPE(GEOMETRY_T)      :: GEOMETRY
-    TYPE(LEVEL_PAR_T)     :: LEVELS
-    TYPE(ENSEMBLE_PAR_T)  :: ENSEMBLE
-    TYPE(WAVE_PAR_T)      :: WAVE
-    TYPE(SATELLITE_PAR_T) :: SATELLITE
-
-  CONTAINS
-
-    !> Set fields by field ID
-    PROCEDURE, NON_OVERRIDABLE, PUBLIC, PASS :: SET_INT    => PARAMETRIZATION_SET_INT
-    PROCEDURE, NON_OVERRIDABLE, PUBLIC, PASS :: SET_STRING => PARAMETRIZATION_SET_STRING
-    PROCEDURE, NON_OVERRIDABLE, PUBLIC, PASS :: SET_FLOAT  => PARAMETRIZATION_SET_FLOAT
-    GENERIC :: SET => SET_INT
-    GENERIC :: SET => SET_STRING
-    GENERIC :: SET => SET_FLOAT
-
-
-
-    !> Set fields by field ID
-    PROCEDURE, NON_OVERRIDABLE, PUBLIC, PASS :: GET_INT    => PARAMETRIZATION_GET_INT
-    PROCEDURE, NON_OVERRIDABLE, PUBLIC, PASS :: GET_STRING => PARAMETRIZATION_GET_STRING
-    PROCEDURE, NON_OVERRIDABLE, PUBLIC, PASS :: GET_FLOAT  => PARAMETRIZATION_GET_FLOAT
-    GENERIC :: GET => GET_INT
-    GENERIC :: GET => GET_STRING
-    GENERIC :: GET => GET_FLOAT
-
-  END TYPE
-
-  !> Whitelist of public symbols (types)
-  PUBLIC :: PARAMETRIZATION_T
+  PUBLIC :: IPARSTRINGFLDS2CPARSTRINGFLDS
+  PUBLIC :: CPARSTRINGFLDS2IPARSTRINGFLDS
 
 CONTAINS
 
-
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'PARAMETRIZATION_SET_INT'
-FUNCTION PARAMETRIZATION_SET_INT( THIS, ID, VALUE, HOOKS ) RESULT(RET)
+#define PP_PROCEDURE_NAME 'IPARINTFLDS2CPARINTFLDS'
+PP_THREAD_SAFE FUNCTION IPARINTFLDS2CPARINTFLDS( IPARINTFLDS, CPARINTFLDS, HOOKS ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
   USE :: HOOKS_MOD,         ONLY: HOOKS_T
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARINTFLD_TABLES_VERSION_E
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARINTFLD_INITIAL_STEP_E
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -144,16 +73,15 @@ FUNCTION PARAMETRIZATION_SET_INT( THIS, ID, VALUE, HOOKS ) RESULT(RET)
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(PARAMETRIZATION_T), INTENT(INOUT) :: THIS
-  INTEGER(KIND=JPIB_K),     INTENT(IN)    :: ID
-  INTEGER(KIND=JPIB_K),     INTENT(IN)    :: VALUE
-  TYPE(HOOKS_T),            INTENT(INOUT) :: HOOKS
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: IPARINTFLDS
+  CHARACTER(LEN=16),    INTENT(OUT)   :: CPARINTFLDS
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
 
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
 
-  !> Local error flags
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PAR=1_JPIB_K
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PARINTFLD_UNARY=1_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -170,16 +98,138 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  ! Set the value based on the ID
-  SELECT CASE ( ID )
-  CASE ( PARINTFLD_TABLES_VERSION_E )
-    THIS%TABLES_VERSION = VALUE
-  CASE ( PARINTFLD_INITIAL_STEP_E )
-    THIS%INITIAL_STEP = VALUE
-  CASE ( PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E )
-    THIS%LENGTH_OF_TIME_STEP_IN_SECONDS = VALUE
+  !> Initialization of the output variable
+  CPARINTFLDS = REPEAT(' ', 16)
+
+  !> Select the prefix
+  SELECT CASE ( IPARINTFLDS )
+  CASE (PARINTFLD_TABLES_VERSION_E)
+    CPARINTFLDS = 'tables-version'
+  CASE (PARINTFLD_INITIAL_STEP_E)
+    CPARINTFLDS = 'initial-step'
+  CASE (PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E)
+    CPARINTFLDS = 'length-of-time-step-in-seconds'
   CASE DEFAULT
-    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PAR )
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PARINTFLD_UNARY )
+  END SELECT
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+    CHARACTER(LEN=16) :: TMPSTR
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNKNOWN_PARINTFLD_UNARY)
+      TMPSTR = REPEAT(' ', 16)
+      WRITE(TMPSTR,*) IPARINTFLDS
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown iintop_unary: '//TRIM(ADJUSTL(TMPSTR)) )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION IPARINTFLDS2CPARINTFLDS
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CPARINTFLDS2IPARINTFLDS'
+PP_THREAD_SAFE FUNCTION CPARINTFLDS2IPARINTFLDS( CPARINTFLDS, IPARINTFLDS, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+  USE :: GENERAL_UTILS_MOD, ONLY: TOLOWER
+  USE :: ENUMERATORS_MOD,   ONLY: UNDEF_PARAM_E
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CHARACTER(LEN=*),     INTENT(IN)    :: CPARINTFLDS
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: IPARINTFLDS
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local variables
+  CHARACTER(LEN=LEN_TRIM(CPARINTFLDS)) :: LOC_CPARINTFLDS
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PARINTFLD_UNARY=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CONVERT_LC=2_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  !> Initialization of the output variable
+  IPARINTFLDS = UNDEF_PARAM_E
+
+  !> Convert prefix to lowercase
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CONVERT_LC) TOLOWER( CPARINTFLDS, LOC_CPARINTFLDS, HOOKS )
+
+  !> Select the prefix
+  SELECT CASE ( TRIM(ADJUSTL(LOC_CPARINTFLDS)) )
+  CASE ( 'tables-version' )
+    IPARINTFLDS = PARINTFLD_TABLES_VERSION_E
+  CASE ( 'initial-step' )
+    IPARINTFLDS = PARINTFLD_INITIAL_STEP_E
+  CASE ( 'length-of-time-step-in-seconds' )
+    IPARINTFLDS = PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E
+  CASE DEFAULT
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PARINTFLD_UNARY )
   END SELECT
 
   ! Trace end of procedure (on success)
@@ -204,8 +254,10 @@ PP_ERROR_HANDLER
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
-    CASE (ERRFLAG_UNKNOWN_PAR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown parameter' )
+    CASE (ERRFLAG_UNABLE_TO_CONVERT_LC)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unable to convert to lowercase' )
+    CASE (ERRFLAG_UNKNOWN_PARINTFLD_UNARY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown cintop_unary: '//TRIM(ADJUSTL(CPARINTFLDS)) )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT
@@ -224,20 +276,23 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION PARAMETRIZATION_SET_INT
+END FUNCTION CPARINTFLDS2IPARINTFLDS
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
 
 
 
+
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'PARAMETRIZATION_SET_STRING'
-FUNCTION PARAMETRIZATION_SET_STRING( THIS, ID, VALUE, HOOKS ) RESULT(RET)
+#define PP_PROCEDURE_NAME 'CPARFLOATFLDS2IPARFLOATFLDS'
+PP_THREAD_SAFE FUNCTION CPARFLOATFLDS2IPARFLOATFLDS( CPARFLOATFLDS, IPARFLOATFLDS, HOOKS ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
   USE :: HOOKS_MOD,         ONLY: HOOKS_T
+  USE :: GENERAL_UTILS_MOD, ONLY: TOLOWER
+  USE :: ENUMERATORS_MOD,   ONLY: UNDEF_PARAM_E
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -251,16 +306,19 @@ FUNCTION PARAMETRIZATION_SET_STRING( THIS, ID, VALUE, HOOKS ) RESULT(RET)
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(PARAMETRIZATION_T), INTENT(INOUT) :: THIS
-  INTEGER(KIND=JPIB_K),     INTENT(IN)    :: ID
-  CHARACTER(LEN=*),         INTENT(IN)    :: VALUE
-  TYPE(HOOKS_T),            INTENT(INOUT) :: HOOKS
+  CHARACTER(LEN=*),     INTENT(IN)    :: CPARFLOATFLDS
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: IPARFLOATFLDS
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
 
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
 
-  !> Local error flags
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PAR=1_JPIB_K
+  !> Local variables
+  CHARACTER(LEN=LEN_TRIM(CPARFLOATFLDS)) :: LOC_CPARFLOATFLDS
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PARFLOATFLD_UNARY=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CONVERT_LC=2_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -277,112 +335,18 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  ! Set the value based on the ID
-  PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PAR )
+  !> Initialization of the output variable
+  IPARFLOATFLDS = UNDEF_PARAM_E
 
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+  !> Convert prefix to lowercase
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CONVERT_LC) TOLOWER( CPARFLOATFLDS, LOC_CPARFLOATFLDS, HOOKS )
 
-  ! Exit point (On success)
-  RETURN
-
-! Error handler
-PP_ERROR_HANDLER
-
-  ! Initialization of bad path return value
-  PP_SET_ERR_FAILURE( RET )
-
-#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
-!$omp critical(ERROR_HANDLER)
-
-  BLOCK
-
-    ! Error handling variables
-    PP_DEBUG_PUSH_FRAME()
-
-    ! Handle different errors
-    SELECT CASE(ERRIDX)
-    CASE (ERRFLAG_UNKNOWN_PAR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown parameter' )
-    CASE DEFAULT
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
-    END SELECT
-
-    ! Trace end of procedure (on error)
-    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
-
-    ! Write the error message and stop the program
-    PP_DEBUG_ABORT()
-
-  END BLOCK
-
-!$omp end critical(ERROR_HANDLER)
-#endif
-
-  ! Exit point (on error)
-  RETURN
-
-END FUNCTION PARAMETRIZATION_SET_STRING
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
-
-
-
-
-#define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'PARAMETRIZATION_SET_FLOAT'
-FUNCTION PARAMETRIZATION_SET_FLOAT( THIS, ID, VALUE, HOOKS ) RESULT(RET)
-
-  !> Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPRD_K
-  USE :: HOOKS_MOD,         ONLY: HOOKS_T
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARFLOATFLD_SCALEFACTOR_E
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  !> Dummy arguments
-  CLASS(PARAMETRIZATION_T), INTENT(INOUT) :: THIS
-  INTEGER(KIND=JPIB_K),     INTENT(IN)    :: ID
-  REAL(KIND=JPRD_K),        INTENT(IN)    :: VALUE
-  TYPE(HOOKS_T),            INTENT(INOUT) :: HOOKS
-
-  !> Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-  !> Local error flags
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PAR=1_JPIB_K
-
-  ! Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  ! Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  ! Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-  ! Set the value based on the ID
-  SELECT CASE ( ID )
-  CASE ( PARFLOATFLD_SCALEFACTOR_E )
-    THIS%VALUES_SCALE_FACTOR = VALUE
+  !> Select the prefix
+  SELECT CASE ( TRIM(ADJUSTL(LOC_CPARFLOATFLDS)) )
+  CASE ( 'scale-factor' )
+    IPARFLOATFLDS = PARFLOATFLD_SCALEFACTOR_E
   CASE DEFAULT
-    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PAR )
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PARFLOATFLD_UNARY )
   END SELECT
 
   ! Trace end of procedure (on success)
@@ -407,8 +371,10 @@ PP_ERROR_HANDLER
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
-    CASE (ERRFLAG_UNKNOWN_PAR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown parameter' )
+    CASE (ERRFLAG_UNABLE_TO_CONVERT_LC)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unable to convert to lowercase' )
+    CASE (ERRFLAG_UNKNOWN_PARFLOATFLD_UNARY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown cfloatop_unary: '//TRIM(ADJUSTL(CPARFLOATFLDS)) )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT
@@ -427,24 +393,17 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION PARAMETRIZATION_SET_FLOAT
+END FUNCTION CPARFLOATFLDS2IPARFLOATFLDS
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
-
-
-
-
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'PARAMETRIZATION_GET_INT'
-FUNCTION PARAMETRIZATION_GET_INT( THIS, ID, VALUE, HOOKS ) RESULT(RET)
+#define PP_PROCEDURE_NAME 'IPARFLOATFLDS2CPARFLOATFLDS'
+PP_THREAD_SAFE FUNCTION IPARFLOATFLDS2CPARFLOATFLDS( IPARFLOATFLDS, CPARFLOATFLDS, HOOKS ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
   USE :: HOOKS_MOD,         ONLY: HOOKS_T
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARINTFLD_TABLES_VERSION_E
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARINTFLD_INITIAL_STEP_E
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -458,16 +417,15 @@ FUNCTION PARAMETRIZATION_GET_INT( THIS, ID, VALUE, HOOKS ) RESULT(RET)
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(PARAMETRIZATION_T), INTENT(IN)    :: THIS
-  INTEGER(KIND=JPIB_K),     INTENT(IN)    :: ID
-  INTEGER(KIND=JPIB_K),     INTENT(OUT)   :: VALUE
-  TYPE(HOOKS_T),            INTENT(INOUT) :: HOOKS
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: IPARFLOATFLDS
+  CHARACTER(LEN=16),    INTENT(OUT)   :: CPARFLOATFLDS
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
 
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
 
-  !> Local error flags
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PAR=1_JPIB_K
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PARFLOATFLD_UNARY=1_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -484,16 +442,130 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  ! Get the value based on the ID
-  SELECT CASE ( ID )
-  CASE ( PARINTFLD_TABLES_VERSION_E )
-    VALUE = THIS%TABLES_VERSION
-  CASE ( PARINTFLD_INITIAL_STEP_E )
-    VALUE = THIS%INITIAL_STEP
-  CASE ( PARINTFLD_LENGTH_OF_TIME_STEP_IN_SECONDS_E )
-    VALUE = THIS%LENGTH_OF_TIME_STEP_IN_SECONDS
+  !> Initialization of the output variable
+  CPARFLOATFLDS = REPEAT(' ', 16)
+
+  !> Select the prefix
+  SELECT CASE ( IPARFLOATFLDS )
+  CASE (PARFLOATFLD_SCALEFACTOR_E)
+    CPARFLOATFLDS = 'scale-factor'
   CASE DEFAULT
-    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PAR )
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PARFLOATFLD_UNARY )
+  END SELECT
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+    CHARACTER(LEN=16) :: TMPSTR
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNKNOWN_PARFLOATFLD_UNARY)
+      TMPSTR = REPEAT(' ', 16)
+      WRITE(TMPSTR,*) IPARFLOATFLDS
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown iintop_unary: '//TRIM(ADJUSTL(TMPSTR)) )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION IPARFLOATFLDS2CPARFLOATFLDS
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CPARSTRINGFLDS2IPARSTRINGFLDS'
+PP_THREAD_SAFE FUNCTION CPARSTRINGFLDS2IPARSTRINGFLDS( CPARSTRINGFLDS, IPARSTRINGFLDS, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+  USE :: GENERAL_UTILS_MOD, ONLY: TOLOWER
+  USE :: ENUMERATORS_MOD,   ONLY: UNDEF_PARAM_E
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CHARACTER(LEN=*),     INTENT(IN)    :: CPARSTRINGFLDS
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: IPARSTRINGFLDS
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local variables
+  CHARACTER(LEN=LEN_TRIM(CPARSTRINGFLDS)) :: LOC_CPARSTRINGFLDS
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PARSTRINGFLD_UNARY=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CONVERT_LC=2_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  !> Initialization of the output variable
+  IPARSTRINGFLDS = UNDEF_PARAM_E
+
+  !> Convert prefix to lowercase
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CONVERT_LC) TOLOWER( CPARSTRINGFLDS, LOC_CPARSTRINGFLDS, HOOKS )
+
+  !> Select the prefix
+  SELECT CASE ( TRIM(ADJUSTL(LOC_CPARSTRINGFLDS)) )
+  CASE DEFAULT
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PARSTRINGFLD_UNARY )
   END SELECT
 
   ! Trace end of procedure (on success)
@@ -518,8 +590,10 @@ PP_ERROR_HANDLER
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
-    CASE (ERRFLAG_UNKNOWN_PAR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown parameter' )
+    CASE (ERRFLAG_UNABLE_TO_CONVERT_LC)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unable to convert to lowercase' )
+    CASE (ERRFLAG_UNKNOWN_PARSTRINGFLD_UNARY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown cstringop_unary: '//TRIM(ADJUSTL(CPARSTRINGFLDS)) )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT
@@ -538,16 +612,13 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION PARAMETRIZATION_GET_INT
+END FUNCTION CPARSTRINGFLDS2IPARSTRINGFLDS
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
-
-
-
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'PARAMETRIZATION_GET_STRING'
-FUNCTION PARAMETRIZATION_GET_STRING( THIS, ID, VALUE, HOOKS ) RESULT(RET)
+#define PP_PROCEDURE_NAME 'IPARSTRINGFLDS2CPARSTRINGFLDS'
+PP_THREAD_SAFE FUNCTION IPARSTRINGFLDS2CPARSTRINGFLDS( IPARSTRINGFLDS, CPARSTRINGFLDS, HOOKS ) RESULT(RET)
 
   !> Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
@@ -565,16 +636,15 @@ FUNCTION PARAMETRIZATION_GET_STRING( THIS, ID, VALUE, HOOKS ) RESULT(RET)
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(PARAMETRIZATION_T), INTENT(IN)    :: THIS
-  INTEGER(KIND=JPIB_K),     INTENT(IN)    :: ID
-  CHARACTER(LEN=4),         INTENT(OUT)   :: VALUE
-  TYPE(HOOKS_T),            INTENT(INOUT) :: HOOKS
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: IPARSTRINGFLDS
+  CHARACTER(LEN=16),    INTENT(OUT)   :: CPARSTRINGFLDS
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
 
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
 
-  !> Local error flags
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PAR=1_JPIB_K
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PARSTRINGFLD_UNARY=1_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -591,113 +661,13 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  VALUE=REPEAT('*',4)
+  !> Initialization of the output variable
+  CPARSTRINGFLDS = REPEAT(' ', 16)
 
-  PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PAR )
-
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
-
-  ! Exit point (On success)
-  RETURN
-
-! Error handler
-PP_ERROR_HANDLER
-
-  ! Initialization of bad path return value
-  PP_SET_ERR_FAILURE( RET )
-
-#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
-!$omp critical(ERROR_HANDLER)
-
-  BLOCK
-
-    ! Error handling variables
-    PP_DEBUG_PUSH_FRAME()
-
-    ! Handle different errors
-    SELECT CASE(ERRIDX)
-    CASE (ERRFLAG_UNKNOWN_PAR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown parameter' )
-    CASE DEFAULT
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
-    END SELECT
-
-    ! Trace end of procedure (on error)
-    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
-
-    ! Write the error message and stop the program
-    PP_DEBUG_ABORT()
-
-  END BLOCK
-
-!$omp end critical(ERROR_HANDLER)
-#endif
-
-  ! Exit point (on error)
-  RETURN
-
-END FUNCTION PARAMETRIZATION_GET_STRING
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
-
-
-
-
-#define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'PARAMETRIZATION_GET_FLOAT'
-FUNCTION PARAMETRIZATION_GET_FLOAT( THIS, ID, VALUE, HOOKS ) RESULT(RET)
-
-  !> Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPRD_K
-  USE :: HOOKS_MOD,         ONLY: HOOKS_T
-  USE :: PARAMETRIZATION_ENUMERATORS_MOD, ONLY: PARFLOATFLD_SCALEFACTOR_E
-
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  !> Dummy arguments
-  CLASS(PARAMETRIZATION_T), INTENT(IN)    :: THIS
-  INTEGER(KIND=JPIB_K),     INTENT(IN)    :: ID
-  REAL(KIND=JPRD_K),        INTENT(OUT)   :: VALUE
-  TYPE(HOOKS_T),            INTENT(INOUT) :: HOOKS
-
-  !> Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-  !> Local error flags
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PAR=1_JPIB_K
-
-  ! Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  ! Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  ! Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-  SELECT CASE ( ID )
-  CASE ( PARFLOATFLD_SCALEFACTOR_E )
-    VALUE = THIS%VALUES_SCALE_FACTOR
+  !> Select the prefix
+  SELECT CASE ( IPARSTRINGFLDS )
   CASE DEFAULT
-    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PAR )
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PARSTRINGFLD_UNARY )
   END SELECT
 
   ! Trace end of procedure (on success)
@@ -716,14 +686,17 @@ PP_ERROR_HANDLER
 !$omp critical(ERROR_HANDLER)
 
   BLOCK
+    CHARACTER(LEN=16) :: TMPSTR
 
     ! Error handling variables
     PP_DEBUG_PUSH_FRAME()
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
-    CASE (ERRFLAG_UNKNOWN_PAR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown parameter' )
+    CASE (ERRFLAG_UNKNOWN_PARSTRINGFLD_UNARY)
+      TMPSTR = REPEAT(' ', 16)
+      WRITE(TMPSTR,*) IPARSTRINGFLDS
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown iintop_unary: '//TRIM(ADJUSTL(TMPSTR)) )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT
@@ -742,11 +715,12 @@ PP_ERROR_HANDLER
   ! Exit point (on error)
   RETURN
 
-END FUNCTION PARAMETRIZATION_GET_FLOAT
+END FUNCTION IPARSTRINGFLDS2CPARSTRINGFLDS
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
-END MODULE PARAMETRIZATION_MOD
+
+END MODULE PARAMETRIZATION_ENUMERATORS_MOD
 #undef PP_SECTION_NAME
 #undef PP_SECTION_TYPE
 #undef PP_FILE_NAME

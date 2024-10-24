@@ -8,6 +8,8 @@ set(OFFSET ${OFFSET}${DOFFSET})
 
 # Collect source files in data-structures
 set( MULTIOM_DATA_STRUCTURES_SOURCES
+  ${MULTIOM_DATA_STRUCTURES_DIR}/fortran_message_enumerators_mod.F90
+  ${MULTIOM_DATA_STRUCTURES_DIR}/parametrization_enumerators_mod.F90
   ${MULTIOM_DATA_STRUCTURES_DIR}/fortran_message_mod.F90
   ${MULTIOM_DATA_STRUCTURES_DIR}/parametrization_mod.F90
   ${MULTIOM_DATA_STRUCTURES_DIR}/time_utils_mod.F90

@@ -166,6 +166,7 @@ set( MULTIOM_CONTAINERS_SOURCES
   ${CMAKE_CURRENT_BINARY_DIR}/keyset_string64_mod.F90
   ${CMAKE_CURRENT_BINARY_DIR}/class_register_str16_enc_mod.F90
   ${CMAKE_CURRENT_BINARY_DIR}/class_register_2int64_enc_mod.F90
+  ${MULTIOM_CONTAINERS_DIR}/encoding_cache_mod.F90
   CACHE INTERNAL "List of all sources in containers directory"
 )
 

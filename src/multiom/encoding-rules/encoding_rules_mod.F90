@@ -437,7 +437,7 @@ END FUNCTION RULE_MATCH
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME 'RULE_GET_ENCODER'
-PP_THREAD_SAFE FUNCTION RULE_GET_ENCODER( THIS, ENCODER, TAG, HOOKS ) RESULT(RET)
+PP_THREAD_SAFE FUNCTION RULE_GET_ENCODER( THIS, NAME, TAG, ENCODER, HOOKS ) RESULT(RET)
 
   ! Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD,     ONLY: JPIB_K
@@ -457,8 +457,9 @@ IMPLICIT NONE
 
   !> Dummy arguments
   CLASS(ENCODING_RULE_T),              INTENT(INOUT) :: THIS
-  CLASS(GRIB_SECTION_BASE_A), POINTER, INTENT(OUT)   :: ENCODER
+  CHARACTER(LEN=256),                  INTENT(OUT)   :: NAME
   CHARACTER(LEN=256),                  INTENT(OUT)   :: TAG
+  CLASS(GRIB_SECTION_BASE_A), POINTER, INTENT(OUT)   :: ENCODER
   TYPE(HOOKS_T),                       INTENT(INOUT) :: HOOKS
 
   !> Function result
@@ -490,6 +491,9 @@ IMPLICIT NONE
 
   !> Get the tag
   TAG = THIS%TAG_
+
+  !> Get the name
+  NAME = THIS%NAME_
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()

@@ -21,10 +21,23 @@ PRIVATE
 TYPE :: GRIB_ENCODER_OPTIONS_T
 
   ! Variables used to control the size of the cache
-  LOGICAL :: ENABLE_CACHE              = .FALSE.
-  LOGICAL :: CACHE_SATELLITES_INFO     = .FALSE.
-  LOGICAL :: CACHE_TYPE_OF_LEVELS      = .FALSE.
-  LOGICAL :: CACHE_DIRECTION_FREQUENCY = .FALSE.
+  LOGICAL :: CACHE_LOCAL_USE_INFO          = .TRUE. ! Should always be true
+  LOGICAL :: CACHE_PRODUCT_DEFINITION_INFO = .TRUE. ! Should always be true
+  LOGICAL :: CACHE_GRID_DEFINITION_INFO    = .TRUE. ! Should always be true
+
+  LOGICAL :: CACHE_SATELLITES_INFO         = .FALSE.
+  LOGICAL :: CACHE_TYPE_OF_LEVELS          = .FALSE.
+  LOGICAL :: CACHE_DIRECTION_FREQUENCY     = .FALSE.
+
+  ! This should never be true, it is only for consistency in the comparison routines
+  LOGICAL :: CACHE_TIME_RELATED_INFO   = .FALSE. ! Should always be false
+
+  ! Variables used to control the cache usage
+  LOGICAL :: ENABLE_CACHE = .FALSE.
+
+
+
+
 
   LOGICAL :: USE_TYPE_OF_LEVEL = .FALSE.
   INTEGER(KIND=JPIB_K) :: CACHE_STRATEGY = OPT_CACHE_FULL_E
