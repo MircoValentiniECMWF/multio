@@ -42,6 +42,9 @@ IMPLICIT NONE
     !> @brief Default initialization of the data structure
     PROCEDURE, PUBLIC, NON_OVERRIDABLE, PASS :: COPY_TO => CURR_TIME_COPY_TO
 
+    !> @brief Compute the bytesize of the data structure
+    PROCEDURE, PUBLIC, NON_OVERRIDABLE, PASS :: BYTESIZE => CURR_TIME_MEMORY_BYTESIZE
+
     !> @brief Cleanup of the current time data structure
     PROCEDURE, PUBLIC, NON_OVERRIDABLE, PASS :: FREE => CURR_TIME_FREE
 
@@ -88,6 +91,9 @@ IMPLICIT NONE
 
     !> @brief Frees the memory allocated for the circular buffer.
     PROCEDURE, PUBLIC, NON_OVERRIDABLE, PASS :: SIZE => CB_SIZE
+
+    !> @brief Frees the memory allocated for the circular buffer.
+    PROCEDURE, PUBLIC, NON_OVERRIDABLE, PASS :: BYTESIZE => CB_BYTESIZE
 
     !> @brief Frees the memory allocated for the circular buffer.
     PROCEDURE, PUBLIC, NON_OVERRIDABLE, PASS :: IS_EMPTY => CB_IS_EMPTY
@@ -293,7 +299,7 @@ END FUNCTION CURR_TIME_INIT_DEFAULT
 #undef PP_PROCEDURE_TYPE
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'CB_ENQUEUE'
+#define PP_PROCEDURE_NAME 'CURR_TIME_COPY_TO'
 PP_THREAD_SAFE FUNCTION CURR_TIME_COPY_TO( THIS, &
 &  OTHER, HOOKS ) RESULT(RET)
 
@@ -379,6 +385,97 @@ PP_ERROR_HANDLER
 
 
 END FUNCTION CURR_TIME_COPY_TO
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CURR_TIME_MEMORY_BYTESIZE'
+PP_THREAD_SAFE FUNCTION CURR_TIME_MEMORY_BYTESIZE( THIS, &
+&  MEMORY_BYTESIZE, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
+  USE :: HOOKS_MOD,                ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(CURR_TIME_T),   INTENT(IN)    :: THIS
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: MEMORY_BYTESIZE
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! TODO: Needs to be updated with the actual memory bytesize
+  MEMORY_BYTESIZE = 264_JPIB_K
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+
+END FUNCTION CURR_TIME_MEMORY_BYTESIZE
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
@@ -1399,6 +1496,123 @@ PP_ERROR_HANDLER
   RETURN
 
 END FUNCTION CB_SIZE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CB_BYTESIZE'
+PP_THREAD_SAFE FUNCTION CB_BYTESIZE(THIS, MEMORY_BYTESIZE, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  CLASS(TIME_HISTORY_T), INTENT(IN)    :: THIS
+  INTEGER(KIND=JPIB_K),  INTENT(OUT)   :: MEMORY_BYTESIZE
+  TYPE(HOOKS_T),         INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: I
+  INTEGER(KIND=JPIB_K) :: TMP_MEMORY_BYTESIZE
+
+  ! Local error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SIZE_OUT_OF_BOUNDS=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_INDEX_OUT_OF_BOUNDS=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_COMPUTE_BUFFER_BYTESIZE=3_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( THIS%SIZE_ .LT. 0, ERRFLAG_SIZE_OUT_OF_BOUNDS )
+  PP_DEBUG_CRITICAL_COND_THROW( THIS%SIZE_ .GT. THIS%CAPACITY_, ERRFLAG_SIZE_OUT_OF_BOUNDS )
+  PP_DEBUG_CRITICAL_COND_THROW( THIS%HEAD_ .LT. 1, ERRFLAG_INDEX_OUT_OF_BOUNDS )
+  PP_DEBUG_CRITICAL_COND_THROW( THIS%HEAD_ .GT. THIS%CAPACITY_, ERRFLAG_INDEX_OUT_OF_BOUNDS )
+  PP_DEBUG_CRITICAL_COND_THROW( THIS%TAIL_ .LT. 1, ERRFLAG_INDEX_OUT_OF_BOUNDS )
+  PP_DEBUG_CRITICAL_COND_THROW( THIS%TAIL_ .GT. THIS%CAPACITY_, ERRFLAG_INDEX_OUT_OF_BOUNDS )
+
+  ! Get the current size
+  MEMORY_BYTESIZE = 32_JPIB_K
+
+  ! Accumulate the size of the buffer
+  DO I = 1, SIZE(THIS%BUFFER_)
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_COMPUTE_BUFFER_BYTESIZE) THIS%BUFFER_(I)%BYTESIZE( TMP_MEMORY_BYTESIZE, HOOKS )
+    MEMORY_BYTESIZE = MEMORY_BYTESIZE + TMP_MEMORY_BYTESIZE
+  ENDDO
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_SIZE_OUT_OF_BOUNDS)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'size out of bounds' )
+    CASE (ERRFLAG_INDEX_OUT_OF_BOUNDS)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'index out of bounds' )
+    CASE (ERRFLAG_UNABLE_TO_COMPUTE_BUFFER_BYTESIZE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unable to compute buffer bytesize' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION CB_BYTESIZE
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 

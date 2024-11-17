@@ -34,6 +34,8 @@ CONTAINS
   PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: INIT           => CACHED_ENCODER_COLLECTION_INIT
   PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: IS_INITIALIZED => CACHED_ENCODER_COLLECTION_INITIALIZED
   PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: SIZE           => CACHED_ENCODER_COLLECTION_SIZE
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: BYTESIZE       => CACHED_ENCODER_COLLECTION_BYTESIZE
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: DUMP           => CACHED_ENCODER_COLLECTION_DUMP
   PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: ENCODE         => CACHED_ENCODER_COLLECTION_ENCODE
   PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: FREE           => CACHED_ENCODER_COLLECTION_FREE
 END TYPE
@@ -352,6 +354,231 @@ PP_ERROR_HANDLER
 
 
 END FUNCTION CACHED_ENCODER_COLLECTION_SIZE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CACHED_ENCODER_COLLECTION_BYTESIZE'
+PP_THREAD_SAFE FUNCTION CACHED_ENCODER_COLLECTION_BYTESIZE( THIS, MEMORY_BYTESIZE, OPT, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
+  USE :: HOOKS_MOD,                ONLY: HOOKS_T
+  USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(CACHED_ENCODER_COLLECTION_T), INTENT(INOUT) :: THIS
+  INTEGER(KIND=JPIB_K),               INTENT(OUT)   :: MEMORY_BYTESIZE
+  TYPE(GRIB_ENCODER_OPTIONS_T),       INTENT(IN)    :: OPT
+  TYPE(HOOKS_T),                      INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local variables
+  INTEGER(KIND=JPIB_K) :: I
+  INTEGER(KIND=JPIB_K) :: SZ
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ENCODERS_NOT_ASSOCIATED=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_CALL_NESTED_SIZE=2_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT.ASSOCIATED(THIS%ENCODERS_), ERRFLAG_ENCODERS_NOT_ASSOCIATED )
+
+  ! Get the size
+  MEMORY_BYTESIZE = 0_JPIB_K
+
+
+  DO I = 1, SIZE(THIS%ENCODERS_)
+    PP_TRYCALL(ERRFLAG_CALL_NESTED_SIZE) THIS%ENCODERS_(I)%BYTESIZE( SZ, OPT, HOOKS )
+    MEMORY_BYTESIZE = MEMORY_BYTESIZE + SZ
+  ENDDO
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_ENCODERS_NOT_ASSOCIATED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Encoders not associated' )
+    CASE(ERRFLAG_CALL_NESTED_SIZE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Error in nested call' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+
+END FUNCTION CACHED_ENCODER_COLLECTION_BYTESIZE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CACHED_ENCODER_COLLECTION_DUMP'
+PP_THREAD_SAFE FUNCTION CACHED_ENCODER_COLLECTION_DUMP( THIS, DUMP_PATH, CNT, OPT, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
+  USE :: HOOKS_MOD,                ONLY: HOOKS_T
+  USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CLASS(CACHED_ENCODER_COLLECTION_T), INTENT(INOUT) :: THIS
+  CHARACTER(LEN=*),                   INTENT(IN)    :: DUMP_PATH
+  INTEGER(KIND=JPIB_K),               INTENT(INOUT) :: CNT
+  TYPE(GRIB_ENCODER_OPTIONS_T),       INTENT(IN)    :: OPT
+  TYPE(HOOKS_T),                      INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local variables
+  INTEGER(KIND=JPIB_K) :: I
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ENCODERS_NOT_ASSOCIATED=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_CALL_NESTED_DUMP=2_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT.ASSOCIATED(THIS%ENCODERS_), ERRFLAG_ENCODERS_NOT_ASSOCIATED )
+
+  ! Dump the encoders
+  DO I = 1, SIZE(THIS%ENCODERS_)
+    CNT = CNT + 1
+    PP_TRYCALL(ERRFLAG_CALL_NESTED_DUMP) THIS%ENCODERS_(I)%DUMP( DUMP_PATH, CNT, OPT, HOOKS )
+  ENDDO
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_ENCODERS_NOT_ASSOCIATED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Encoders not associated' )
+    CASE(ERRFLAG_CALL_NESTED_DUMP)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Error in nested call' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+
+END FUNCTION CACHED_ENCODER_COLLECTION_DUMP
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
