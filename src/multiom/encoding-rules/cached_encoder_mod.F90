@@ -14,6 +14,7 @@ MODULE CACHED_ENCODER_MOD
   ! Symbols imported from other modules within the project.
   USE :: METADATA_BASE_MOD,     ONLY: METADATA_BASE_A
   USE :: GRIB_SECTION_BASE_MOD, ONLY: GRIB_SECTION_BASE_A
+  USE :: TIME_UTILS_MOD,        ONLY: TIME_HISTORY_T
 
 IMPLICIT NONE
 
@@ -25,21 +26,24 @@ TYPE :: CACHED_ENCODER_T
   !> Default visibility of the type
   PRIVATE
 
+  !> Rule applied
+  CHARACTER(LEN=256) :: TAG_=REPEAT(' ',256)
+  CHARACTER(LEN=256) :: NAME_=REPEAT(' ',256)
+  LOGICAL :: TO_BE_DEALLOCATED_=.FALSE.
+
   !> Circular buffer used to store the time history
-  ! TYPE(CIRCULAR_BUFFER_T) :: TIME_HISTORY_
+  TYPE(TIME_HISTORY_T) :: TIME_HISTORY_
 
   !> Metadata associated with the encoder
   CLASS(METADATA_BASE_A), POINTER :: METADATA_ => NULL()
 
   !> Pointer to the class
-   CLASS(GRIB_SECTION_BASE_A), POINTER :: ENCODER_ => NULL()
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: ENCODER_ => NULL()
 
 CONTAINS
-  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: INIT          =>  CACHED_ENCODER_INIT
-  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: TO_BE_ENCODED =>  CACHED_ENCODER_TO_BE_ENCODED
-  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: ENCODE        =>  CACHED_ENCODER_ENCODE
-  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: SWAP_DATA     =>  CACHED_ENCODER_SWAP_DATA
-  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: FREE          =>  CACHED_ENCODER_FREE
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: INIT   =>  CACHED_ENCODER_INIT
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: ENCODE =>  CACHED_ENCODER_ENCODE
+  PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: FREE   =>  CACHED_ENCODER_FREE
 END TYPE
 
 !> Whitelist of public symbols (types)
@@ -50,7 +54,8 @@ CONTAINS
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME ' CACHED_ENCODER_INIT'
-PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_INIT( THIS, MSG, PAR, METADATA, ENCODER, OPT, HOOKS ) RESULT(RET)
+PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_INIT( THIS, MSG, PAR, TAG, NAME, &
+&         METADATA, ENCODER, TO_BE_DEALLOCATED, OPT, HOOKS ) RESULT(RET)
 
   ! Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
@@ -60,6 +65,7 @@ PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_INIT( THIS, MSG, PAR, METADATA, ENCODER,
   USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
   USE :: PARAMETRIZATION_MOD,      ONLY: PARAMETRIZATION_T
   USE :: FORTRAN_MESSAGE_MOD,      ONLY: FORTRAN_MESSAGE_T
+  USE :: METADATA_FACTORY_MOD,     ONLY: MAKE_METADATA
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -76,14 +82,24 @@ IMPLICIT NONE
   CLASS(CACHED_ENCODER_T),             INTENT(INOUT) :: THIS
   TYPE(FORTRAN_MESSAGE_T),             INTENT(IN)    :: MSG
   TYPE(PARAMETRIZATION_T),             INTENT(IN)    :: PAR
+  CHARACTER(LEN=*),                    INTENT(IN)    :: TAG
+  CHARACTER(LEN=*),                    INTENT(IN)    :: NAME
   CLASS(METADATA_BASE_A), POINTER,     INTENT(IN)    :: METADATA
   CLASS(GRIB_SECTION_BASE_A), POINTER, INTENT(IN)    :: ENCODER
+  LOGICAL,                             INTENT(IN)    :: TO_BE_DEALLOCATED
   TYPE(GRIB_ENCODER_OPTIONS_T),        INTENT(IN)    :: OPT
   TYPE(HOOKS_T),                       INTENT(INOUT) :: HOOKS
 
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
 
+  !> Local error flag
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_CLONE_METADATA=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_ALLOCATE=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_PRESET=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_INITIALIZE_TIME_HISTORY=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_METADATA_ALREADY_ALLOCATED=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ENCODER_ALREADY_ALLOCATED=6_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -100,7 +116,31 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  ! TODO
+  ! Set the tag and name
+  THIS%TAG_ = TAG
+  THIS%NAME_ = NAME
+  THIS%TO_BE_DEALLOCATED_ = TO_BE_DEALLOCATED
+
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%METADATA_), ERRFLAG_METADATA_ALREADY_ALLOCATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(THIS%ENCODER_),  ERRFLAG_ENCODER_ALREADY_ALLOCATED  )
+
+  ! Call the Clone constructor of metadata
+  ! Here we clone a metadata object passed as input. We clone the this object and after
+  ! we preset the metadata using the provided encoder
+  PP_TRYCALL(ERRFLAG_CLONE_METADATA) MAKE_METADATA( METADATA, THIS%METADATA_, HOOKS)
+
+  ! Associate the encoder
+  THIS%ENCODER_ => ENCODER
+
+  WRITE(*,*) 'vercingetorice'
+
+  ! Preconfigure the local metadata with all the memory related information
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_ALLOCATE) THIS%ENCODER_%ALLOCATE( MSG, PAR, OPT, THIS%METADATA_, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_PRESET) THIS%ENCODER_%PRESET( MSG, PAR, OPT, THIS%METADATA_, HOOKS )
+
+  ! Initialize the time history
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_INITIALIZE_TIME_HISTORY) THIS%TIME_HISTORY_%INIT( OPT%TIME_HISTORY_CAPACITY, HOOKS)
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -124,6 +164,18 @@ PP_ERROR_HANDLER
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_CLONE_METADATA)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error cloning metadata' )
+    CASE(ERRFLAG_UNABLE_TO_ALLOCATE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error allocating encoder' )
+    CASE(ERRFLAG_UNABLE_TO_PRESET)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error presetting encoder' )
+    CASE(ERRFLAG_UNABLE_TO_INITIALIZE_TIME_HISTORY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error initializing time history' )
+    CASE(ERRFLAG_METADATA_ALREADY_ALLOCATED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'metadata already allocated' )
+    CASE(ERRFLAG_ENCODER_ALREADY_ALLOCATED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'encoder already allocated' )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT
@@ -158,10 +210,12 @@ PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_ENCODE( THIS, MSG, PAR, METADATA, ENCODI
   USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
   USE :: HOOKS_MOD,                ONLY: HOOKS_T
   USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
-  USE :: ENCODING_RULES_MOD,       ONLY: ENCODING_RULE_T
   USE :: PARAMETRIZATION_MOD,      ONLY: PARAMETRIZATION_T
   USE :: FORTRAN_MESSAGE_MOD,      ONLY: FORTRAN_MESSAGE_T
   USE :: METADATA_BASE_MOD,        ONLY: METADATA_BASE_A
+  USE :: TIME_UTILS_MOD,           ONLY: CURR_TIME_T
+  USE :: TIME_UTILS_MOD,           ONLY: COMPUTE_CURRENT_TIME
+  USE :: METADATA_FACTORY_MOD,     ONLY: MAKE_METADATA
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -178,7 +232,7 @@ IMPLICIT NONE
   CLASS(CACHED_ENCODER_T),         INTENT(INOUT) :: THIS
   TYPE(FORTRAN_MESSAGE_T),         INTENT(IN)    :: MSG
   TYPE(PARAMETRIZATION_T),         INTENT(IN)    :: PAR
-  CLASS(METADATA_BASE_A), POINTER, INTENT(IN)    :: METADATA
+  CLASS(METADATA_BASE_A), POINTER, INTENT(OUT)   :: METADATA
   LOGICAL,                         INTENT(OUT)   :: ENCODING_DONE
   TYPE(GRIB_ENCODER_OPTIONS_T),    INTENT(IN)    :: OPT
   TYPE(HOOKS_T),                   INTENT(INOUT) :: HOOKS
@@ -186,6 +240,19 @@ IMPLICIT NONE
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
 
+  !> Local variables
+  LOGICAL :: TO_BE_ENCODED
+  TYPE(CURR_TIME_T) :: CURR_TIME
+
+  !> Local error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_METADATA_NOT_ALLOCATED=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ENCODER_NOT_ALLOCATED=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_OUTPUT_METADATA_ALREADY_ALLOCATED=3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_COMPUTE_CURRENT_TIME=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_TO_BE_ENCODED=5_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_CLONE_METADATA=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CALL_ENCODE=7_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_UPDATE_TIME_HISTORY=8_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -202,8 +269,42 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  ! TODO
-  ENCODING_DONE = .FALSE.
+  ! Error handling
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%METADATA_), ERRFLAG_METADATA_NOT_ALLOCATED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%ENCODER_),  ERRFLAG_ENCODER_NOT_ALLOCATED )
+  PP_DEBUG_CRITICAL_COND_THROW( ASSOCIATED(METADATA), ERRFLAG_OUTPUT_METADATA_ALREADY_ALLOCATED )
+
+  ! Compute current time
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_COMPUTE_CURRENT_TIME) COMPUTE_CURRENT_TIME( &
+&       MSG, PAR, THIS%TIME_HISTORY_, CURR_TIME, OPT, HOOKS )
+
+  ! Check if the field has to be encoded
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_TO_BE_ENCODED) THIS%ENCODER_%TO_BE_ENCODED( &
+&    MSG, PAR, THIS%TIME_HISTORY_, CURR_TIME, OPT, TO_BE_ENCODED, HOOKS )
+
+  ! If needed then encode the field
+  IF ( TO_BE_ENCODED ) THEN
+
+    ! Clone the metadata
+    PP_TRYCALL(ERRFLAG_CLONE_METADATA) MAKE_METADATA( THIS%METADATA_, METADATA, HOOKS)
+
+    ! Encode the field
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_CALL_ENCODE) THIS%ENCODER_%RUNTIME( &
+&      MSG, PAR, THIS%TIME_HISTORY_, CURR_TIME, OPT, THIS%METADATA_, HOOKS )
+
+    ! Update the time history
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_UPDATE_TIME_HISTORY) THIS%TIME_HISTORY_%ENQUEUE( &
+&      CURR_TIME, HOOKS )
+
+    ! Set the encoding done flag
+    ENCODING_DONE = .TRUE.
+
+  ELSE
+
+    ! Set the encoding done flag
+    ENCODING_DONE = .FALSE.
+
+  ENDIF
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -227,6 +328,22 @@ PP_ERROR_HANDLER
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_METADATA_NOT_ALLOCATED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'metadata not allocated' )
+    CASE(ERRFLAG_ENCODER_NOT_ALLOCATED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'encoder not allocated' )
+    CASE(ERRFLAG_OUTPUT_METADATA_ALREADY_ALLOCATED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'output metadata already allocated' )
+    CASE(ERRFLAG_UNABLE_TO_COMPUTE_CURRENT_TIME)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error computing current time' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_TO_BE_ENCODED)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error calling to_be_encoded' )
+    CASE(ERRFLAG_CLONE_METADATA)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error cloning metadata' )
+    CASE(ERRFLAG_UNABLE_TO_CALL_ENCODE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error calling encode' )
+    CASE(ERRFLAG_UNABLE_TO_UPDATE_TIME_HISTORY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error updating time history' )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT
@@ -252,201 +369,6 @@ END FUNCTION  CACHED_ENCODER_ENCODE
 
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME ' CACHED_ENCODER_TO_BE_ENCODED'
-PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_TO_BE_ENCODED( THIS, MSG, PAR, TO_BE_ENCODED, OPT, HOOKS ) RESULT(RET)
-
-  ! Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
-  USE :: HOOKS_MOD,                ONLY: HOOKS_T
-  USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
-  USE :: ENCODING_RULES_MOD,       ONLY: ENCODING_RULE_T
-  USE :: PARAMETRIZATION_MOD,      ONLY: PARAMETRIZATION_T
-  USE :: FORTRAN_MESSAGE_MOD,      ONLY: FORTRAN_MESSAGE_T
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  !> Dummy arguments
-  CLASS(CACHED_ENCODER_T),      INTENT(INOUT) :: THIS
-  TYPE(FORTRAN_MESSAGE_T),      INTENT(IN)    :: MSG
-  TYPE(PARAMETRIZATION_T),      INTENT(IN)    :: PAR
-  LOGICAL,                      INTENT(OUT)   :: TO_BE_ENCODED
-  TYPE(GRIB_ENCODER_OPTIONS_T), INTENT(IN)    :: OPT
-  TYPE(HOOKS_T),                INTENT(INOUT) :: HOOKS
-
-  !> Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-
-  ! Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  ! Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  ! Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-  ! TODO
-  TO_BE_ENCODED = .FALSE.
-
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
-
-  ! Exit point (On success)
-  RETURN
-
-! Error handler
-PP_ERROR_HANDLER
-
-  ! Initialization of bad path return value
-  PP_SET_ERR_FAILURE( RET )
-
-#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
-!$omp critical(ERROR_HANDLER)
-
-  BLOCK
-
-    ! Error handling variables
-    PP_DEBUG_PUSH_FRAME()
-
-    ! Handle different errors
-    SELECT CASE(ERRIDX)
-    CASE DEFAULT
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
-    END SELECT
-
-    ! Trace end of procedure (on error)
-    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
-
-    ! Write the error message and stop the program
-    PP_DEBUG_ABORT()
-
-  END BLOCK
-
-!$omp end critical(ERROR_HANDLER)
-#endif
-
-  ! Exit point (on error)
-  RETURN
-
-
-END FUNCTION  CACHED_ENCODER_TO_BE_ENCODED
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
-
-
-
-#define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME ' CACHED_ENCODER_SWAP_DATA'
-PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_SWAP_DATA( THIS, OTHER, OPT, HOOKS ) RESULT(RET)
-
-  ! Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
-  USE :: HOOKS_MOD,                ONLY: HOOKS_T
-  USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  !> Dummy arguments
-  CLASS(CACHED_ENCODER_T),      INTENT(INOUT) :: THIS
-  CLASS(CACHED_ENCODER_T),      INTENT(INOUT) :: OTHER
-  TYPE(GRIB_ENCODER_OPTIONS_T), INTENT(IN)    :: OPT
-  TYPE(HOOKS_T),                INTENT(INOUT) :: HOOKS
-
-  !> Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-
-  ! Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  ! Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  ! Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-  ! TODO
-
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
-
-  ! Exit point (On success)
-  RETURN
-
-! Error handler
-PP_ERROR_HANDLER
-
-  ! Initialization of bad path return value
-  PP_SET_ERR_FAILURE( RET )
-
-#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
-!$omp critical(ERROR_HANDLER)
-
-  BLOCK
-
-    ! Error handling variables
-    PP_DEBUG_PUSH_FRAME()
-
-    ! Handle different errors
-    SELECT CASE(ERRIDX)
-    CASE DEFAULT
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
-    END SELECT
-
-    ! Trace end of procedure (on error)
-    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
-
-    ! Write the error message and stop the program
-    PP_DEBUG_ABORT()
-
-  END BLOCK
-
-!$omp end critical(ERROR_HANDLER)
-#endif
-
-  ! Exit point (on error)
-  RETURN
-
-
-END FUNCTION  CACHED_ENCODER_SWAP_DATA
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
-
-
-
-
-#define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME ' CACHED_ENCODER_FREE'
 PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_FREE( THIS, OPT, HOOKS ) RESULT(RET)
 
@@ -454,6 +376,8 @@ PP_THREAD_SAFE FUNCTION  CACHED_ENCODER_FREE( THIS, OPT, HOOKS ) RESULT(RET)
   USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
   USE :: HOOKS_MOD,                ONLY: HOOKS_T
   USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
+  USE :: GRIB_ENCODER_FACTORY_MOD, ONLY: DESTROY_ENCODER
+  USE :: METADATA_FACTORY_MOD,     ONLY: DESTROY_METADATA
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -474,6 +398,10 @@ IMPLICIT NONE
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
 
+  !> Local error flag
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_DESTROY_ENCODER=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_DESTROY_METADATA=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_FREE_TIME_HISTORY=3_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -490,7 +418,20 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  ! TODO
+  !> If necessary deallocate the encoder
+  IF ( THIS%TO_BE_DEALLOCATED_ .AND. ASSOCIATED(THIS%ENCODER_) ) THEN
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_DESTROY_ENCODER) DESTROY_ENCODER( THIS%ENCODER_, OPT, HOOKS )
+  ELSE
+    THIS%ENCODER_ => NULL()
+  ENDIF
+
+  ! Deallocate the metadata
+  IF ( ASSOCIATED(THIS%METADATA_) ) THEN
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_DESTROY_METADATA) DESTROY_METADATA( THIS%METADATA_, HOOKS )
+  ENDIF
+
+  !> TODO: Free the time history
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_FREE_TIME_HISTORY) THIS%TIME_HISTORY_%FREE(HOOKS)
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -514,6 +455,12 @@ PP_ERROR_HANDLER
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
+    CASE(ERRFLAG_UNABLE_TO_DESTROY_ENCODER)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error destroying encoder' )
+    CASE(ERRFLAG_UNABLE_TO_DESTROY_METADATA)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error destroying metadata' )
+    CASE(ERRFLAG_UNABLE_TO_FREE_TIME_HISTORY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'error freeing time history' )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT

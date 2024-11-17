@@ -1,0 +1,268 @@
+! Include preprocessor utils
+#include "output_manager_preprocessor_utils.h"
+#include "output_manager_preprocessor_trace_utils.h"
+#include "output_manager_preprocessor_logging_utils.h"
+#include "output_manager_preprocessor_errhdl_utils.h"
+
+#define PP_FILE_NAME 'test_read04_prog.F90'
+#define PP_SECTION_TYPE 'PROGRAM'
+#define PP_SECTION_NAME 'TEST_READ04_PROG'
+#define PP_PROCEDURE_TYPE 'PROGRAM'
+#define PP_PROCEDURE_NAME 'MAIN'
+PROGRAM TEST_READ04_PROG
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD, ONLY: HOOKS_T
+
+  USE :: FILTER_OPTIONS_MOD,         ONLY: FILTER_OPTIONS_T
+  USE :: GRIB_ENCODER_OPTIONS_MOD,   ONLY: GRIB_ENCODER_OPTIONS_T
+  USE :: PARAMETRIZATION_MOD,        ONLY: PARAMETRIZATION_T
+  USE :: FORTRAN_MESSAGE_MOD,        ONLY: FORTRAN_MESSAGE_T
+  USE :: METADATA_BASE_MOD,          ONLY: METADATA_BASE_A
+  USE :: METADATA_FACTORY_MOD,       ONLY: MAKE_METADATA
+  USE :: METADATA_FACTORY_MOD,       ONLY: DESTROY_METADATA
+  USE :: METADATA_LIST_MOD,          ONLY: METADATA_LIST_T
+  USE :: MULTIOM_CACHED_ENCODER_MOD, ONLY: MULTIOM_CACHED_ENCODERS_T
+  USE :: CACHE_UTILS_MOD,            ONLY: CACHE_OPTIONS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Test encodr object
+  TYPE(HOOKS_T) :: HOOKS
+  CHARACTER(LEN=256) :: MAPPING_FNAME
+  CHARACTER(LEN=256) :: ENCODER_FNAME
+  LOGICAL :: FEXIST
+  INTEGER(KIND=JPIB_K) :: RET
+  INTEGER(KIND=JPIB_K) :: LENGTH
+  INTEGER(KIND=JPIB_K) :: UNIT
+  INTEGER(KIND=JPIB_K) :: OFFSET
+  CLASS(METADATA_BASE_A), POINTER :: METADATA
+  TYPE(METADATA_LIST_T) :: METADATA_LIST
+  TYPE(MULTIOM_CACHED_ENCODERS_T) :: MULTIO_ENCODER
+
+  ! Options
+  TYPE(CACHE_OPTIONS_T) :: CACHE_OPTIONS
+  TYPE(FILTER_OPTIONS_T) :: FILTER_OPTIONS
+  TYPE(GRIB_ENCODER_OPTIONS_T) :: ENCODER_OPTIONS
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_INITIALIZE_ENCODER = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_FREE_ENCODER = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_LOADING_LOCAL_SAMPLE = 3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_FREE_METADATA = 4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ENCODING_RULE_PRINT_ERROR = 5_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+
+  ! Get the first command-line argument (index starts from 1)
+  MAPPING_FNAME = REPEAT(' ', 256)
+  ENCODER_FNAME = REPEAT(' ', 256)
+  IF ( COMMAND_ARGUMENT_COUNT() .EQ. 2 ) THEN
+    ! Get the first command-line argument (index starts from 1)
+    CALL GET_COMMAND_ARGUMENT(1, ENCODER_FNAME, LENGTH, RET )
+    IF (RET .NE. 0) THEN
+      ENCODER_FNAME = 'encoder-rules.yaml'
+    END IF
+    CALL GET_COMMAND_ARGUMENT(2, MAPPING_FNAME, LENGTH, RET )
+    IF (RET .NE. 0) THEN
+      MAPPING_FNAME = 'mapping-rules.yaml'
+    END IF
+  ELSE
+    ENCODER_FNAME = 'encoder-rules.yaml'
+    MAPPING_FNAME = 'mapping-rules.yaml'
+  END IF
+
+  !> Set the unit and offset
+  UNIT = 6
+  OFFSET = 1
+  CALL HOOKS%DEBUG_HOOK_%INIT( )
+
+
+  !> Open the configuration file
+  PP_TRYCALL( ERRFLAG_LOADING_LOCAL_SAMPLE ) MAKE_METADATA( METADATA, 'grib', 'sample', HOOKS )
+
+  !> Create the encoder
+  PP_TRYCALL(ERRFLAG_UNABLE_INITIALIZE_ENCODER) MULTIO_ENCODER%INIT( &
+  &   MAPPING_FNAME, ENCODER_FNAME, METADATA, &
+  &   CACHE_OPTIONS, ENCODER_OPTIONS, FILTER_OPTIONS, &
+  &   HOOKS )
+
+  !> Print the encoder
+  PP_TRYCALL(ERRFLAG_ENCODING_RULE_PRINT_ERROR) MULTIO_ENCODER%PRINT( UNIT, OFFSET, HOOKS )
+
+#if 0
+
+  !>
+  !> Open the YAML configurations
+
+  !> Open the configuration file
+  PP_TRYCALL(ERRFLAG_MAPPING_CFG_FILE_DOES_NOT_EXIST) YAML_NEW_CONFIGURATION_FROM_FILE( &
+& TRIM(ADJUSTL(FNAME)), MAPPING_CONFIG, HOOKS )
+
+  !> Open the configuration file
+  PP_TRYCALL(ERRFLAG_ENCODER_CFG_FILE_DOES_NOT_EXIST) YAML_NEW_CONFIGURATION_FROM_FILE( &
+&   TRIM(ADJUSTL(FNAME)), ENCODER_CONFIG, HOOKS )
+
+
+
+  !>
+  !> Read the YAML configurations
+
+  !> Read the mapping rules
+  PP_TRYCALL(ERRFLAG_MAPPING_RULES_INIT) MAPPING_RULES%INIT( &
+&    MAPPING_CONFIG, FILTER_OPT, HOOKS )
+
+  !> Read the encoder configuration
+  PP_TRYCALL(ERRFLAG_ENCODER_RULES_INIT) ENCODER_RULES%INIT( &
+&   ENCODER_CONFIG, FILTER_OPT, ENCODER_OPT, HOOKS )
+
+
+  !>
+  !> Close the YAML configurations
+
+  !> Deallocate section configuration
+  PP_TRYCALL(ERRFLAG_ENCODER_RULE_DELETE_ERROR) YAML_DELETE_CONFIGURATION( &
+&     ENCODER_CONFIG, HOOKS )
+
+  !> Destroy the configuration object
+  PP_TRYCALL(ERRFLAG_MAPPING_RULE_DELETE_ERROR) YAML_DELETE_CONFIGURATION( &
+&     MAPPING_CONFIG, HOOKS )
+
+
+
+
+
+  !> Print all the rules
+  PP_TRYCALL( ERRFLAG_ENCODING_RULE_PRINT_ERROR ) MAPPING_RULES%PRINT( UNIT, OFFSET, ENCODER_OPT, HOOKS )
+  PP_TRYCALL( ERRFLAG_ENCODING_RULE_PRINT_ERROR ) ENCODER_RULES%PRINT( UNIT, OFFSET, ENCODER_OPT, HOOKS )
+
+
+  !> Search the rules
+  MSG%PARAM=228057
+  MSG%NUMBER=3
+  MSG%LEVTYPE=7
+  MSG%LEVELIST=80
+  MSG%REPRES=2
+  MSG%PACKING=1
+  MSG%NUMBER=1
+
+  !> Create the cache
+  PP_TRYCALL(ERRFLAG_MAPPING_CACHE_INIT) MAPPING_CACHE%ACCESS_OR_CREATE( MSG, PAR, &
+  &    MAPPING_RULES, MAPPERS, OPT, FILTER_OPT, HOOKS )
+
+  !
+  ! Initialize encoder cahce
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_INIT_ENCODER_CAHCE) ENCODING_CACHE%INIT( ENCODER_OPT, HOOKS )
+
+  !> Init message
+  WRITE(*,*) 'PUSH INTO CACHE'
+
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_AOC_ENCODER_CAHCE) ENCODING_CACHE%ACCESS_OR_CREATE( &
+&    MSG, PAR, METADATA, ENCODING_RULES, ENCODERS, &
+&    ENCODER_OPT, HOOKS )
+
+  WRITE(*,*) 'RE-PUSH TO CACHE'
+
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_AOC_ENCODER_CAHCE) ENCODING_CACHE%ACCESS_OR_CREATE( &
+&    MSG, PAR, METADATA, ENCODING_RULES, ENCODERS, &
+&    ENCODER_OPT, HOOKS )
+
+  WRITE(*,*) 'CACHE UPDATED'
+
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_SIZE_ENCODER_CAHCE)  ENCODERS%SIZE( SZ, ENCODER_OPT, HOOKS )
+
+  !> Deallocate all the rules
+  WRITE(*,*) 'ENCODERS SIZE', SZ
+
+  ! Deallocate all the rules
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_FREE_ENCODER_CAHCE) ENCODING_CACHE%FREE( ENCODER_OPT, HOOKS )
+
+  ! Deallocate all the rules
+  PP_TRYCALL( ERRFLAG_ENCODING_RULES_DEALLOCATION_ERROR ) ENCODER_RULES%FREE( ENCODER_OPT, HOOKS )
+
+
+  !> Read the intop configuration
+  PP_TRYCALL(ERRFLAG_MAPPING_RULES_FREE) MAPPING_RULES%FREE( HOOKS )
+  PP_TRYCALL(ERRFLAG_MAPPING_CACHE_FREE) MAPPING_CACHE%FREE( OPT, HOOKS )
+#endif
+
+  ! Deallocate all the rules
+  PP_TRYCALL(ERRFLAG_UNABLE_FREE_ENCODER) MULTIO_ENCODER%FREE( HOOKS )
+
+  ! Destroy metadata
+  PP_TRYCALL(ERRFLAG_UNABLE_FREE_METADATA) DESTROY_METADATA( METADATA, HOOKS )
+
+  !> Be sure we don't have any memory leaks
+  CALL HOOKS%DEBUG_HOOK_%FREE( )
+
+  !> Exit point (on success)
+  STOP 0
+
+! Error handler
+PP_ERROR_HANDLER
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNABLE_INITIALIZE_ENCODER)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to initialize encoder' )
+    CASE (ERRFLAG_UNABLE_FREE_ENCODER)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to free encoder' )
+    CASE (ERRFLAG_LOADING_LOCAL_SAMPLE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to load the local sample' )
+    CASE (ERRFLAG_UNABLE_FREE_METADATA)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to free metadata' )
+    CASE (ERRFLAG_ENCODING_RULE_PRINT_ERROR)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to print the encoding rule' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unknown error' )
+    END SELECT
+
+    ! Print the error stack
+    CALL HOOKS%DEBUG_HOOK_%PRINT_ERROR_STACK( 6_JPIB_K )
+
+    ! Free the error stack
+    CALL HOOKS%DEBUG_HOOK_%FREE( )
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  STOP 1
+
+END PROGRAM TEST_READ04_PROG
+#undef PP_SECTION_NAME
+#undef PP_SECTION_TYPE
+#undef PP_FILE_NAME

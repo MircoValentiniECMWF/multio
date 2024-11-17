@@ -241,8 +241,11 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
-  !> TODO: Some kind of logic here
-  MATCH = .FALSE.
+  IF ( MSG%NUMBER .GT. 0_JPIB_K ) THEN
+    MATCH = .TRUE.
+  ELSE
+    MATCH = .FALSE.
+  ENDIF
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()

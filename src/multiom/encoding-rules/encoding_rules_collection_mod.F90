@@ -45,9 +45,6 @@ CONTAINS
   !> Match the rule
   PROCEDURE, PASS, PUBLIC, NON_OVERRIDABLE :: MATCH => RULE_MATCH
 
-  !> Get the encoder from rule IDX
-  PROCEDURE, PASS, PUBLIC, NON_OVERRIDABLE :: GET_ENCODER => RULE_GET_ENCODER
-
   !> Free all the memory allocated by the rule
   PROCEDURE, PASS, PUBLIC, NON_OVERRIDABLE :: PRINT => RULE_PRINT
 
@@ -231,13 +228,18 @@ END FUNCTION RULE_INIT
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME 'RULE_MATCH'
-PP_THREAD_SAFE FUNCTION RULE_MATCH( THIS, MSG, PAR, MATCHES, HOOKS ) RESULT(RET)
+PP_THREAD_SAFE FUNCTION RULE_MATCH( THIS, MSG, PAR, METADATA, ENCODERS, OPT, HOOKS ) RESULT(RET)
 
   ! Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD,     ONLY: JPIB_K
-  USE :: HOOKS_MOD,             ONLY: HOOKS_T
-  USE :: PARAMETRIZATION_MOD,   ONLY: PARAMETRIZATION_T
-  USE :: FORTRAN_MESSAGE_MOD,   ONLY: FORTRAN_MESSAGE_T
+  USE :: DATAKINDS_DEF_MOD,        ONLY: JPIB_K
+  USE :: HOOKS_MOD,                ONLY: HOOKS_T
+  USE :: METADATA_BASE_MOD,        ONLY: METADATA_BASE_A
+  USE :: GRIB_SECTION_BASE_MOD,    ONLY: GRIB_SECTION_BASE_A
+  USE :: PARAMETRIZATION_MOD,      ONLY: PARAMETRIZATION_T
+  USE :: FORTRAN_MESSAGE_MOD,      ONLY: FORTRAN_MESSAGE_T
+  USE :: CACHED_ENCODER_MOD,       ONLY: CACHED_ENCODER_T
+  USE :: GRIB_ENCODER_OPTIONS_MOD, ONLY: GRIB_ENCODER_OPTIONS_T
+  USE :: GRIB_ENCODER_FACTORY_MOD, ONLY: MAKE_ENCODER
 
   ! Symbols imported by the preprocessor for debugging purposes
   PP_DEBUG_USE_VARS
@@ -251,11 +253,13 @@ PP_THREAD_SAFE FUNCTION RULE_MATCH( THIS, MSG, PAR, MATCHES, HOOKS ) RESULT(RET)
 IMPLICIT NONE
 
   !> Dummy arguments
-  CLASS(ENCODING_RULE_COLLECTION_T),           INTENT(IN)    :: THIS
-  TYPE(PARAMETRIZATION_T),                     INTENT(IN)    :: PAR
-  TYPE(FORTRAN_MESSAGE_T),                     INTENT(IN)    :: MSG
-  INTEGER(KIND=JPIB_K), DIMENSION(:), POINTER, INTENT(OUT)   :: MATCHES
-  TYPE(HOOKS_T),                               INTENT(INOUT) :: HOOKS
+  CLASS(ENCODING_RULE_COLLECTION_T),             INTENT(IN)    :: THIS
+  TYPE(PARAMETRIZATION_T),                       INTENT(IN)    :: PAR
+  TYPE(FORTRAN_MESSAGE_T),                       INTENT(IN)    :: MSG
+  CLASS(METADATA_BASE_A), POINTER,               INTENT(IN)    :: METADATA
+  TYPE(CACHED_ENCODER_T), DIMENSION(:), POINTER, INTENT(OUT)   :: ENCODERS
+  TYPE(GRIB_ENCODER_OPTIONS_T),                  INTENT(IN)    :: OPT
+  TYPE(HOOKS_T),                                 INTENT(INOUT) :: HOOKS
 
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET
@@ -264,10 +268,11 @@ IMPLICIT NONE
   LOGICAL :: MATCH
   INTEGER(KIND=JPIB_K) :: I
   INTEGER(KIND=JPIB_K) :: NUM_MATCHES
-  ! INTEGER(KIND=JPIB_K) :: ALLOC_STATUS
-  ! CHARACTER(LEN=:), ALLOCATABLE :: ERRMSG
-  ! CLASS(GRIB_SECTION_BASE_A), POINTER :: ENCODER
-  ! CHARACTER(LEN=256) :: TAG
+  INTEGER(KIND=JPIB_K) :: ALLOC_STATUS
+  CHARACTER(LEN=:), ALLOCATABLE :: ERRMSG
+  CLASS(GRIB_SECTION_BASE_A), POINTER :: ENCODER
+  CHARACTER(LEN=256) :: TAG
+  CHARACTER(LEN=256) :: NAME
 
   !> Local error flags
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_FILTER_NOT_ASSOCIATED=1_JPIB_K
@@ -276,6 +281,7 @@ IMPLICIT NONE
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNEXPECTED_NUMBER_OF_MATCHES=4_JPIB_K
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_MATCHES_ALLOCATION_ERROR=5_JPIB_K
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_GET_ENCODERS=6_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_NOT_IMPLEMENTED_YET=7_JPIB_K
 
   !> Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -305,50 +311,51 @@ IMPLICIT NONE
     ENDIF
   ENDDO
 
-  ! Matches
-  IF ( NUM_MATCHES .GT. 0 ) THEN
-    MATCHES => THIS%MATCHES_(1:NUM_MATCHES)
-  ELSE
-    MATCHES => NULL()
-  ENDIF
-
-#if 0
   !> Initialize the encoding info
-  IF ( NUM_MATCHES .GT. 0 ) THEN
+  IF ( NUM_MATCHES .EQ. 0 ) THEN
+
+    !> TODO Lazy construction of the default encoder
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_NOT_IMPLEMENTED_YET )
+    !> On the fly create the encoder using msg and par
+    !> Allocate the encoding info to be output
+    ALLOCATE( ENCODERS(1), STAT=ALLOC_STATUS, ERRMSG=ERRMSG )
+    PP_DEBUG_CRITICAL_COND_THROW( ALLOC_STATUS .NE. 0, ERRFLAG_MATCHES_ALLOCATION_ERROR )
+
+    !> Lazy construction of the encoder
+    PP_TRYCALL(ERRFLAG_INIT_ENCODING_INFO) MAKE_ENCODER( ENCODER, MSG, PAR, OPT, HOOKS )
+    TAG = REPEAT(' ',256)
+    TAG = 'Lazy encoder'
+    NAME = REPEAT(' ',256)
+    NAME = 'default-encoder'
+    !> Initialize the encoding info
+    PP_TRYCALL(ERRFLAG_INIT_ENCODING_INFO) ENCODERS(1)%INIT( MSG, PAR, TAG, NAME, METADATA, ENCODER, .TRUE., OPT, HOOKS )
+
+  ELSEIF ( NUM_MATCHES .GT. 0 ) THEN
 
     !> Allocate the encoding info to be output
-    ALLOCATE( ENCODING_INFO(NUM_MATCHES), STAT=ALLOC_STATUS, ERRMSG=ERRMSG )
+    ALLOCATE( ENCODERS(NUM_MATCHES), STAT=ALLOC_STATUS, ERRMSG=ERRMSG )
     PP_DEBUG_CRITICAL_COND_THROW( ALLOC_STATUS .NE. 0, ERRFLAG_MATCHES_ALLOCATION_ERROR )
 
     !> Initialize encoding info
     DO I = 1, NUM_MATCHES
       NULLIFY(ENCODER)
       TAG = REPEAT(' ',256)
-      PP_TRYCALL(ERRFLAG_GET_ENCODERS) THIS%RULES_(THIS%MATCHES_(I))%RULE_%GET_ENCODER( ENCODER, TAG, HOOKS )
-      PP_TRYCALL(ERRFLAG_INIT_ENCODING_INFO) ENCODING_INFO(I)%INIT( ENCODER, TAG, .FALSE., HOOKS )
+      NAME = REPEAT(' ',256)
+      PP_TRYCALL(ERRFLAG_GET_ENCODERS) THIS%RULES_(THIS%MATCHES_(I))%RULE_%GET_ENCODER( NAME, TAG, ENCODER, HOOKS )
+      WRITE(*,*) 'Acciderbolina: ', I, NUM_MATCHES, TRIM(NAME), TRIM(TAG)
+      PP_TRYCALL(ERRFLAG_INIT_ENCODING_INFO) ENCODERS(I)%INIT( MSG, PAR, TAG, NAME, METADATA, ENCODER, .FALSE., OPT, HOOKS )
       THIS%MATCHES_(I) = -1_JPIB_K
     ENDDO
 
     ! PAranoid operation
     NUM_MATCHES = 0_JPIB_K
 
-  ELSEIF ( NUM_MATCHES .EQ. 0 ) THEN
-    !> TODO
-    !> On the fly create the encoder using msg and par
-    !> Allocate the encoding info to be output
-    !! ALLOCATE( ENCODING_INFO(1), STAT=ALLOC_STATUS, ERRMSG=ERRMSG )
-    !! PP_DEBUG_CRITICAL_COND_THROW( ALLOC_STATUS .NE. 0, ERRFLAG_MATCHES_ALLOCATION_ERROR )
-
-    !> Lazy construction of the encoder
-    !! PP_TRYCALL(ERRFLAG_INIT_ENCODING_INFO) MAKE_ENCODER( ENCODER, MSG, PAR, THIS%ENCODER_OPT_, THIS%FILTER_OPT_, HOOKS )
-    !! TAG = REPEAT(' ',256)
-    !! TAG = 'Lazy encoder'
-    !> Initialize the encoding info
-    !! PP_TRYCALL(ERRFLAG_INIT_ENCODING_INFO) ENCODING_INFO(1)%INIT( ENCODER, TAG, .FALSE., HOOKS )
   ELSE
+
     PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNEXPECTED_NUMBER_OF_MATCHES)
+
   ENDIF
-#endif
+
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -384,6 +391,8 @@ PP_ERROR_HANDLER
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to allocate the matches array' )
     CASE(ERRFLAG_GET_ENCODERS)
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to get the encoders' )
+    CASE(ERRFLAG_NOT_IMPLEMENTED_YET)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Not implemented yet' )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
     END SELECT
@@ -404,120 +413,6 @@ PP_ERROR_HANDLER
 
 
 END FUNCTION RULE_MATCH
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
-
-
-
-#define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'RULE_GET_ENCODER'
-PP_THREAD_SAFE FUNCTION RULE_GET_ENCODER( THIS, ID, NAME, TAG, ENCODER, HOOKS ) RESULT(RET)
-
-  ! Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD,     ONLY: JPIB_K
-  USE :: HOOKS_MOD,             ONLY: HOOKS_T
-  USE :: PARAMETRIZATION_MOD,   ONLY: PARAMETRIZATION_T
-  USE :: FORTRAN_MESSAGE_MOD,   ONLY: FORTRAN_MESSAGE_T
-  USE :: GRIB_SECTION_BASE_MOD, ONLY: GRIB_SECTION_BASE_A
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  !> Dummy arguments
-  CLASS(ENCODING_RULE_COLLECTION_T),   INTENT(IN)    :: THIS
-  INTEGER(KIND=JPIB_K),                INTENT(IN)    :: ID
-  CHARACTER(LEN=256),                  INTENT(OUT)   :: NAME
-  CHARACTER(LEN=256),                  INTENT(OUT)   :: TAG
-  CLASS(GRIB_SECTION_BASE_A), POINTER, INTENT(OUT)   :: ENCODER
-  TYPE(HOOKS_T),                       INTENT(INOUT) :: HOOKS
-
-  !> Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-  !> Local error flags
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_RULE_NOT_ASSOCIATED=1_JPIB_K
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ID_OUT_OF_BOUNDS=2_JPIB_K
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_GET_ENCODERS=3_JPIB_K
-
-  !> Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  !> Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  !> Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  !> Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  !> Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-  !> Error handling
-  PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(THIS%RULES_), ERRFLAG_RULE_NOT_ASSOCIATED )
-  PP_DEBUG_CRITICAL_COND_THROW( ID.LT.1, ERRFLAG_ID_OUT_OF_BOUNDS )
-  PP_DEBUG_CRITICAL_COND_THROW( ID.GT.SIZE(THIS%RULES_), ERRFLAG_ID_OUT_OF_BOUNDS )
-
-  !> Get the encoder from the rule
-  PP_TRYCALL(ERRFLAG_GET_ENCODERS) THIS%RULES_(ID)%RULE_%GET_ENCODER( NAME, TAG, ENCODER, HOOKS )
-
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
-
-  ! Exit point (On success)
-  RETURN
-
-! Error handler
-PP_ERROR_HANDLER
-
-  ! Initialization of bad path return value
-  PP_SET_ERR_FAILURE( RET )
-
-#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
-!$omp critical(ERROR_HANDLER)
-
-  BLOCK
-
-    ! Error handling variables
-    PP_DEBUG_PUSH_FRAME()
-
-    ! Handle different errors
-    SELECT CASE(ERRIDX)
-    CASE(ERRFLAG_RULE_NOT_ASSOCIATED)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Rule not associated' )
-    CASE(ERRFLAG_ID_OUT_OF_BOUNDS)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'ID out of bounds' )
-    CASE(ERRFLAG_GET_ENCODERS)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to get the encoders' )
-    CASE DEFAULT
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
-    END SELECT
-
-    ! Trace end of procedure (on error)
-    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
-
-    ! Write the error message and stop the program
-    PP_DEBUG_ABORT()
-
-  END BLOCK
-
-!$omp end critical(ERROR_HANDLER)
-#endif
-
-  ! Exit point (on error)
-  RETURN
-
-
-END FUNCTION RULE_GET_ENCODER
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 

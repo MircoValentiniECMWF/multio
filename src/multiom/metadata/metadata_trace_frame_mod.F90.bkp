@@ -19,10 +19,10 @@
 #include "output_manager_preprocessor_errhdl_utils.h"
 
 ! Definition of the module
-#define PP_FILE_NAME 'multio_metadata_mod.F90'
+#define PP_FILE_NAME 'metadata_trace_frame_mod.F90'
 #define PP_SECTION_TYPE 'MODULE'
-#define PP_SECTION_NAME 'MULTIO_METADATA_MOD'
-MODULE ENCODE_STACK_MOD
+#define PP_SECTION_NAME 'METADATA_TRACE_FRAME_MOD'
+MODULE METADATA_TRACE_FRAME_MOD
 
   ! Symbols imported from other modules within the project.
   USE :: DATAKINDS_DEF_MOD,       ONLY: JPIB_K
@@ -63,48 +63,27 @@ IMPLICIT NONE
     !> Pointer to the next frame in the stack
     TYPE(ENCODE_STACK_FRAME_NODE), POINTER :: NEXT => NULL()
 
-  END TYPE
-
-
-  !>
-  !> @brief Manages error frames and messages for debugging purposes.
-  !>
-  !> The `ENCODE_STACK_T` type provides functionality to manage a stack of error frames,
-  !> each containing detailed error information and associated messages. It allows
-  !> for error frames to be pushed to the stack, error messages to be added, and
-  !> the entire error stack to be printed. The structure also includes methods
-  !> for initializing and freeing the error stack.
-  !>
-  TYPE :: ENCODE_STACK_T
-
-    !> Default visibility
-    PRIVATE
-
-    !> Error frames
-    TYPE(ENCODE_STACK_FRAME_NODE), POINTER :: FRAME_STACK => NULL()
-
   CONTAINS
-
-    !> Initialize the ENCODE_STACK_T structure
-    PROCEDURE, PRIVATE, PASS, NON_OVERRIDABLE :: INIT => ENCODE_STACK_INIT_DEFAULT
-
-    !> Copy the error stack to another ENCODE_STACK_T structure
-    PROCEDURE, PRIVATE, PASS, NON_OVERRIDABLE :: COPY_TO    => ENCODE_STACK_COPY_TO
-
-    !> Free the error stack (both frames and messages)
-    PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: FREE => ENCODE_STACK_FREE
-
-    !> Add an error frame to the stack
-    PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: PUSH_FRAME => ENCODE_STACK_PUSH_FRAME
-
-    !> Add an error message to the current frame
-    PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: PUSH_MSG => ENCODE_STACK_PUSH_MSG
-
-    !> TODO: Add more options to add messages to the frame (i.e. int message, float messge, etc.)
-
-    !> Print all error frames and their messages
-    PROCEDURE, PUBLIC, PASS, NON_OVERRIDABLE :: PRINT_STACK => ENCODE_STACK_PRINT_STACK
-
+    PROCEDURE, PRIVATE, PASS :: INIT
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_EMPTY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_STRING
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_STRING_ARRAY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_BOOL
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_BOOL_ARRAY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT8
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT8_ARRAY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT16
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT16_ARRAY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT32
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT32_ARRAY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT64
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_INT64_ARRAY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_REAL32
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_REAL32_ARRAY
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_REAL64
+    PROCEDURE, PRIVATE, PASS :: ADD_MSG_REAL64_ARRAY
+    PROCEDURE, PRIVATE, PASS :: PRINT
+    PROCEDURE, PRIVATE, PASS :: FREE
   END TYPE
 
 
@@ -1199,7 +1178,7 @@ END FUNCTION ENCODE_STACK_PRINT_STACK
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
-END MODULE ENCODE_STACK_MOD
+END MODULE METADATA_TRACE_FRAME_MOD
 #undef PP_SECTION_NAME
 #undef PP_SECTION_TYPE
 #undef PP_FILE_NAME

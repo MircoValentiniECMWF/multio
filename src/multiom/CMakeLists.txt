@@ -103,6 +103,8 @@ list( APPEND output_manager_src
   ${MULTIOM_OPERATIONS_SOURCES}
   ${MULTIOM_MAPPING_RULES_SOURCES}
   ${MULTIOM_ENCODING_RULES_SOURCES}
+  ./multiom_cached_encoder_mod.F90
+  ./multiom_encoder_mod.F90
 )
 
  message("All files in output_manager_src:")

@@ -1665,11 +1665,11 @@ IMPLICIT NONE
   !> Select the repres
   SELECT CASE ( TRIM(ADJUSTL(LOC_CREPRES)) )
 
-  CASE ( 'll' )
+  CASE ( 'll', 'latlon' )
     IREPRES = REPRES_LATLONG_E
-  CASE ( 'gg' )
+  CASE ( 'gg', 'gaussian-grid' )
     IREPRES = REPRES_GAUSSIANGRID_E
-  CASE ( 'sh' )
+  CASE ( 'sh', 'spherical-harmonics' )
     IREPRES = REPRES_SPHERICALHARMONICS_E
   CASE DEFAULT
     PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_REPRES )

@@ -307,9 +307,10 @@ IMPLICIT NONE
   ! Check if there is a current frame
   CURRENT_FRAME => THIS%FRAME_STACK
   IF (.NOT. ASSOCIATED(CURRENT_FRAME)) THEN
-    CALL THIS%PUSH_ERROR_FRAME('UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', -1, -1)
-    RETURN
-  END IF
+    !> If there is no current frame, push an unknown frame to avoid errors
+    CALL THIS%PUSH_ERROR_FRAME( 'UNKNOWN', 'UNKNOWN', 'UNKNOWN', &
+&   'UNKNOWN', 'UNKNOWN', -1_JPIB_K, -1_JPIB_K )
+  ENDIF
 
   !> Create a new message node
   ALLOCATE(NEW_MSG, STAT=ALLOC_STATUS)
@@ -325,7 +326,7 @@ IMPLICIT NONE
     ELSE
       CURRENT_FRAME%MSG_LIST_TAIL%NEXT => NEW_MSG
       CURRENT_FRAME%MSG_LIST_TAIL => NEW_MSG
-    END IF
+    ENDIF
   ENDIF
 
   !> Exit point

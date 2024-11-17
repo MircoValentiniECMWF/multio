@@ -18,6 +18,7 @@ set( MULTIOM_FILTERS_MARS_SOURCES
   # ${MULTIOM_FILTERS_MARS_DIR}/filter_origin_mod.F90
   ${MULTIOM_FILTERS_MARS_DIR}/filter_param_mod.F90
   ${MULTIOM_FILTERS_MARS_DIR}/filter_repres_mod.F90
+  ${MULTIOM_FILTERS_MARS_DIR}/filter_packing_mod.F90
   ${MULTIOM_FILTERS_MARS_DIR}/filter_stream_mod.F90
   ${MULTIOM_FILTERS_MARS_DIR}/filter_type_mod.F90
   CACHE INTERNAL "List of all sources in filters/mars directory"

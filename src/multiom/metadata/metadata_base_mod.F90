@@ -137,6 +137,7 @@ END TYPE
 
 
 ABSTRACT INTERFACE
+
 !> @brief Return the initialisation status of the object
 !>
 !> @param [in]    this  The object to be checked.

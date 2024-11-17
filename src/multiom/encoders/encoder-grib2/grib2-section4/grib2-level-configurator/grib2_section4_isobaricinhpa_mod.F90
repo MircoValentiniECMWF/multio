@@ -533,6 +533,8 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
+  WRITE(*,*) 'ALLOCATE ISOBARICINHPA'
+
   ! Allocate the section
   IF ( MSG%LEVTYPE .EQ. LEVTYPE_ML_E )   THEN
     PP_DEBUG_CRITICAL_COND_THROW( .NOT. ASSOCIATED(PAR%LEVELS%PV), ERRFLAG_PV_NOT_ASSOCIATED )
@@ -683,9 +685,10 @@ IMPLICIT NONE
   PP_TRACE_ENTER_PROCEDURE()
   PP_METADATA_ENTER_PROCEDURE( METADATA, ERRFLAG_METADATA )
 
-
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
+
+  WRITE(*,*) 'PRESET ISOBARICINHPA'
 
   ! According to the options decide where to set the levels (preset or runlevel)
   IF ( OPT%CACHE_STRATEGY .EQ. OPT_CACHE_FULL_E ) THEN

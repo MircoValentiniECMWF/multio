@@ -14,6 +14,8 @@ set( MULTIOM_ENCODING_RULES_MAIN_SOURCES
   ${MULTIOM_ENCODING_RULES_DIR}/encoding_rules_factory_mod.F90
   ${MULTIOM_ENCODING_RULES_DIR}/encoding_rules_collection_mod.F90
   ${MULTIOM_ENCODING_RULES_DIR}/encoding_info_mod.F90
+  ${MULTIOM_ENCODING_RULES_DIR}/encoding_cache_mod.F90
+  ${MULTIOM_ENCODING_RULES_DIR}/encoding_utils_mod.F90
 )
 
 # Collect source files in module2
