@@ -1,0 +1,21 @@
+encoding-rules:
+
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-hPa-ccsds-deterministic.yaml'
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-hPa-ccsds-deterministic.yaml'
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-hPa-simple-deterministic.yaml'
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-hPa-simple-deterministic.yaml'
+
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-Pa-ccsds-deterministic.yaml'
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-Pa-ccsds-deterministic.yaml'
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-Pa-simple-deterministic.yaml'
+  - file: '{ENCODING_RULES_DIR}/rule-gg-pl-statistical-ftr3h-isobaricIn-Pa-simple-deterministic.yaml'
+
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-ml-statistical-ftr3h-hybrid-ccsds-deterministic.yaml'
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-ml-statistical-ftr3h-hybrid-ccsds-deterministic.yaml'
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-ml-statistical-ftr3h-hybrid-simple-deterministic.yaml'
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-ml-statistical-ftr3h-hybrid-simple-deterministic.yaml'
+#
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-sfc-statistical-ftr3h-surface-ccsds-deterministic.yaml'
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-sfc-statistical-ftr3h-surface-ccsds-deterministic.yaml'
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-sfc-statistical-ftr3h-surface-simple-deterministic.yaml'
+#  - file: '{ENCODING_RULES_DIR}/rule-gg-sfc-statistical-ftr3h-surface-simple-deterministic.yaml'

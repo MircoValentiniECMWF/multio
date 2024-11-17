@@ -54,8 +54,8 @@ TYPE, EXTENDS(METADATA_BASE_A) :: LOG_METADATA_T
 
 
   !> @brief Multio Handle pointer to be used to initialize multio metadata
-  INTEGER(KINd=JPIB_K) :: UNIT_=-1_JPIB_K
-  INTEGER(KINd=JPIB_K) :: N_=10_JPIB_K
+  INTEGER(KIND=JPIB_K) :: UNIT_=-1_JPIB_K
+  INTEGER(KIND=JPIB_K) :: N_=10_JPIB_K
 
 CONTAINS
 
@@ -255,7 +255,7 @@ IMPLICIT NONE
   PP_SET_ERR_SUCCESS( RET )
 
   ! Associate pointer to multio handle
-  THIS%UNIT_ => UNIT
+  THIS%UNIT_ = UNIT
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -305,7 +305,7 @@ PP_THREAD_SAFE FUNCTION LOG_METADATA_INIT_FROM_METADATA( THIS, METADATA, HOOKS )
 IMPLICIT NONE
 
   ! Dummy arguments
-  CLASS(LOG_METADATA_T),        INTENT(INOUT) :: THIS
+  CLASS(LOG_METADATA_T),           INTENT(INOUT) :: THIS
   CLASS(METADATA_BASE_A), POINTER, INTENT(IN)    :: METADATA
   TYPE(HOOKS_T),                   INTENT(INOUT) :: HOOKS
 
@@ -327,7 +327,10 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
+  WRITE(*,*) 'LOG_METADATA_INIT_FROM_METADATA'
 
+  ! Set the initialization flag to .true.
+  THIS%INITIALIZED_ = .TRUE.
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -354,6 +357,7 @@ PP_ERROR_HANDLER
 
     ! HAndle different errors
     SELECT CASE(ERRIDX)
+    CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
     END SELECT
 
@@ -429,6 +433,11 @@ IMPLICIT NONE
 
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
+
+  WRITE(*,*) 'LOG_METADATA_INIT_FROM_SAMPLE_NAME: '//TRIM(ADJUSTL(SAMPLE_NAME))//'.tmpl'
+
+  ! Set the initialization flag to .true.
+  THIS%INITIALIZED_ = .TRUE.
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -533,6 +542,9 @@ IMPLICIT NONE
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
 
+  ! Set the initialization flag to .true.
+  THIS%INITIALIZED_ = .TRUE.
+
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
 
@@ -633,6 +645,9 @@ IMPLICIT NONE
 
   ! Initialization of good path return value
   PP_SET_ERR_SUCCESS( RET )
+
+  ! Set the initialization flag to .true.
+  THIS%INITIALIZED_ = .TRUE.
 
   ! Trace end of procedure (on success)
   PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
@@ -813,6 +828,9 @@ IMPLICIT NONE
 
   ! Function result
   INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIM_K)  :: IOSTAT
 
   ! Local error codes
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_NOT_INITIALIZED=1_JPIM_K
@@ -1042,6 +1060,7 @@ IMPLICIT NONE
 
   ! Local variables
   CHARACTER(LEN=7) :: KVAL
+  INTEGER(KIND=JPIM_K)  :: IOSTAT
 
   ! Local error codes
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_NOT_INITIALIZED=1_JPIM_K
@@ -1905,6 +1924,7 @@ IMPLICIT NONE
 
   ! Local variables
   INTEGER(KIND=JPIM_K)  :: IOSTAT
+  INTEGER(KIND=JPIM_K)  :: I
 
   ! Local error codes
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_NOT_INITIALIZED=1_JPIM_K
@@ -1933,7 +1953,7 @@ IMPLICIT NONE
   IF ( SIZE(VALUES) .GT. 1 ) THEN
     DO I = 1, SIZE(VALUES)-1
       IF ( MOD(I-1,THIS%N_) .NE. 0 ) THEN
-        WRITE(THIS%UNIT_,*,IOSTAT=IOSTAT,ADVANCE='NO') '"'//TRIM(ADJUSTL(VALUES(I)))//'", '
+        WRITE(THIS%UNIT_,'(A)',ADVANCE='NO',IOSTAT=IOSTAT) '"'//TRIM(ADJUSTL(VALUES(I)))//'", '
         PP_DEBUG_CRITICAL_COND_THROW( IOSTAT.NE.0, ERRFLAG_LOG_METADATA_SET_STRING )
       ELSE
         WRITE(THIS%UNIT_,*,IOSTAT=IOSTAT) '"'//TRIM(ADJUSTL(VALUES(I)))//'", ...'
@@ -2033,6 +2053,7 @@ IMPLICIT NONE
   ! Local variables
   INTEGER(KIND=JPIB_K)  :: IOSTAT
   CHARACTER(LEN=32) :: CTMP
+  INTEGER(KIND=JPIB_K)  :: I
 
   ! Local error codes
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_NOT_INITIALIZED=1_JPIB_K
@@ -2069,7 +2090,7 @@ IMPLICIT NONE
         CTMP = '.FALSE.'
       ENDIF
       IF ( MOD(I-1,THIS%N_) .NE. 0 ) THEN
-        WRITE(THIS%UNIT_,*,IOSTAT=IOSTAT,ADVANCE='NO') '"'//TRIM(ADJUSTL(CTMP))//'", '
+        WRITE(THIS%UNIT_,'(A)',ADVANCE='NO',IOSTAT=IOSTAT) '"'//TRIM(ADJUSTL(CTMP))//'", '
         PP_DEBUG_CRITICAL_COND_THROW( IOSTAT.NE.0, ERRFLAG_LOG_METADATA_SET_BOOL )
       ELSE
         WRITE(THIS%UNIT_,*,IOSTAT=IOSTAT) '"'//TRIM(ADJUSTL(CTMP))//'", ...'
@@ -2164,7 +2185,7 @@ PP_THREAD_SAFE FUNCTION LOG_METADATA_SET_INT8_ARRAY( THIS, KEY, VALUES, HOOKS ) 
 IMPLICIT NONE
 
   ! Dummy arguments
-  CLASS(LOG_METADATA_T),         INTENT(INOUT) :: THIS
+  CLASS(LOG_METADATA_T),            INTENT(INOUT) :: THIS
   CHARACTER(LEN=*),                 INTENT(IN)    :: KEY
   INTEGER(KIND=INT8), DIMENSION(:), INTENT(IN)    :: VALUES
   TYPE(HOOKS_T),                    INTENT(INOUT) :: HOOKS
@@ -2826,635 +2847,6 @@ PP_ERROR_HANDLER
 END FUNCTION LOG_METADATA_SET_REAL64_ARRAY
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
-
-
-#define PP_PROCEDURE_TYPE 'PP_THREAD_SAFE FUNCTION'
-#define PP_PROCEDURE_NAME 'LOG_GRIB_TO_MD_SPECTRAL'
-PP_THREAD_SAFE FUNCTION LOG_GRIB_TO_MD_SPECTRAL( MIOMD, KGRIB_HANDLE, HOOKS ) RESULT(RET)
-
-  ! Symbolds imported from intrinsic modules
-  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: INT64
-
-  ! Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPIM_K
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
-  USE :: HOOKS_MOD,         ONLY: HOOKS_T
-
-  ! Symbols imported from other libraries
-  USE :: ECCODES,    ONLY: CODES_GET
-  USE :: ECCODES,    ONLY: CODES_SUCCESS
-  USE :: LOG_API, ONLY: LOG_METADATA
-  USE :: LOG_API, ONLY: LOG_SUCCESS
-  USE :: LOG_API, ONLY: LOG_ERROR_STRING
-  USE :: ECCODES,    ONLY: CODES_GET_ERROR_STRING
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  ! Dummy arguments
-  TYPE(LOG_METADATA), INTENT(INOUT) :: MIOMD
-  INTEGER(KIND=JPIM_K),  INTENT(IN)    :: KGRIB_HANDLE
-  TYPE(HOOKS_T),         INTENT(INOUT) :: HOOKS
-
-  ! Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-  ! Local variabels
-  INTEGER(KIND=INT64)  :: IVALUE
-  INTEGER(KIND=JPIM_K) :: KRET
-  INTEGER(KIND=JPIM_K) :: CERR
-
-  ! Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  ! Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  ! Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'sphericalHarmonics',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 50 )
-  CERR = MIOMD%SET('sphericalHarmonics',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 1 )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'complexPacking',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 51 )
-  CERR = MIOMD%SET('complexPacking',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 2 )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'pentagonalResolutionParameterJ',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 52 )
-  CERR = MIOMD%SET('pentagonalResolutionParameterJ',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 3 )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'pentagonalResolutionParameterK',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 53 )
-  CERR = MIOMD%SET('pentagonalResolutionParameterK',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 4 )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'pentagonalResolutionParameterM',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 54 )
-  CERR = MIOMD%SET('pentagonalResolutionParameterM',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 5 )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'subSetJ',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 55 )
-  CERR = MIOMD%SET('subSetJ',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 6 )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'subSetK',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 56 )
-  CERR = MIOMD%SET('subSetK',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 7 )
-
-
-  CALL CODES_GET(KGRIB_HANDLE,'subSetM',IVALUE,STATUS=KRET)
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 57 )
-  CERR = MIOMD%SET('subSetM',IVALUE)
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 8 )
-
-
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
-
-  ! Exit point on success
-  RETURN
-
-! Error handler
-PP_ERROR_HANDLER
-
-  ! Initialization of bad path return value
-  PP_SET_ERR_FAILURE( RET )
-
-#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
-!$omp critical(ERROR_HANDLER)
-
-  BLOCK
-
-    ! Error handling variables
-    CHARACTER(LEN=:), ALLOCATABLE :: STR
-    CHARACTER(LEN=:), ALLOCATABLE :: MIO_ERR_STR
-    CHARACTER(LEN=4096) :: GRIB_ERROR
-
-    ! Error handling variables
-    PP_DEBUG_PUSH_FRAME()
-
-    ! HAndle different errors
-    SELECT CASE(ERRIDX)
-
-    CASE (1)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (sphericalHarmonics): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (2)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (complexPacking): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (3)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (pentagonalResolutionParameterJ): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (4)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (pentagonalResolutionParameterK): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (5)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (pentagonalResolutionParameterM): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (6)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (subSetJ): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (7)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (subSetK): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (8)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (subSetM): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-
-
-    CASE (50)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "sphericalHarmonics" from handle', KRET, GRIB_ERROR )
-    CASE (51)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "complexPacking" from handle', KRET, GRIB_ERROR )
-    CASE (52)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "pentagonalResolutionParameterJ" from handle', KRET, GRIB_ERROR )
-    CASE (53)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "pentagonalResolutionParameterK" from handle', KRET, GRIB_ERROR )
-    CASE (54)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "pentagonalResolutionParameterM" from handle', KRET, GRIB_ERROR )
-    CASE (55)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "subSetJ" from handle', KRET, GRIB_ERROR )
-    CASE (56)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "subSetK" from handle', KRET, GRIB_ERROR )
-    CASE (57)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "subSetM" from handle', KRET, GRIB_ERROR )
-
-    CASE DEFAULT
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
-    END SELECT
-
-    ! Trace end of procedure (on error)
-    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
-
-    ! Write the error message and stop the program
-    PP_DEBUG_ABORT()
-
-  END BLOCK
-
-!$omp end critical(ERROR_HANDLER)
-#endif
-
-  ! Exit point (on error)
-  RETURN
-
-END FUNCTION LOG_GRIB_TO_MD_SPECTRAL
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
-
-
-
-#define PP_PROCEDURE_TYPE 'PP_THREAD_SAFE FUNCTION'
-#define PP_PROCEDURE_NAME 'LOG_GRIB_TO_MD'
-PP_THREAD_SAFE FUNCTION LOG_GRIB_TO_MD( MIOMD, KGRIB_HANDLE, HOOKS ) RESULT(RET)
-
-  ! Symbolds imported from intrinsic modules
-  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: INT64
-
-  ! Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPIM_K
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
-  USE :: HOOKS_MOD,         ONLY: HOOKS_T
-
-  ! Symbols imported from other libraries
-  USE :: ECCODES,    ONLY: CODES_KEYS_ITERATOR_NEW
-  USE :: ECCODES,    ONLY: CODES_KEYS_ITERATOR_NEXT
-  USE :: ECCODES,    ONLY: CODES_KEYS_ITERATOR_GET_NAME
-  USE :: ECCODES,    ONLY: CODES_GET
-  USE :: ECCODES,    ONLY: CODES_IS_DEFINED
-  USE :: ECCODES,    ONLY: CODES_KEYS_ITERATOR_DELETE
-  USE :: ECCODES,    ONLY: CODES_GET_ERROR_STRING
-  USE :: ECCODES,    ONLY: CODES_SUCCESS
-  USE :: LOG_API, ONLY: LOG_METADATA
-  USE :: LOG_API, ONLY: LOG_SUCCESS
-  USE :: LOG_API, ONLY: LOG_ERROR_STRING
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  ! Dummy arguments
-  TYPE(LOG_METADATA), INTENT(INOUT) :: MIOMD
-  INTEGER(KIND=JPIM_K),  INTENT(IN)    :: KGRIB_HANDLE
-  TYPE(HOOKS_T),         INTENT(INOUT) :: HOOKS
-
-  ! Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-  ! Local variables
-  INTEGER(KIND=JPIM_K) :: KRET
-  INTEGER(KIND=JPIM_K) :: IRET
-  INTEGER(KIND=JPIM_K) :: IHAS
-  INTEGER(KIND=INT64)  :: PARAMID
-  INTEGER(KIND=INT64)  :: LEVEL
-  INTEGER(KIND=INT64)  :: DATADATE
-  INTEGER(KIND=INT64)  :: DATATIME
-  INTEGER(KIND=INT64)  :: STEPUNITS
-  INTEGER(KIND=INT64)  :: STARTSTEP
-  INTEGER(KIND=INT64)  :: ENDSTEP
-  INTEGER(KIND=INT64)  :: TIMEINCREMENTUNIT
-  INTEGER(KIND=INT64)  :: TIMEINCREMENT
-  CHARACTER(LEN=256)   :: VALUE
-  CHARACTER(LEN=256)   :: GRIDTYPE
-  INTEGER(KIND=JPIM_K) :: CERR
-
-  ! Local error codes
-  INTEGER(KIND=JPIB_K), PARAMETER :: UNABLE_TO_CALL_GRIB_TO_MDS=1001_JPIB_K
-
-  ! Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  ! Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  ! Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-  ! Configure grib edition
-  CALL CODES_GET( KGRIB_HANDLE, 'edition', VALUE, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 53 )
-  CERR = MIOMD%SET( 'gribEdition', VALUE )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 2 )
-
-
-  IF (VALUE.EQ. '2') THEN
-    CALL CODES_GET( KGRIB_HANDLE, 'date', DATADATE, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 54 )
-    CERR = MIOMD%SET( 'date', DATADATE )
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 3 )
-
-    CALL CODES_GET( KGRIB_HANDLE, 'time', DATATIME, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 55 )
-    CERR = MIOMD%SET( "time", DATATIME )
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 4 )
-
-    CALL CODES_GET( KGRIB_HANDLE, 'stepUnits', STEPUNITS, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 56 )
-    CERR = MIOMD%SET( 'stepUnits', STEPUNITS )
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 5 )
-
-    CALL CODES_GET( KGRIB_HANDLE, 'startStep', STARTSTEP, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 57 )
-    CERR = MIOMD%SET('startStep',STARTSTEP)
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 6 )
-
-    CALL CODES_GET( KGRIB_HANDLE, 'endStep', ENDSTEP, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 58 )
-    CERR = MIOMD%SET( 'endStep', ENDSTEP )
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 7 )
-
-    ! TODO: time increment should always be defined, no need for the check
-    CALL CODES_IS_DEFINED( KGRIB_HANDLE, 'timeIncrement', IHAS, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 59 )
-    IF (IHAS.NE. 0) THEN
-
-      CALL CODES_GET( KGRIB_HANDLE, 'indicatorOfUnitForTimeIncrement', TIMEINCREMENTUNIT, STATUS=KRET )
-      PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 60 )
-      CERR = MIOMD%SET( 'indicatorOfUnitForTimeIncrement', TIMEINCREMENTUNIT )
-      PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 8 )
-
-      CALL CODES_GET( KGRIB_HANDLE, 'timeIncrement', TIMEINCREMENT, STATUS=KRET )
-      PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 61 )
-      CERR = MIOMD%SET( 'timeIncrement', TIMEINCREMENT )
-      PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 9 )
-
-    ENDIF
-  ELSE
-    CALL CODES_GET( KGRIB_HANDLE, 'stepUnits', STEPUNITS, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 62 )
-    CERR = MIOMD%SET( 'stepUnits', STEPUNITS )
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 10 )
-
-    CALL CODES_GET( KGRIB_HANDLE, 'startStep', STARTSTEP, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 63 )
-    CERR = MIOMD%SET( 'startStep', STARTSTEP )
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 11 )
-
-    CALL CODES_GET( KGRIB_HANDLE, 'endStep', ENDSTEP, STATUS=KRET )
-    PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 64 )
-    CERR = MIOMD%SET( 'endStep', ENDSTEP )
-    PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 12 )
-  ENDIF
-
-  CALL CODES_GET( KGRIB_HANDLE, 'paramId', PARAMID, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 65 )
-  CERR = MIOMD%SET( 'paramId', PARAMID )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 13 )
-
-  CALL CODES_GET( KGRIB_HANDLE, 'gridType', GRIDTYPE, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 66 )
-  CERR = MIOMD%SET( 'gridType', GRIDTYPE )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 14 )
-
-  CALL CODES_GET( KGRIB_HANDLE, 'levtype', VALUE, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 67 )
-  CERR = MIOMD%SET( 'levtype', VALUE )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 15 )
-
-  CALL CODES_GET( KGRIB_HANDLE, 'level', LEVEL, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 68 )
-  CERR = MIOMD%SET( 'level', LEVEL )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 16 )
-
-  CALL CODES_GET( KGRIB_HANDLE, 'class', VALUE, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 69 )
-  CERR = MIOMD%SET( 'class', VALUE )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 17 )
-
-  CALL CODES_GET( KGRIB_HANDLE, 'stream', VALUE, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 70 )
-  CERR = MIOMD%SET( 'stream', VALUE )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 18 )
-
-  CALL CODES_GET( KGRIB_HANDLE, 'type', VALUE, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 71 )
-  CERR = MIOMD%SET( 'type', VALUE )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 19 )
-
-  CALL CODES_GET( KGRIB_HANDLE, 'expver', VALUE, STATUS=KRET )
-  PP_DEBUG_CRITICAL_COND_THROW( KRET.NE.CODES_SUCCESS, 72 )
-  CERR = MIOMD%SET( 'expver', VALUE )
-  PP_DEBUG_DEVELOP_COND_THROW( CERR.NE.LOG_SUCCESS, 20 )
-
-
-
-  IF ( TRIM(ADJUSTL(GRIDTYPE)) .EQ. 'sh') THEN
-    PP_TRYCALL(UNABLE_TO_CALL_GRIB_TO_MDS) LOG_GRIB_TO_MD_SPECTRAL( MIOMD, KGRIB_HANDLE, HOOKS )
-  ENDIF
-
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
-
-  ! Exit point on success
-  RETURN
-
-! Error handler
-PP_ERROR_HANDLER
-
-  ! Initialization of bad path return value
-  PP_SET_ERR_FAILURE( RET )
-
-#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
-!$omp critical(ERROR_HANDLER)
-
-  BLOCK
-
-    ! Error handling variables
-    CHARACTER(LEN=:), ALLOCATABLE :: STR
-    CHARACTER(LEN=:), ALLOCATABLE :: MIO_ERR_STR
-    CHARACTER(LEN=4096) :: GRIB_ERROR
-
-    ! Error handling variables
-    PP_DEBUG_PUSH_FRAME()
-
-    ! HAndle different errors
-    SELECT CASE(ERRIDX)
-
-    CASE (2)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (gribEdition): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (3)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (startDate): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (4)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (startTime): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (5)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (stepUnits): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (6)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (startStep): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (7)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (endStep): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (8)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (indicatorOfUnitForTimeIncrement): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (9)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (timeIncrement): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (10)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (stepUnits): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (11)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (startStep): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (12)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (endStep): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (13)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (paramId): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (14)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (gridType): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (15)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (levtype): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (16)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (level): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (17)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (class): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (18)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (stream): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (19)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (type): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-    CASE (20)
-      MIO_ERR_STR = LOG_ERROR_STRING(CERR)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to set MultIO metadata (expver): '//TRIM(ADJUSTL(MIO_ERR_STR)) )
-      IF ( ALLOCATED( MIO_ERR_STR ) ) DEALLOCATE( MIO_ERR_STR )
-
-    CASE (53)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "edition" from handle', KRET, GRIB_ERROR )
-    CASE (54)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "dataDate" from handle ', KRET, GRIB_ERROR )
-    CASE (55)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "dataTime" from handle ', KRET, GRIB_ERROR )
-    CASE (56)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "stepUnits" from handle ', KRET, GRIB_ERROR )
-    CASE (57)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "startStep" from handle ', KRET, GRIB_ERROR )
-    CASE (58)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "endStep" from handle ', KRET, GRIB_ERROR )
-    CASE (59)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "timeIncrement" from handle ', KRET, GRIB_ERROR )
-    CASE (60)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "indicatorOfUnitForTimeIncrement" from handle ', KRET, GRIB_ERROR )
-    CASE (61)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "timeIncrement" from handle ', KRET, GRIB_ERROR )
-    CASE (62)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "stepUnits" from handle ', KRET, GRIB_ERROR )
-    CASE (63)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "startStep" from handle ', KRET, GRIB_ERROR )
-    CASE (64)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "endStep" from handle ', KRET, GRIB_ERROR )
-    CASE (65)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "paramId" from handle ', KRET, GRIB_ERROR )
-    CASE (66)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "gridType" from handle ', KRET, GRIB_ERROR )
-    CASE (67)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "levtype" from handle ', KRET, GRIB_ERROR )
-    CASE (68)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "level" from handle ', KRET, GRIB_ERROR )
-    CASE (69)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "class" from handle ', KRET, GRIB_ERROR )
-    CASE (70)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "stream" from handle ', KRET, GRIB_ERROR )
-    CASE (71)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "type" from handle ', KRET, GRIB_ERROR )
-    CASE (72)
-      GRIB_ERROR = REPEAT(' ', 4096)
-      CALL CODES_GET_ERROR_STRING( KRET, GRIB_ERROR )
-      PP_DEBUG_CREATE_ERROR_MSG_GRIB( STR, 'Unable to get grib "expver" from handle ', KRET, GRIB_ERROR )
-    CASE (UNABLE_TO_CALL_GRIB_TO_MDS)
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to call LOG_GRIB_TO_MD_SPECTRAL' )
-    CASE DEFAULT
-      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
-    END SELECT
-
-    ! Trace end of procedure (on error)
-    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
-
-    ! Write the error message and stop the program
-    PP_DEBUG_ABORT()
-
-  END BLOCK
-
-!$omp end critical(ERROR_HANDLER)
-#endif
-
-  ! Exit point (on error)
-  RETURN
-
-END FUNCTION LOG_GRIB_TO_MD
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
-
 
 END MODULE LOG_METADATA_MOD
 #undef PP_SECTION_NAME
