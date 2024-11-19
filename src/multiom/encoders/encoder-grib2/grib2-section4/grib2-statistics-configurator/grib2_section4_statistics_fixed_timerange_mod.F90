@@ -1636,9 +1636,9 @@ IMPLICIT NONE
 
   !> Dummy arguments
   CLASS(GRIB2_SECTION4_STATISTICS_FIXED_TIMERANGE_T), INTENT(INOUT) :: THIS
-  TYPE(GRIB_ENCODER_OPTIONS_T),                 INTENT(IN)    :: OPT
-  TYPE(YAML_CONFIGURATION_T),                   INTENT(IN)    :: CFG
-  TYPE(HOOKS_T),                                INTENT(INOUT) :: HOOKS
+  TYPE(GRIB_ENCODER_OPTIONS_T),                       INTENT(IN)    :: OPT
+  TYPE(YAML_CONFIGURATION_T),                         INTENT(IN)    :: CFG
+  TYPE(HOOKS_T),                                      INTENT(INOUT) :: HOOKS
 
   !> Function result
   INTEGER(KIND=JPIB_K) :: RET

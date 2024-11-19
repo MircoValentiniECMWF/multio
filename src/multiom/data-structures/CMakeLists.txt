@@ -14,6 +14,7 @@ set( MULTIOM_DATA_STRUCTURES_SOURCES
   ${MULTIOM_DATA_STRUCTURES_DIR}/parametrization_mod.F90
   ${MULTIOM_DATA_STRUCTURES_DIR}/time_utils_mod.F90
   ${MULTIOM_DATA_STRUCTURES_DIR}/cache_utils_mod.F90
+  ${MULTIOM_DATA_STRUCTURES_DIR}/multiom_debug_mod.F90
   CACHE INTERNAL "List of all sources in data-structures directory"
 )
 

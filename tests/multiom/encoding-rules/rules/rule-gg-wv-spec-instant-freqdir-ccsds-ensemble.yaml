@@ -1,0 +1,71 @@
+name: 'rule-gg-wv-int-instant-freqdir-simple-ensemble'
+
+tag: 'fdb-01'
+
+filter:
+  type: 'composed'
+  operation: 'all'
+  filters:
+    - type: 'is-ensemble'
+
+    - type: 'param'
+      operation: 'match'
+      values: [ 140249, '140251:140254' ]
+
+    - type: 'levtype'
+      operation: 'match'
+      values: [ 'sfc' ]
+
+    - type: 'repres'
+      operation: 'match'
+      values: [ 'gg' ]
+
+    - type: 'packing'
+      operation: 'match'
+      value: 'grib-ccsds'
+
+encoder:
+  type: 'grib2'
+
+  indicator-section:
+    template-number: 0
+
+  identification-section:
+    template-number: 0
+    origin-configurator:
+      type: 'default'
+      sub-centre: 0
+
+    data-type-configurator:
+      type: 'default'
+
+    reference-time-configurator:
+      type: 'default'
+
+    tables-configurator:
+      type: 'default'
+      local-tables-version: 0
+
+  local-use-section:
+    template-number: 36
+
+  grid-definition-section:
+    template-number: 40
+
+  product-definition-section:
+    template-number: 100
+
+    derections-frequencies-configurator:
+      type: 'default'
+
+    param-configurator:
+      type: 'paramId'
+
+    level-configurator:
+      type: 'surface'
+
+    ensemble-configurator:
+      type: 'default'
+
+  data-representation-section:
+    template-number: 42

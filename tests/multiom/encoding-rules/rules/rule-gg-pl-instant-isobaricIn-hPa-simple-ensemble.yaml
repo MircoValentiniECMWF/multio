@@ -1,4 +1,4 @@
-name: 'rule-gg-pl-statistical-ftr3h-isobaricIn-hPa-simple-deterministic'
+name: 'rule-gg-pl-instant-isobaricIn-hPa-simple-ensemble'
 
 tag: 'fdb-01'
 
@@ -6,14 +6,11 @@ filter:
   type: 'composed'
   operation: 'all'
   filters:
-    - type: 'composed'
-      operation: 'none'
-      filters:
-        - type: 'is-ensemble'
+    - type: 'is-ensemble'
 
     - type: 'param'
       operation: 'match'
-      values: [ 228057, 228059 ]
+      values: [ 60, 75, 76, 133, 203, 246, 247, 248, 260290 ]
 
     - type: 'levtype'
       operation: 'match'
@@ -29,7 +26,7 @@ filter:
 
     - type: 'packing'
       operation: 'match'
-      value: 'grib-ccsds'
+      value: 'grib-simple'
 
 encoder:
   type: 'grib2'
@@ -54,24 +51,25 @@ encoder:
       local-tables-version: 0
 
   local-use-section:
-    template-number: 1
+    template-number: 36
 
   grid-definition-section:
     template-number: 40
 
   product-definition-section:
-    template-number: 8
+    template-number: 1
 
-    time-statistics-configurator:
-      type: 'fixed-timerange'
-      type-of-statistical-processing: 'Average'
-      overall-length-of-timerange: '3h'
+    point-in-time-configurator:
+      type: 'default'
 
     param-configurator:
-      type: 'paramIdECMF'
+      type: 'paramId'
 
     level-configurator:
       type: 'isobaricinhpa'
 
+    ensemble-configurator:
+      type: 'default'
+
   data-representation-section:
-    template-number: 42
+    template-number: 0

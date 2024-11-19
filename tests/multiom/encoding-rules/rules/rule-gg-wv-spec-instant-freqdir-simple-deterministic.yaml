@@ -1,4 +1,4 @@
-name: 'rule-gg-pl-statistical-ftr3h-isobaricIn-hPa-simple-ensemble'
+name: 'rule-gg-wv-int-instant-freqdir-simple-deterministic'
 
 tag: 'fdb-01'
 
@@ -6,19 +6,18 @@ filter:
   type: 'composed'
   operation: 'all'
   filters:
-    - type: 'is-ensemble'
+    - type: 'composed'
+      operation: 'none'
+      filters:
+        - type: 'is-ensemble'
 
     - type: 'param'
       operation: 'match'
-      values: [ 228057, 228059 ]
+      values: [ 140249, '140251:140254' ]
 
     - type: 'levtype'
       operation: 'match'
-      values: [ 'pl' ]
-
-    - type: 'levelist'
-      operation: 'greater-equal'
-      treshold: 100
+      values: [ 'sfc' ]
 
     - type: 'repres'
       operation: 'match'
@@ -51,26 +50,22 @@ encoder:
       local-tables-version: 0
 
   local-use-section:
-    template-number: 36
+    template-number: 1
 
   grid-definition-section:
     template-number: 40
 
   product-definition-section:
-    template-number: 11
-    time-statistics-configurator:
-      type: 'fixed-timerange'
-      type-of-statistical-processing: 'Average'
-      overall-length-of-timerange: '3h'
+    template-number: 99
+
+    derections-frequencies-configurator:
+      type: 'default'
 
     param-configurator:
-      type: 'paramIdECMF'
+      type: 'paramId'
 
     level-configurator:
-      type: 'isobaricinhpa'
-
-    ensemble-configurator:
-      type: 'default'
+      type: 'surface'
 
   data-representation-section:
     template-number: 0

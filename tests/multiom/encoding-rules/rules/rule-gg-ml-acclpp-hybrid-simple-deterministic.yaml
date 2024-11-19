@@ -1,4 +1,4 @@
-name: 'rule-gg-pl-statistical-ftr3h-isobaricIn-hPa-simple-ensemble'
+name: 'rule-gg-ml-acclpp-hybrid-simple-deterministic'
 
 tag: 'fdb-01'
 
@@ -6,19 +6,18 @@ filter:
   type: 'composed'
   operation: 'all'
   filters:
-    - type: 'is-ensemble'
+    - type: 'composed'
+      operation: 'none'
+      filters:
+        - type: 'is-ensemble'
 
     - type: 'param'
       operation: 'match'
-      values: [ 228057, 228059 ]
+      values: [ '162100:162113' ]
 
     - type: 'levtype'
       operation: 'match'
-      values: [ 'pl' ]
-
-    - type: 'levelist'
-      operation: 'greater-equal'
-      treshold: 100
+      values: [ 'ml' ]
 
     - type: 'repres'
       operation: 'match'
@@ -26,7 +25,7 @@ filter:
 
     - type: 'packing'
       operation: 'match'
-      value: 'grib-ccsds'
+      value: 'grib-simple'
 
 encoder:
   type: 'grib2'
@@ -51,26 +50,24 @@ encoder:
       local-tables-version: 0
 
   local-use-section:
-    template-number: 36
+    template-number: 1
 
   grid-definition-section:
     template-number: 40
 
   product-definition-section:
-    template-number: 11
+    template-number: 8
+
     time-statistics-configurator:
-      type: 'fixed-timerange'
-      type-of-statistical-processing: 'Average'
-      overall-length-of-timerange: '3h'
+      type: 'since-last-post-processing-step'
+      type-of-statistical-processing: 'accumul'
+      encode-step-zero: false
 
     param-configurator:
-      type: 'paramIdECMF'
+      type: 'paramId'
 
     level-configurator:
-      type: 'isobaricinhpa'
-
-    ensemble-configurator:
-      type: 'default'
+      type: 'hybrid'
 
   data-representation-section:
-    template-number: 42
+    template-number: 0

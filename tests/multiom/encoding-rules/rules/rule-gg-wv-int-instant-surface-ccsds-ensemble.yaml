@@ -1,4 +1,4 @@
-name: 'rule-gg-pl-statistical-ftr3h-isobaricIn-Pa-simple-ensemble'
+name: 'rule-gg-wv-int-instant-surface-simple-ensemble'
 
 tag: 'fdb-01'
 
@@ -10,15 +10,11 @@ filter:
 
     - type: 'param'
       operation: 'match'
-      values: [ 228057, 228059 ]
+      values: [ '140098:140105', '140112:140129', '140207:140209', '140211:140212', '140214:140222', '140223:140239', '140244:140245' ]
 
     - type: 'levtype'
       operation: 'match'
-      values: [ 'pl' ]
-
-    - type: 'levelist'
-      operation: 'lower-than'
-      treshold: 100
+      values: [ 'sfc' ]
 
     - type: 'repres'
       operation: 'match'
@@ -57,17 +53,16 @@ encoder:
     template-number: 40
 
   product-definition-section:
-    template-number: 11
-    time-statistics-configurator:
-      type: 'fixed-timerange'
-      type-of-statistical-processing: 'Average'
-      overall-length-of-timerange: '3h'
+    template-number: 1
+
+    point-in-time-configurator:
+      type: 'default'
 
     param-configurator:
-      type: 'paramIdECMF'
+      type: 'paramId'
 
     level-configurator:
-      type: 'isobaricinpa'
+      type: 'surface'
 
     ensemble-configurator:
       type: 'default'
