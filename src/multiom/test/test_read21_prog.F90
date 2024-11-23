@@ -4,9 +4,9 @@
 #include "output_manager_preprocessor_logging_utils.h"
 #include "output_manager_preprocessor_errhdl_utils.h"
 
-#define PP_FILE_NAME 'test_read04_prog.F90'
+#define PP_FILE_NAME 'test_read21_prog.F90'
 #define PP_SECTION_TYPE 'PROGRAM'
-#define PP_SECTION_NAME 'TEST_READ04_PROG'
+#define PP_SECTION_NAME 'TEST_READ21_PROG'
 #define PP_PROCEDURE_TYPE 'PROGRAM'
 #define PP_PROCEDURE_NAME 'MAIN'
 PROGRAM TEST_READ21_PROG
@@ -179,7 +179,7 @@ IMPLICIT NONE
     PP_DEBUG_CRITICAL_COND_THROW( WRITE_ERROR .NE. 0, ERRFLAG_UNABLE_WRITE_LOG )
     PP_TRYCALL(ERRFLAG_UNABLE_WRITE_LOG) MSG%PRINT( 6_JPIB_K, HOOKS )
 
-    STOP 1
+    STOP 0
 
     !> Initialize the metadata list
     PP_TRYCALL(ERRFLAG_UNABLE_FREE_METADATA_LIST) METADATA_LIST%INIT( HOOKS )
@@ -195,14 +195,10 @@ IMPLICIT NONE
       PP_TRYCALL(ERRFLAG_ENCODING_RULE_PRINT_ERROR) METADATA_LIST%POP( MSG, PAR, &
 &        MAPPING_TAG, MAPPING_NAME, ENCODER_TAG, ENCODER_NAME, MD, HOOKS )
 
-    !> TODO: Do something with the encoding rule
+      !> TODO: Do something with the encoded metadata
 
-      !> Free the encoding rule
-      PP_TRYCALL(ERRFLAG_UNABLE_FREE_METADATA) MD%DESTROY( HOOKS )
-
-      !> Deallocate the encoding rule
-      DEALLOCATE( MD, STAT=DEALLOC_STATUS, ERRMSG=ERRMSG )
-      PP_DEBUG_CRITICAL_COND_THROW( DEALLOC_STATUS .NE. 0, ERRFLAG_UNABLE_DEALLOCATE_METADATA )
+      !> Free the encoded metadata
+      PP_TRYCALL(ERRFLAG_UNABLE_DEALLOCATE_METADATA) DESTROY_METADATA( MD, HOOKS )
 
       !> Increment the counter
       PP_TRYCALL(ERRFLAG_UNABLE_CHECK_LIST) METADATA_LIST%IS_EMPTY( IS_EMPTY, HOOKS )

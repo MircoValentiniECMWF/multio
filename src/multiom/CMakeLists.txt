@@ -87,6 +87,8 @@ add_subdirectory( metadata )
 add_subdirectory( operations )
 add_subdirectory( mapping-rules )
 add_subdirectory( encoding-rules )
+add_subdirectory( ifs-interface )
+add_subdirectory( output-manager )
 
 #
 # + ADD LOCAL FILES
@@ -103,6 +105,9 @@ list( APPEND output_manager_src
   ${MULTIOM_OPERATIONS_SOURCES}
   ${MULTIOM_MAPPING_RULES_SOURCES}
   ${MULTIOM_ENCODING_RULES_SOURCES}
+  ${MULTIOM_ENCODING_RULES_SOURCES}
+  ${MULTIOM_IFS_INTERFACE_SOURCES}
+  ${MULTIOM_OUTPUT_MANAGER_SOURCES}
   ./multiom_cached_encoder_mod.F90
   ./multiom_encoder_mod.F90
 )

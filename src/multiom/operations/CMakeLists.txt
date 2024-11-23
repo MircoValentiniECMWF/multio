@@ -36,13 +36,13 @@ set( MULTIOM_OPERATIONS_SOURCES
 # ecbuild_add_library(
 #   TARGET  multiom-operations
 #   SOURCES ${MULTIOM_OPERATIONS_SOURCES}
-# 
+#
 #   DEFINITIONS ${OUTPUT_MANAGER_BUILD_FLAVOUR}
-# 
+#
 #   PRIVATE_INCLUDES
 #     ${CMAKE_BINARY_DIR}/include
 #     ${OUTPUT_MANAGER_INCLUDE_PATH}
-# 
+#
 #   PUBLIC_LIBS
 #     fckit
 #     eccodes

@@ -14,6 +14,7 @@ set( MULTIOM_COMMON_SOURCES
   ${MULTIOM_COMMON_DIR}/general_utils_c.c
   ${MULTIOM_COMMON_DIR}/datetime_utils_mod.F90
   ${MULTIOM_COMMON_DIR}/constants_mod.F90
+  ${MULTIOM_COMMON_DIR}/grib_codes_mod.F90
   CACHE INTERNAL "List of all sources in common directory"
 )
 

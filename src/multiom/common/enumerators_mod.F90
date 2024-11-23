@@ -476,9 +476,24 @@ IMPLICIT NONE
   ! Undefined parameters
   INTEGER(KIND=JPIB_K), PARAMETER :: UNDEF_PARAM_E=-999999999_JPIB_K
 
+  ! Enumerators for the type of the interfaces
+  INTEGER(KIND=JPIB_K), PARAMETER :: ATM_MSG_E=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: WAM_MSG_E=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: N_INTERFACES=2_JPIB_K
+
+
+  ! Enumerators for the type of the interfaces
+  INTEGER(KIND=JPIB_K), PARAMETER :: VALUES_DP_E=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: VALUES_SP_E=2_JPIB_K
+
   !>
   !>
   !>  Whitelist of public symbols (parameters)
+
+  ! Precision enumerators
+  PUBLIC :: VALUES_SP_E
+  PUBLIC :: VALUES_DP_E
+
 
   ! Cache options
   PUBLIC :: OPT_CACHE_NONE_E
@@ -932,6 +947,11 @@ IMPLICIT NONE
   ! Undefined parameters
   PUBLIC :: UNDEF_PARAM_E
 
+  ! Interfaces with ifs
+  PUBLIC :: ATM_MSG_E
+  PUBLIC :: WAM_MSG_E
+  PUBLIC :: N_INTERFACES
+
   !>  Whitelist of public symbols (procedures)
   PUBLIC :: IPREFIX2CPREFIX
   PUBLIC :: CPREFIX2IPREFIX
@@ -975,8 +995,487 @@ IMPLICIT NONE
   PUBLIC :: CFLOATOPUNARY2IFLOATOPUNARY
   PUBLIC :: IFLOATOPFUNCCALL2CFLOATOPFUNCCALL
   PUBLIC :: CFLOATOPFUNCCALL2IFLOATOPFUNCCALL
+  PUBLIC :: IIFACES2CIFACES
+  PUBLIC :: CIFACES2IIFACES
+  PUBLIC :: IPREF2MSGTYPE
+  PUBLIC :: IPREFIX2ILEVTYPE
 
 CONTAINS
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'IPREF2MSGTYPE'
+PP_THREAD_SAFE FUNCTION IPREF2MSGTYPE( KPREF, MSGTYPE, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: KPREF
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: MSGTYPE
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_PREFIX = 1_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Extract the enum for message type from prefix
+  SELECT CASE( KPREF )
+  CASE ( PREFIX_MODEL_LEVEL_E, PREFIX_PRESSURE_LEVEL_E, PREFIX_VORTICITY_LEVEL_E, PREFIX_THETA_LEVEL_E, PREFIX_SURFACE_E  )
+    MSGTYPE = ATM_MSG_E
+  CASE ( PREFIX_WAVE_INT_E, PREFIX_WAVE_SPEC_E )
+    MSGTYPE = WAM_MSG_E
+  CASE DEFAULT
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_PREFIX )
+  END SELECT
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+
+    CASE (ERRFLAG_UNKNOWN_PREFIX)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown prefix' )
+
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION IPREF2MSGTYPE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+
+#define PP_PROCEDURE_TYPE 'SUBROUTINE'
+#define PP_PROCEDURE_NAME 'IPREFIX2ILEVTYPE'
+FUNCTION IPREFIX2ILEVTYPE( IPREFIX, PARAM_ID, LEVEL, REPRES, ILEVTYPE, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+  USE :: GRIB_CODES_MOD,    ONLY: NGRBRSN
+  USE :: GRIB_CODES_MOD,    ONLY: NGRBTSN
+  USE :: GRIB_CODES_MOD,    ONLY: NGRBWSN
+  USE :: GRIB_CODES_MOD,    ONLY: NGRBSD
+  USE :: GRIB_CODES_MOD,    ONLY: NGRB100U
+  USE :: GRIB_CODES_MOD,    ONLY: NGRB100V
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: IPREFIX
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: PARAM_ID
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: LEVEL
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: REPRES
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: ILEVTYPE
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_LEVTYPE = 1_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! NGRBRSN  - 33     - Snow density
+  ! NGRBTSN  - 238    - Temperature of snow layer
+  ! NGRBWSN  - 228038 - Snow liquid water (multi-layer)
+  ! NGRBSD   - 228141 - Snow depth (multi-layer)
+
+  SELECT CASE ( IPREFIX )
+
+  CASE ( PREFIX_MODEL_LEVEL_E )
+    SELECT CASE (PARAM_ID)
+    CASE ( NGRB100U, NGRB100V )
+      ILEVTYPE = LEVTYPE_HL_E
+    CASE DEFAULT
+      ILEVTYPE = LEVTYPE_ML_E
+    END SELECT
+  CASE ( PREFIX_PRESSURE_LEVEL_E )
+    SELECT CASE (PARAM_ID)
+    CASE ( NGRB100U, NGRB100V )
+      ILEVTYPE = LEVTYPE_HL_E
+    CASE DEFAULT
+      ILEVTYPE = LEVTYPE_PL_E
+    END SELECT
+  CASE ( PREFIX_VORTICITY_LEVEL_E )
+    ILEVTYPE = LEVTYPE_PV_E
+  CASE ( PREFIX_THETA_LEVEL_E )
+    ILEVTYPE = LEVTYPE_PT_E
+  CASE ( PREFIX_SURFACE_E )
+    SELECT CASE (PARAM_ID)
+    CASE ( NGRBRSN, NGRBTSN, NGRBWSN, NGRBSD, 231027 )
+      IF ( LEVEL .NE. 0 ) THEN
+        ILEVTYPE = LEVTYPE_SOL_E
+      ELSE
+        ILEVTYPE = LEVTYPE_SFC_E
+      END IF
+    CASE DEFAULT
+      ILEVTYPE = LEVTYPE_SFC_E
+    END SELECT
+  CASE ( PREFIX_WAVE_INT_E )
+    ILEVTYPE = LEVTYPE_SFC_E
+  CASE ( PREFIX_WAVE_SPEC_E )
+    ILEVTYPE = LEVTYPE_SFC_E
+  CASE DEFAULT
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_LEVTYPE )
+  END SELECT
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+    ! HAndle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNKNOWN_LEVTYPE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unknown levtype' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION IPREFIX2ILEVTYPE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'IIFACES2CIFACES'
+PP_THREAD_SAFE FUNCTION IIFACES2CIFACES( IIFACES, CIFACES, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  INTEGER(KIND=JPIB_K), INTENT(IN)    :: IIFACES
+  CHARACTER(LEN=16),    INTENT(OUT)   :: CIFACES
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_IFACES=1_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  !> Initialization of the output variable
+  CIFACES = REPEAT(' ', 16)
+
+  !> Select the prefix
+  SELECT CASE ( IIFACES )
+
+  CASE ( ATM_MSG_E )
+    CIFACES = 'atm-msg'
+  CASE ( WAM_MSG_E )
+    CIFACES = 'wam-msg'
+  CASE DEFAULT
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_IFACES )
+  END SELECT
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+    CHARACTER(LEN=16) :: TMPSTR
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNKNOWN_IFACES)
+      TMPSTR = REPEAT(' ', 16)
+      WRITE(TMPSTR,*) IIFACES
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown ifaces: '//TRIM(ADJUSTL(TMPSTR)) )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION IIFACES2CIFACES
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CIFACES2IIFACES'
+PP_THREAD_SAFE FUNCTION CIFACES2IIFACES( CIFACES, IIFACES, HOOKS ) RESULT(RET)
+
+  !> Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+  USE :: GENERAL_UTILS_MOD, ONLY: TOLOWER
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  !> Dummy arguments
+  CHARACTER(LEN=*),     INTENT(IN)    :: CIFACES
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: IIFACES
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  !> Local variables
+  CHARACTER(LEN=LEN_TRIM(CIFACES)) :: LOC_CIFACES
+
+  !> Local error codes
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNKNOWN_IFACES=1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CONVERT_LC=2_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  !> Initialization of the output variable
+  IIFACES = UNDEF_PARAM_E
+
+  !> Convert prefix to lowercase
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CONVERT_LC) TOLOWER( CIFACES, LOC_CIFACES, HOOKS )
+
+  !> Select the prefix
+  SELECT CASE ( TRIM(ADJUSTL(LOC_CIFACES)) )
+
+  CASE ( 'atm-msg' )
+    IIFACES = ATM_MSG_E
+  CASE ( 'wave-msg' )
+    IIFACES = WAM_MSG_E
+  CASE DEFAULT
+    PP_DEBUG_CRITICAL_THROW( ERRFLAG_UNKNOWN_IFACES )
+  END SELECT
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (On success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNABLE_TO_CONVERT_LC)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unable to convert to lowercase' )
+    CASE (ERRFLAG_UNKNOWN_IFACES)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unknown ciface: '//TRIM(ADJUSTL(CIFACES)) )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION CIFACES2IIFACES
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME 'IPREFIX2CPREFIX'
