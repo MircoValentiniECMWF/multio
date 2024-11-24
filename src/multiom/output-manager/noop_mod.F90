@@ -94,6 +94,7 @@ CONTAINS
 
   !> @brief Read the configuration from YAML using fckit
   PROCEDURE, NON_OVERRIDABLE, PASS, PRIVATE :: READ_CFG_FROM_YAML => NOOP_READ_CFG_FROM_YAML
+  PROCEDURE, NON_OVERRIDABLE, PASS, PRIVATE :: READ_VERBOSE_FROM_YAML => NOOP_READ_VERBOSE_FROM_YAML
 
   END TYPE
 
@@ -147,7 +148,8 @@ IMPLICIT NONE
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CONVERT_TO_LOWER=1_JPIB_K
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_HAS_KEY=2_JPIB_K
   INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_GET_SUBCFG=3_JPIB_K
-  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFFLAG_UNABLE_TO_DESTRY_CFG=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_VERBOSE=4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_DESTRY_CFG=5_JPIB_K
 
   ! Local variables declared by the preprocessor for debugging purposes
   PP_DEBUG_DECL_VARS
@@ -177,18 +179,11 @@ IMPLICIT NONE
     ! Get the specific sub-configuration
     PP_TRYCALL(ERRFLAG_GET_SUBCFG) YAML_GET_SUBCONFIGURATION( CFG, NOOP_OMNAME_LC, NOOP_CFG, HOOKS )
 
-    ! Read from YAML file the flag to enable verbose execution
-    PP_TRYCALL(ERRFLAG_HAS_KEY) YAML_CONFIGURATION_HAS_KEY( NOOP_CFG, 'verbose', HAS_SUBKEY, HOOKS )
-
-    ! Read or apply the default configuration
-    IF ( HAS_SUBKEY ) THEN
-      PP_TRYCALL(ERRFLAG_GET_SUBCFG) YAML_READ_LOGICAL( NOOP_CFG, 'verbose', THIS%VERBOSE_, HOOKS )
-    ELSE
-      THIS%VERBOSE_ = .FALSE.
-    ENDIF
+    ! Read the verbose flag
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_VERBOSE) THIS%READ_VERBOSE_FROM_YAML( NOOP_CFG, HOOKS )
 
     ! Deallocate the dump-output-manager object
-    PP_TRYCALL(ERRFFLAG_UNABLE_TO_DESTRY_CFG) YAML_DELETE_CONFIGURATION( NOOP_CFG, HOOKS )
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_DESTRY_CFG) YAML_DELETE_CONFIGURATION( NOOP_CFG, HOOKS )
 
   ELSE
 
@@ -225,7 +220,9 @@ PP_ERROR_HANDLER
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to find the output manager name in the configuration file' )
     CASE (ERRFLAG_GET_SUBCFG)
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to get the sub-configuration for the output manager' )
-    CASE (ERRFFLAG_UNABLE_TO_DESTRY_CFG)
+    CASE (ERRFLAG_UNABLE_TO_READ_VERBOSE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to read the verbose flag' )
+    CASE (ERRFLAG_UNABLE_TO_DESTRY_CFG)
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to destroy the sub-configuration for the output manager' )
     CASE DEFAULT
       PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
@@ -246,6 +243,117 @@ PP_ERROR_HANDLER
   RETURN
 
 END FUNCTION NOOP_READ_CFG_FROM_YAML
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'NOOP_READ_VERBOSE_FROM_YAML'
+PP_THREAD_SAFE FUNCTION NOOP_READ_VERBOSE_FROM_YAML( THIS, CFG, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD,   ONLY: JPIB_K
+  USE :: HOOKS_MOD,           ONLY: HOOKS_T
+  USE :: YAML_CORE_UTILS_MOD, ONLY: YAML_CONFIGURATION_T
+  USE :: YAML_CORE_UTILS_MOD, ONLY: YAML_CONFIGURATION_HAS_KEY
+  USE :: YAML_CORE_UTILS_MOD, ONLY: YAML_READ_LOGICAL
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  CLASS(NOOP_OUTPUT_MANAGER_T), INTENT(INOUT) :: THIS
+  TYPE(YAML_CONFIGURATION_T),   INTENT(IN)    :: CFG
+  TYPE(HOOKS_T),                INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  LOGICAL :: HAS_KEY
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_HAS_KEY=2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_GET_SUBCFG=3_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Read from YAML file the flag to enable verbose execution
+  PP_TRYCALL(ERRFLAG_HAS_KEY) YAML_CONFIGURATION_HAS_KEY( CFG, 'verbose', HAS_KEY, HOOKS )
+
+  ! Read or apply the default configuration
+  IF ( HAS_KEY ) THEN
+    PP_TRYCALL(ERRFLAG_GET_SUBCFG) YAML_READ_LOGICAL( CFG, 'verbose', THIS%VERBOSE_, HOOKS )
+  ELSE
+    THIS%VERBOSE_ = .FALSE.
+  ENDIF
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (on success)
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! HAndle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_HAS_KEY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to find the output manager name in the configuration file' )
+    CASE (ERRFLAG_GET_SUBCFG)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to get the sub-configuration for the output manager' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT( )
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point on error
+  RETURN
+
+END FUNCTION NOOP_READ_VERBOSE_FROM_YAML
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
