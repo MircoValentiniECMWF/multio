@@ -10,7 +10,7 @@ set(OFFSET ${OFFSET}${DOFFSET})
 set( MULTIOM_OUTPUT_MANAGER_MAIN_SOURCES
   ${MULTIOM_OUTPUT_MANAGER_DIR}/output_manager_base_mod.F90
   ${MULTIOM_OUTPUT_MANAGER_DIR}/output_manager_factory_mod.F90
-  # ${MULTIOM_OUTPUT_MANAGER_DIR}/noop_output_manager_mod.F90
+  ${MULTIOM_OUTPUT_MANAGER_DIR}/noop_mod.F90
 )
 
 # Collect source files in module2

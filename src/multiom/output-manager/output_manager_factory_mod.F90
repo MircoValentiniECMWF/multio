@@ -64,8 +64,11 @@ PP_THREAD_SAFE FUNCTION MAKE_OUTPUT_MANAGER( OMTYPE, PROCESSOR_TOPO, &
   USE :: IFS_PAR_MOD,              ONLY: MODEL_PAR_T
   USE :: HOOKS_MOD,                ONLY: HOOKS_T
 
-#if 0
   USE :: NOOP_MOD,                 ONLY: NOOP_OUTPUT_MANAGER_T
+  USE :: NOOP_MOD,                 ONLY: NOOP_OMNAME
+
+
+#if 0
   USE :: DUMP_MOD,                 ONLY: DUMP_OUTPUT_MANAGER_T
   USE :: GRIBX_BIN_MOD,            ONLY: GRIBX_BINARY_OUTPUT_MANAGER_T
   USE :: GRIBX2MULTIO_BIN_MOD,     ONLY: GRIBX2MULTIO_BIN_OUTPUT_MANAGER_T
@@ -73,7 +76,6 @@ PP_THREAD_SAFE FUNCTION MAKE_OUTPUT_MANAGER( OMTYPE, PROCESSOR_TOPO, &
   USE :: MULTIO_RAW_MOD,           ONLY: MULTIO_RAW_OUTPUT_MANAGER_T
   USE :: MULTIO_NO_ENC_MOD,        ONLY: MULTIO_NO_ENC_OUTPUT_MANAGER_T
 
-  USE :: NOOP_MOD,                 ONLY: NOOP_OMNAME
   USE :: DUMP_MOD,                 ONLY: DUMP_OMNAME
   USE :: GRIBX_BIN_MOD,            ONLY: GRIBX_BINARY_OMNAME
   USE :: GRIBX2MULTIO_BIN_MOD,     ONLY: GRIBX2MULTIO_BIN_OMNAME
@@ -134,15 +136,15 @@ IMPLICIT NONE
   !
   ! Allocate the requested IOmanager
   SELECT CASE(TRIM(ADJUSTL(OMTYPE)))
-#if 0
 
   ! ------------------------------------------------------------------------------------------------
   ! A no-op output manager. Used to demonstrate behavior without I/O
   ! when addressing complaints or testing scenarios.
   CASE ( 'NOOP', NOOP_OMNAME )
     ALLOCATE( NOOP_OUTPUT_MANAGER_T::OM, STAT=STAT, ERRMSG=ERRMSG )
-    PP_DEBUG_DEVELOP_COND_THROW( STAT.NE.0, 1 )
+    PP_DEBUG_DEVELOP_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_ALLOCATE )
 
+#if 0
 
   ! ------------------------------------------------------------------------------------------------
   ! A dump output manager. Used to dump all the data arrived to the IOserver

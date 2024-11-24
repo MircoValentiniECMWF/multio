@@ -34,9 +34,6 @@ CONTAINS
   !> @brief Initializes the object
   PROCEDURE(SETUP_IF), DEFERRED, PASS, PUBLIC :: SETUP
 
-  !> @brief Initializes the object
-  PROCEDURE(READ_CFG_FROM_YAML_IF), DEFERRED, PASS, PUBLIC :: READ_CFG_FROM_YAML
-
 
   !> @brief Used to write an atmosphere field
   PROCEDURE(WRITE_ATM_DP_IF), DEFERRED, PASS, PUBLIC :: WRITE_ATM_DP
@@ -67,30 +64,6 @@ END TYPE
 
 
 ABSTRACT INTERFACE
-
-!>
-!> @brief Initializes the object from an instance of the IOserver.
-!>
-!> This procedure initializes the object using the informations
-!> contained in the instance of the IOServer
-!>
-!> @param [inout] THIS  The object to be initialized.
-!> @param [in]    CFG   The YAML configuration object to be readed
-!> @param [inout] HOOKS The hooks object to be initialized
-!>
-!> @return              The return code of the function
-!>
-PP_THREAD_SAFE FUNCTION READ_CFG_FROM_YAML_IF( THIS, CFG, HOOKS ) RESULT(RET)
-  USE :: DATAKINDS_DEF_MOD,          ONLY: JPIB_K
-  USE :: FCKIT_CONFIGURATION_MODULE, ONLY: FCKIT_CONFIGURATION
-  USE :: HOOKS_MOD,                  ONLY: HOOKS_T
-  IMPORT :: OUTPUT_MANAGER_BASE_A
-IMPLICIT NONE
-  CLASS(OUTPUT_MANAGER_BASE_A), INTENT(INOUT) :: THIS
-  TYPE(FCKIT_CONFIGURATION),    INTENT(IN)    :: CFG
-  TYPE(HOOKS_T),                INTENT(INOUT) :: HOOKS
-  INTEGER(KIND=JPIB_K) :: RET
-END FUNCTION READ_CFG_FROM_YAML_IF
 
 !>
 !> @brief Initializes the object from an instance of the IOserver.
@@ -307,8 +280,8 @@ PP_THREAD_SAFE FUNCTION FINALISE_IF( THIS, HOOKS ) RESULT(RET)
   USE :: HOOKS_MOD,         ONLY: HOOKS_T
   IMPORT :: OUTPUT_MANAGER_BASE_A
 IMPLICIT NONE
-  CLASS(OUTPUT_MANAGER_BASE_A), INTENT(INOUT) :: THIS
-  TYPE(HOOKS_T),                INTENT(INOUT) :: HOOKS
+  CLASS(OUTPUT_MANAGER_BASE_A), TARGET, INTENT(INOUT) :: THIS
+  TYPE(HOOKS_T),                        INTENT(INOUT) :: HOOKS
   INTEGER(KIND=JPIB_K) :: RET
 END FUNCTION FINALISE_IF
 

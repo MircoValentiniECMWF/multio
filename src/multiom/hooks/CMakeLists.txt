@@ -12,6 +12,7 @@ add_subdirectory( options )
 add_subdirectory( debug )
 add_subdirectory( log )
 add_subdirectory( trace )
+add_subdirectory( paranoid_profile )
 
 set( MULTIOM_HOOKS_MAIN_SOURCES
   ${MULTIOM_HOOKS_DIR}/hooks_mod.F90
@@ -24,6 +25,7 @@ set( MULTIOM_HOOKS_SOURCES
   ${MULTIOM_HOOKS_DEBUG_SOURCES}
   ${MULTIOM_HOOKS_LOG_SOURCES}
   ${MULTIOM_HOOKS_TRACE_SOURCES}
+  ${MULTIOM_HOOKS_PARANOID_PROFILE_SOURCES}
   CACHE INTERNAL "List of all sources in hooks directory"
 )
 
