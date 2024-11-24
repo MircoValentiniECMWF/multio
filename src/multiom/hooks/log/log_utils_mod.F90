@@ -15,10 +15,12 @@ MODULE LOG_UTILS_MOD
 
 IMPLICIT NONE
 
+! Default visibility
 PRIVATE
 
 !> Local parameters
 INTEGER(KIND=JPIB_K), PARAMETER :: MAX_STR_LEN = 32_JPIB_K
+
 
 !> Local overloading of the intrinsic function TO_STRING
 INTERFACE TO_STRING
@@ -49,8 +51,89 @@ END INTERFACE TO_STRING
 !> Whitelist of public symbols
 PUBLIC :: MAX_STR_LEN
 PUBLIC :: TO_STRING
+PUBLIC :: BYTES_TO_STRING
 
 CONTAINS
+
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'BYTES_TO_STRING'
+PP_THREAD_SAFE FUNCTION BYTES_TO_STRING( BYTES, STR, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPRD_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K),       INTENT(IN)    :: BYTES
+  CHARACTER(LEN=MAX_STR_LEN), INTENT(OUT)   :: STR
+  TYPE(HOOKS_T),              INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  REAL(KIND=JPRD_K) :: MEM
+  INTEGER(KIND=JPIB_K) :: SUFFIX
+  INTEGER(KIND=JPIB_K) :: I
+  CHARACTER(LEN=MAX_STR_LEN) :: TMP
+
+  ! define the suffixes for memory units
+  CHARACTER(LEN=4), DIMENSION(7), PARAMETER :: UNITS(7) = ['[B] ', '[KB]', '[MB]', '[GB]', '[TB]', '[PB]', '[EB]']
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! convert bytes to the appropriate unit
+  MEM = REAL(BYTES, JPRD_K)
+  DO I = 1, SIZE(UNITS)
+    IF ( MEM .LT. 1024.0_JPRD_K ) THEN
+      SUFFIX = I
+      EXIT
+    ENDIF
+    MEM = MEM / 1024.0_JPRD_K
+  END DO
+
+  ! format the memory value with the appropriate suffix
+  TMP = REPEAT(' ', MAX_STR_LEN)
+  STR = REPEAT(' ', MAX_STR_LEN)
+  WRITE(TMP, '(F10.2)') MEM
+  STR = TRIM(ADJUSTL(TMP))//' '//TRIM(ADJUSTL(UNITS(I)))
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (on success)
+  RETURN
+
+END FUNCTION BYTES_TO_STRING
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
 
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'

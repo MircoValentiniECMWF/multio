@@ -16,7 +16,12 @@ IMPLICIT NONE
 PRIVATE
 
 ! Whitelist of public symbols
+PUBLIC :: ENVVAR_IS_DEFINED
+PUBLIC :: READ_ENVVAR
 PUBLIC :: REPLACE_ENVVAR_IN_STRING
+PUBLIC :: READ_TYPE_FROM_ENV
+PUBLIC :: READ_YAML_FROM_ENV
+PUBLIC :: CUSTOM_FINDLOC
 PUBLIC :: TOLOWER
 PUBLIC :: TOUPPER
 
@@ -153,13 +158,16 @@ IMPLICIT NONE
 ! Error handler
 PP_ERROR_HANDLER
 
-  ! Error handling variables
-  PP_DEBUG_PUSH_FRAME()
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
 
 #if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
 !$omp critical(ERROR_HANDLER)
 
   BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
 
     ! Handle different errors
     SELECT CASE(ERRIDX)
@@ -371,7 +379,7 @@ PP_ERROR_HANDLER
 
   BLOCK
 
-    ! Initialize error frame
+    ! Error handling variables
     PP_DEBUG_PUSH_FRAME()
 
     ! Handle different errors
@@ -401,6 +409,354 @@ PP_ERROR_HANDLER
   RETURN
 
 END FUNCTION READ_ENVVAR
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Retrieves the output manager type from the 'OUTPUT_MANAGER_YAML' environment variable.
+!>
+!> This function reads the 'OUTPUT_MANAGER_YAML' environment variable to determine the configure
+!> the main YAML configuration file. If the variable is not defined, the default value
+!> '../output-manager-config.yaml' is assumed.
+!>
+!> @attention the folder is "../" because by default each instance of the output manager run in
+!>            the folder calles io_serv.<procId>.d
+!>
+!> @param [out] OMYAML Name of the main YAML configuraiton file
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'READ_YAML_FROM_ENV'
+PP_THREAD_SAFE FUNCTION READ_YAML_FROM_ENV( OMYAML, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  CHARACTER(LEN=*), INTENT(OUT)   :: OMYAML
+  TYPE(HOOKS_T),    INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: NENVLN
+  INTEGER(KIND=JPIB_K) :: STAT
+  LOGICAL :: IS_DEFINED
+  LOGICAL :: EX
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ENVVAR_TOO_LONG = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CHECK_ENVVAR = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_ENVVAR = 3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_YAML_FILE_DOES_NOT_EXISTS = 4_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Initialise the YAML name
+  OMYAML = REPEAT(' ',LEN(OMYAML))
+
+  ! Read Output Manager Type
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CHECK_ENVVAR) ENVVAR_IS_DEFINED( 'OUTPUT_MANAGER_YAML', IS_DEFINED, HOOKS, NDLEN=NENVLN )
+  PP_DEBUG_DEVELOP_COND_THROW( (NENVLN.GT.LEN(OMYAML)), ERRFLAG_ENVVAR_TOO_LONG )
+
+  ! Read Output Manager Type
+  IF ( IS_DEFINED ) THEN
+
+    ! Read the environment variable
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_ENVVAR) READ_ENVVAR( 'OUTPUT_MANAGER_YAML', OMYAML, NENVLN, HOOKS )
+
+    ! Check if the file exsts
+    INQUIRE( FILE=TRIM(OMYAML), EXIST=EX )
+    PP_DEBUG_DEVELOP_COND_THROW( .NOT.EX, ERRFLAG_YAML_FILE_DOES_NOT_EXISTS )
+
+  ELSE
+
+    ! Default value for output manager type when environment variable
+    ! is not defined.
+    ! "../" Because the output manager "main" directory is: "io_serv.0000?.d"
+    OMYAML = '../output-manager-config.yaml'
+
+  ENDIF
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! HAndle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_ENVVAR_TOO_LONG)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'OUTPUT_MANAGER_YAML env. var. too long' )
+    CASE (ERRFLAG_UNABLE_TO_CHECK_ENVVAR)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Error checking: "OUTPUT_MANAGER_YAML" env. var.' )
+    CASE (ERRFLAG_UNABLE_TO_READ_ENVVAR)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Error reading: "OUTPUT_MANAGER_YAML" env. var.' )
+    CASE (ERRFLAG_YAML_FILE_DOES_NOT_EXISTS)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'YAML file does not exists' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION READ_YAML_FROM_ENV
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+!>
+!> @brief Retrieves the output manager type from the 'OUTPUT_MANAGER_TYPE' environment variable.
+!>
+!> This function reads the 'OUTPUT_MANAGER_TYPE' environment variable to determine the desired
+!> type of output manager to be constructed. If the variable is not defined, the default value
+!> 'NOOP' is assumed.
+!>
+!> @return The name of the output manager to be implemented.
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'READ_TYPE_FROM_ENV'
+PP_THREAD_SAFE FUNCTION READ_TYPE_FROM_ENV( OMTYPE, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  CHARACTER(LEN=*), INTENT(OUT)   :: OMTYPE
+  TYPE(HOOKS_T),    INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  CHARACTER(LEN=LEN(OMTYPE)) :: LOC_OMTYPE
+  INTEGER(KIND=JPIB_K) :: NENVLN
+  INTEGER(KIND=JPIB_K) :: STAT
+  LOGICAL :: IS_DEFINED
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_ENVVAR_TOO_LONG = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CHECK_ENVVAR = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_ENVVAR = 3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_CONVERT_UPPERCASE = 4_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Initialise the YAML name
+  OMTYPE = REPEAT(' ',LEN(OMTYPE))
+  LOC_OMTYPE = REPEAT(' ',LEN(OMTYPE))
+
+  ! Read Output Manager Type
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_CHECK_ENVVAR) ENVVAR_IS_DEFINED( 'OUTPUT_MANAGER_TYPE', IS_DEFINED, HOOKS, NDLEN=NENVLN )
+  PP_DEBUG_DEVELOP_COND_THROW( (NENVLN.GT.LEN(OMTYPE)), ERRFLAG_ENVVAR_TOO_LONG )
+
+  ! Read Output Manager Type
+  IF ( IS_DEFINED ) THEN
+
+    ! Read the environment variable
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_ENVVAR) READ_ENVVAR( 'OUTPUT_MANAGER_TYPE', LOC_OMTYPE, NENVLN, HOOKS )
+
+    ! Convert to uppercase the environment variable
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_CONVERT_UPPERCASE)  TOUPPER( LOC_OMTYPE, OMTYPE, HOOKS )
+
+  ELSE
+
+    ! Default value for output manager type when environment variable is not defined
+    OMTYPE = 'NOOP'
+
+  ENDIF
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+
+    ! HAndle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_ENVVAR_TOO_LONG)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'OUTPUT_MANAGER_TYPE env. var. too long' )
+    CASE (ERRFLAG_UNABLE_TO_CHECK_ENVVAR)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Error checking: "OUTPUT_MANAGER_TYPE" env. var.' )
+    CASE (ERRFLAG_UNABLE_TO_READ_ENVVAR)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Error reading: "OUTPUT_MANAGER_TYPE" env. var.' )
+    CASE (ERRFLAG_UNABLE_TO_CONVERT_UPPERCASE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Error converting to uppercase' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT()
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION READ_TYPE_FROM_ENV
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'CUSTOM_FINDLOC'
+PP_THREAD_SAFE FUNCTION CUSTOM_FINDLOC( DAT, REF, LOC, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K), DIMENSION(:), INTENT(IN)    :: DAT
+  INTEGER(KIND=JPIB_K),               INTENT(IN)    :: REF
+  INTEGER(KIND=JPIB_K),               INTENT(OUT)   :: LOC
+  TYPE(HOOKS_T),                      INTENT(INOUT) :: HOOKS
+
+  !> Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: I
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  LOC = 0_JPIB_K
+  SearchLoop: DO I = 1, SIZE(DAT)
+    IF ( DAT(I) .EQ. REF ) THEN
+      LOC = I
+      EXIT SearchLoop
+    ENDIF
+  ENDDO SearchLoop
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point
+  RETURN
+
+END FUNCTION CUSTOM_FINDLOC
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
@@ -621,6 +977,7 @@ PP_ERROR_HANDLER
 END FUNCTION TOUPPER
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
+
 
 END MODULE GENERAL_UTILS_MOD
 #undef PP_SECTION_NAME
