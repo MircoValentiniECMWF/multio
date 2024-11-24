@@ -51,7 +51,7 @@ execute_process(
 #
 # + CONFIGURE HEADERS
 # ======================================================================
-# configure_file(  ${CMAKE_CURRENT_SOURCE_DIR}/output_manager_version_mod.F90.in                               ${CMAKE_CURRENT_BINARY_DIR}/output_manager_version_mod.F90  )
+configure_file(  ${CMAKE_CURRENT_SOURCE_DIR}/output_manager_version_mod.F90.in                               ${CMAKE_CURRENT_BINARY_DIR}/output_manager_version_mod.F90  )
 configure_file(  ${CMAKE_CURRENT_SOURCE_DIR}/include/standard/output_manager_preprocessor_utils.h.in         ${CMAKE_CURRENT_BINARY_DIR}/include/output_manager_preprocessor_utils.h  )
 configure_file(  ${CMAKE_CURRENT_SOURCE_DIR}/include/standard/output_manager_preprocessor_trace_utils.h.in   ${CMAKE_CURRENT_BINARY_DIR}/include/output_manager_preprocessor_trace_utils.h  )
 configure_file(  ${CMAKE_CURRENT_SOURCE_DIR}/include/standard/output_manager_preprocessor_logging_utils.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/output_manager_preprocessor_logging_utils.h  )
@@ -108,6 +108,7 @@ list( APPEND output_manager_src
   ${MULTIOM_ENCODING_RULES_SOURCES}
   ${MULTIOM_IFS_INTERFACE_SOURCES}
   ${MULTIOM_OUTPUT_MANAGER_SOURCES}
+  ${CMAKE_CURRENT_BINARY_DIR}/output_manager_version_mod.F90
   ./multiom_cached_encoder_mod.F90
   ./multiom_encoder_mod.F90
 )

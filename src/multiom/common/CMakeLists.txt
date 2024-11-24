@@ -16,6 +16,9 @@ set( MULTIOM_COMMON_SOURCES
   ${MULTIOM_COMMON_DIR}/grib_codes_mod.F90
   ${MULTIOM_COMMON_DIR}/sysinfo_c.c
   ${MULTIOM_COMMON_DIR}/sysinfo_mod.F90
+  ${MULTIOM_COMMON_DIR}/profile_mod.F90
+  ${MULTIOM_COMMON_DIR}/multio_utils_mod.F90
+  ${MULTIOM_COMMON_DIR}/log_info_mod.F90
   CACHE INTERNAL "List of all sources in common directory"
 )
 
