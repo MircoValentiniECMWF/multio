@@ -18,6 +18,8 @@ PRIVATE
 ! Whitelist of public symbols
 PUBLIC :: GET_HOSTNAME
 PUBLIC :: GET_PID
+PUBLIC :: GET_TID
+PUBLIC :: GET_NUM_THREADS
 PUBLIC :: GET_MEM
 PUBLIC :: TIC
 PUBLIC :: TOC
@@ -238,6 +240,144 @@ IMPLICIT NONE
 END FUNCTION GET_PID
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GET_TID'
+PP_THREAD_SAFE FUNCTION GET_TID( TID, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from intrinsic modules
+  USE, INTRINSIC :: ISO_C_BINDING, ONLY: C_INT
+
+  ! Symbols imported from other modules within the project
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+#ifdef __OPENMP
+  USE :: OMP_LIB,           ONLY: OMP_GET_THREAD_NUM
+#endif
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K), INTENT(OUT) :: TID
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER :: THREAD_ID
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+#ifdef __OPENMP
+  THREAD_ID = OMP_GET_THREAD_NUM()
+#else
+  THREAD_ID = 0  ! Default to thread ID 0 when OpenMP is not enabled
+#endif
+
+  ! Set dummy argument
+  TID = INT(THREAD_ID, KIND=JPIB_K)
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (on success)
+  RETURN
+
+END FUNCTION GET_TID
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'GET_NUM_THREADS'
+PP_THREAD_SAFE FUNCTION GET_NUM_THREADS( NTH, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+#ifdef __OPENMP
+  USE :: OMP_LIB,           ONLY: OMP_GET_THREAD_NUM
+#endif
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K), INTENT(OUT)   :: NTH
+  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER :: NUM_THREADS
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+#ifdef __OPENMP
+  NUM_THREADS = OMP_GET_NUM_THREADS()
+#else
+  NUM_THREADS = 1  ! Default to thread ID 0 when OpenMP is not enabled
+#endif
+
+  ! Set dummy argument
+  NTH = INT(NUM_THREADS, KIND=JPIB_K)
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point (on success)
+  RETURN
+
+END FUNCTION GET_NUM_THREADS
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
 
 
 #define PP_PROCEDURE_TYPE 'FUNCTION'

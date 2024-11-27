@@ -67,16 +67,16 @@ PP_THREAD_SAFE FUNCTION MAKE_OUTPUT_MANAGER( OMTYPE, PROCESSOR_TOPO, &
   USE :: NOOP_MOD,                 ONLY: NOOP_OUTPUT_MANAGER_T
   USE :: NOOP_MOD,                 ONLY: NOOP_OMNAME
 
+  USE :: DUMP_MOD,                 ONLY: DUMP_OUTPUT_MANAGER_T
+  USE :: DUMP_MOD,                 ONLY: DUMP_OMNAME
 
 #if 0
-  USE :: DUMP_MOD,                 ONLY: DUMP_OUTPUT_MANAGER_T
   USE :: GRIBX_BIN_MOD,            ONLY: GRIBX_BINARY_OUTPUT_MANAGER_T
   USE :: GRIBX2MULTIO_BIN_MOD,     ONLY: GRIBX2MULTIO_BIN_OUTPUT_MANAGER_T
   USE :: GRIBX2MULTIO_RAW_MOD,     ONLY: GRIBX2MULTIO_RAW_OUTPUT_MANAGER_T
   USE :: MULTIO_RAW_MOD,           ONLY: MULTIO_RAW_OUTPUT_MANAGER_T
   USE :: MULTIO_NO_ENC_MOD,        ONLY: MULTIO_NO_ENC_OUTPUT_MANAGER_T
 
-  USE :: DUMP_MOD,                 ONLY: DUMP_OMNAME
   USE :: GRIBX_BIN_MOD,            ONLY: GRIBX_BINARY_OMNAME
   USE :: GRIBX2MULTIO_BIN_MOD,     ONLY: GRIBX2MULTIO_BIN_OMNAME
   USE :: GRIBX2MULTIO_RAW_MOD,     ONLY: GRIBX2MULTIO_RAW_OMNAME
@@ -144,7 +144,7 @@ IMPLICIT NONE
     ALLOCATE( NOOP_OUTPUT_MANAGER_T::OM, STAT=STAT, ERRMSG=ERRMSG )
     PP_DEBUG_DEVELOP_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_ALLOCATE )
 
-#if 0
+
 
   ! ------------------------------------------------------------------------------------------------
   ! A dump output manager. Used to dump all the data arrived to the IOserver
@@ -152,7 +152,7 @@ IMPLICIT NONE
     ALLOCATE( DUMP_OUTPUT_MANAGER_T::OM, STAT=STAT, ERRMSG=ERRMSG )
     PP_DEBUG_DEVELOP_COND_THROW( STAT.NE.0, 1 )
 
-
+#if 0
   ! ------------------------------------------------------------------------------------------------
   ! Grib[1|2] output manager utilizing grib functionalities as a sink,
   ! designed to operate independently of multIO.
