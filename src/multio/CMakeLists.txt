@@ -27,6 +27,7 @@ list( APPEND multio_util_srcs
     util/config/Parser.h
     util/DateTime.cc
     util/DateTime.h
+    util/DrHook.h
     util/Hash.h
     util/Environment.cc
     util/Environment.h
@@ -191,6 +192,8 @@ list( APPEND multio_server_srcs
     server/MultioClient.h
     server/MultioServer.cc
     server/MultioServer.h
+    server/ServerRuntime.cc
+    server/ServerRuntime.h
 )
 
 list( APPEND multio_sink_srcs

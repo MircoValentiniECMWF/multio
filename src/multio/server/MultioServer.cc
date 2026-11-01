@@ -3,6 +3,9 @@
 
 #include <fstream>
 #include <iomanip>
+#include <sstream>
+#include <thread>
+#include <vector>
 
 #include "eckit/config/LocalConfiguration.h"
 #include "eckit/filesystem/PathName.h"
@@ -15,42 +18,44 @@
 
 namespace multio::server {
 
-using config::ComponentConfiguration;
-using transport::TransportFactory;
 
 
-namespace {
-
-eckit::LocalConfiguration getServerConf(const MultioConfiguration& multioConf) {
-    if (multioConf.parsedConfig().has("server")) {
-        return multioConf.parsedConfig().getSubConfiguration("server");
-    }
-
-    std::ostringstream oss;
-    oss << "Configuration 'server' not found in configuration file " << multioConf.configFile();
-    throw eckit::UserError(oss.str());
-}
-
-}  // namespace
-
-MultioServer::MultioServer(const eckit::LocalConfiguration& conf, MultioConfiguration&& multioConf) :
-    MultioConfigurationHolder(std::move(multioConf), config::LocalPeerTag::Server),
-    FailureAware(config::ComponentConfiguration(conf, multioConfig())),
-    transport_{
-        TransportFactory::instance().build(conf.getString("transport"), ComponentConfiguration(conf, multioConfig()))},
-    listener_{ComponentConfiguration(conf, multioConfig()), *transport_} {
-
-
-
+MultioServer::MultioServer(MultioConfiguration&& multioConf) :
+    detail::SharedHolder(std::move(multioConf)),
+    FailureAware(config::ComponentConfiguration(shared_->serverConfig(), shared_->configuration())) {
     eckit::Log::info() << "Server start listening..." << std::endl;
-    withFailureHandling([&]() { listener_.start(); });
+    withFailureHandling([&]() { run(); });
     eckit::Log::info() << "Listening loop has stopped" << std::endl;
 }
 
-MultioServer::MultioServer(MultioConfiguration&& multioConf) :
-    MultioServer(getServerConf(multioConf), std::move(multioConf)) {}
-
 MultioServer::~MultioServer() = default;
+
+void MultioServer::run() {
+    auto runnables = shared_->createRunnables(shared_->requiredThreads());
+
+    std::vector<int> status(runnables.size(), 0);
+    std::vector<std::thread> threads;
+    for (std::size_t i = 0; i < runnables.size(); ++i) {
+        threads.emplace_back([this, &runnables, &status, i]() {
+            runnables[i]->init(*shared_);
+            status[i] = runnables[i]->run(util::DrHook{});
+            runnables[i]->free();
+        });
+    }
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    std::ostringstream errors;
+    for (std::size_t i = 0; i < runnables.size(); ++i) {
+        if (status[i] != 0) {
+            errors << "  " << runnables[i]->name() << ": " << runnables[i]->error() << std::endl;
+        }
+    }
+    if (!errors.str().empty()) {
+        throw eckit::SeriousBug("multio server failed:\n" + errors.str(), Here());
+    }
+}
 
 util::FailureHandlerResponse MultioServer::handleFailure(util::OnServerError t, const util::FailureContext& c,
                                                          util::DefaultFailureState&) const {
@@ -59,7 +64,7 @@ util::FailureHandlerResponse MultioServer::handleFailure(util::OnServerError t, 
     eckit::Log::flush();
 
     if (t == util::OnServerError::AbortTransport) {
-        transport_->abort(c.eptr);
+        shared_->abortTransports(c.eptr);
     }
     return util::FailureHandlerResponse::Rethrow;
 };

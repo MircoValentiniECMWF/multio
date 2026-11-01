@@ -13,7 +13,7 @@
 #include <memory>
 
 #include "multio/config/ComponentConfiguration.h"
-#include "multio/server/Listener.h"
+#include "multio/server/ServerRuntime.h"
 #include "multio/util/FailureHandling.h"
 
 namespace eckit {
@@ -50,7 +50,18 @@ struct ServerFailureTraits {
 };
 
 
-class MultioServer : public MultioConfigurationHolder, public FailureAware<ServerFailureTraits> {
+namespace detail {
+// Owns the server state before FailureAware is constructed (FailureAware needs the configuration)
+struct SharedHolder {
+    explicit SharedHolder(MultioConfiguration&& multioConf) :
+        shared_{std::make_unique<Shared>(std::move(multioConf))} {}
+    std::unique_ptr<Shared> shared_;
+};
+}  // namespace detail
+
+/// Server running the runnables of the server runtime (ServerRuntime.h) on its own threads, one per runnable.
+/// The constructor returns when the server has finished.
+class MultioServer : private detail::SharedHolder, public FailureAware<ServerFailureTraits> {
 public:
     MultioServer(MultioConfiguration&& multioConf);
     ~MultioServer();
@@ -59,10 +70,7 @@ public:
                                                util::DefaultFailureState&) const override;
 
 private:
-    MultioServer(const eckit::LocalConfiguration& conf, MultioConfiguration&& multioConf);
-
-    std::unique_ptr<transport::Transport> transport_;
-    Listener listener_;
+    void run();
 };
 }  // namespace server
 }  // namespace multio
