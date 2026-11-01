@@ -61,16 +61,7 @@ std::string makeServerName(const std::string& base) {
 }
 
 
-MpiPeerSetup setupMPI_(const ComponentConfiguration& compConf) {
-    const auto& multioConf = compConf.multioConfig();
-
-    if (multioConf.getCommunicatorCount() == 0) {
-        throw TransportException("MpiXTransport: no communicator registered in MultioConfiguration", Here());
-    }
-
-    // For now: use communicator 0 only.
-    const std::string baseName = multioConf.getCommunicatorNameById(0);
-
+MpiPeerSetup setupMPI_(const ComponentConfiguration& compConf, const std::string& baseName) {
     const std::string parentName = makeParentName(baseName);
     const std::string clientName = makeClientName(baseName);
     const std::string serverName = makeServerName(baseName);
@@ -86,13 +77,6 @@ MpiPeerSetup setupMPI_(const ComponentConfiguration& compConf) {
         throw TransportException(oss.str(), Here());
     }
 
-    if (!eckit::mpi::hasComm(clientName.c_str())) {
-        std::ostringstream oss;
-        oss << "MpiXTransport: client communicator \"" << clientName
-            << "\" is not registered in eckit::mpi";
-        throw TransportException(oss.str(), Here());
-    }
-
     if (!eckit::mpi::hasComm(serverName.c_str())) {
         std::ostringstream oss;
         oss << "MpiXTransport: server communicator \"" << serverName
@@ -101,12 +85,16 @@ MpiPeerSetup setupMPI_(const ComponentConfiguration& compConf) {
     }
 
     auto& parentComm = eckit::mpi::comm(parentName.c_str());
-    auto& clientComm = eckit::mpi::comm(clientName.c_str());
     auto& serverComm = eckit::mpi::comm(serverName.c_str());
 
     eckit::mpi::Group parentGroup = parentComm.group();
-    eckit::mpi::Group clientGroup = clientComm.group();
     eckit::mpi::Group serverGroup = serverComm.group();
+
+    // A server registers only the extended (parent) and the server communicators:
+    // the client ranks are the ranks of the parent communicator not in the server one
+    eckit::mpi::Group clientGroup = eckit::mpi::hasComm(clientName.c_str())
+                                      ? eckit::mpi::comm(clientName.c_str()).group()
+                                      : parentGroup.difference(serverGroup);
     if ( serverGroup.size() == 0 && clientGroup.size() != 0) {
         serverGroup = parentGroup.difference( clientGroup );
     }
@@ -119,6 +107,15 @@ MpiPeerSetup setupMPI_(const ComponentConfiguration& compConf) {
     return MpiPeerSetup(std::move(local), std::move(parentGroup), std::move(clientGroup), std::move(serverGroup));
 }
 
+// For now the client and the single-group server use communicator 0
+std::string defaultBaseName(const ComponentConfiguration& compConf) {
+    const auto& multioConf = compConf.multioConfig();
+    if (multioConf.getCommunicatorCount() == 0) {
+        throw TransportException("MpiXTransport: no communicator registered in MultioConfiguration", Here());
+    }
+    return multioConf.getCommunicatorNameById(0);
+}
+
 }  // namespace
 
 MpiXTransport::MpiXTransport(const ComponentConfiguration& compConf, MpiPeerSetup&& peerSetup) :
@@ -127,7 +124,6 @@ MpiXTransport::MpiXTransport(const ComponentConfiguration& compConf, MpiPeerSetu
     parentGroup_{std::move(std::get<1>(peerSetup))},
     clientGroup_{std::move(std::get<2>(peerSetup))},
     serverGroup_{std::move(std::get<3>(peerSetup))},
-    pool_{getMpiPoolSize(compConf), getMpiBufferSize(compConf), comm(), statistics_},
     streamQueue_{1024} {
 
     auto poolSize = getMpiPoolSize(compConf);
@@ -162,7 +158,17 @@ MpiXTransport::MpiXTransport(const ComponentConfiguration& compConf, MpiPeerSetu
 }
 
 MpiXTransport::MpiXTransport(const ComponentConfiguration& compConf) :
-    MpiXTransport(compConf, setupMPI_(compConf)) {}
+    MpiXTransport(compConf, setupMPI_(compConf, defaultBaseName(compConf))) {}
+
+MpiXTransport::MpiXTransport(const ComponentConfiguration& compConf, const std::string& baseName) :
+    MpiXTransport(compConf, setupMPI_(compConf, baseName)) {}
+
+StreamPool& MpiXTransport::pool() {
+    std::call_once(poolOnce_, [this]() {
+        pool_.emplace(getMpiPoolSize(compConf_), getMpiBufferSize(compConf_), comm(), statistics_);
+    });
+    return *pool_;
+}
 
 MpiXTransport::~MpiXTransport() = default;
 
@@ -177,9 +183,9 @@ void MpiXTransport::closeConnections() {
     for (auto& server : serverPeers()) {
         Message msg{Message::Header{Message::Tag::Close, local_, *server}};
         bufferedSend(msg);
-        pool_.sendBuffer(msg.destination());
+        pool().sendBuffer(msg.destination());
     }
-    pool_.waitAll();
+    pool().waitAll();
 }
 
 void MpiXTransport::synchronize() {
@@ -188,10 +194,9 @@ void MpiXTransport::synchronize() {
         for (auto& server : serverPeers()) {
             // Message msg{Message::Header{Message::Tag::Synchronization, local_, *server}};
             //bufferedSend(msg);
-            // pool_.sendBuffer(msg.destination());
-            pool_.sendBuffer(*server);
+            pool().sendBuffer(*server);
         }
-        pool_.waitAll();
+        pool().waitAll();
     }
 
     comm().barrier();
@@ -248,7 +253,7 @@ void MpiXTransport::send(const Message& msg) {
 
 void MpiXTransport::bufferedSend(const Message& msg) {
     std::lock_guard<std::mutex> lock{mutex_};
-    encodeMessage(pool_.getStream(msg), msg);
+    encodeMessage(pool().getStream(msg), msg);
 }
 
 void MpiXTransport::createPeers() const {
@@ -287,10 +292,37 @@ void MpiXTransport::listen() {
         return;
     }
 
-    auto& buf = pool_.acquireAvailableBuffer(BufferStatus::fillingUp);
+    auto& buf = pool().acquireAvailableBuffer(BufferStatus::fillingUp);
     auto sz = blockingReceive(status, buf);
     util::ScopedTiming timing{statistics_.pushToQueueTiming_};
     streamQueue_.push(ReceivedBuffer{&buf, sz});
+}
+
+bool MpiXTransport::tryReceive(eckit::Buffer& target, size_t& size) {
+    auto status = probe();
+    if (status.error()) {
+        return false;
+    }
+    auto sz = comm().getCount<void>(status);
+    if (sz > target.size()) {
+        std::ostringstream oss;
+        oss << "MpiXTransport: received message of " << sz << " bytes does not fit in the receive buffer of "
+            << target.size() << " bytes. Increase the receive buffer size of the server.";
+        throw TransportException(oss.str(), Here());
+    }
+    util::ScopedTiming timing{statistics_.receiveTiming_};
+    comm().receive<void>(target, sz, status.source(), status.tag());
+    ++statistics_.receiveCount_;
+    statistics_.receiveSize_ += sz;
+    size = sz;
+    return true;
+}
+
+void MpiXTransport::decodeBuffer(eckit::Buffer& buffer, size_t size, std::vector<Message>& messages) {
+    eckit::ResizableMemoryStream strm{buffer};
+    while (strm.position() < size) {
+        messages.push_back(decodeMessage(strm));
+    }
 }
 
 PeerList MpiXTransport::createServerPeers() const {

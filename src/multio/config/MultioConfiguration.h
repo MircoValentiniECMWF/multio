@@ -155,6 +155,28 @@ public:
 
     }
 
+    // Server side: register a client group by its extended communicator (server and client ranks) and the
+    // server communicator. The client ranks are derived by the transport (extended minus server ranks).
+    void addServerCommunicator(const std::string& name, int parentComm, int serverComm) {
+        if (std::find(in_comms_.begin(), in_comms_.end(), name) != in_comms_.end()) {
+            throw eckit::SeriousBug("Communicator base name \"" + name + "\" already exists in MultioConfiguration",
+                                    Here());
+        }
+
+        const std::string parentName = name + "-parent";
+        const std::string serverName = name + "-server";
+
+        if (!eckit::mpi::hasComm(parentName)) {
+            eckit::mpi::addComm(parentName, parentComm);
+        }
+
+        if (!eckit::mpi::hasComm(serverName)) {
+            eckit::mpi::addComm(serverName, serverComm);
+        }
+
+        in_comms_.push_back(name);
+    }
+
     std::size_t getCommunicatorCount() const {return in_comms_.size();};
 
     std::string getCommunicatorNameById( int commId ) const {
