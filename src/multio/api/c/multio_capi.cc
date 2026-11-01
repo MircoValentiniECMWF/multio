@@ -15,10 +15,15 @@
 #include "multio/multio_version.h"
 #include "multio/server/MultioClient.h"
 #include "multio/server/MultioServer.h"
+#include "multio/server/ServerRuntime.h"
+#include "multio/util/DrHook.h"
 #include "multio/util/FailureHandling.h"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
+#include <string>
+#include <vector>
 #include <optional>
 #include <iostream>
 
@@ -88,6 +93,21 @@ struct multio_handle_t : public multio::server::MultioClient {
     multio_handle_t(MultioConfiguration&& multioConf) : MultioClient{std::move(multioConf)} {}
 
     std::unique_ptr<multio_failure_context_t> failureContext;
+
+    // Tracing hook of the caller: stored, not called yet
+    multio::util::DrHook drHook;
+};
+
+struct multio_server_runnable_t {
+    std::unique_ptr<multio::server::Runnable> runnable;
+    std::string kind;
+};
+
+// Members destroyed in reverse order: the runnables before the shared state
+struct multio_server_shared_t {
+    std::unique_ptr<multio::server::Shared> shared;
+    std::vector<multio_server_runnable_t> runnables;
+    std::vector<multio::server::QueueUsage> usage;  // snapshot taken by multio_server_shared_usage_count
 };
 
 struct multio_data_t : public eckit::Buffer {
@@ -1111,6 +1131,178 @@ int multio_field_accepted(multio_handle_t* mio, const multio_metadata_t* md, boo
             *accepted = mio->isFieldMatched(md->md.read());
         },
         mio);
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Tracing hook and server API
+
+int multio_handle_set_dr_hook(multio_handle_t* mio, multio_dr_hook_function_t hook, void* context) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction(
+        [mio, hook, context]() {
+            ASSERT(mio != nullptr);
+            mio->drHook = multio::util::DrHook{hook, context};
+        },
+        mio);
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_create_runnables(multio_configuration_t* cc, int nthreads, int server_comm, const int* client_comms,
+                                   int n_client_comms, multio_server_shared_t** shared, int* n_runnables) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction(
+        [=]() {
+            ASSERT(cc != nullptr);
+            ASSERT(shared != nullptr);
+            ASSERT(n_runnables != nullptr);
+            ASSERT(n_client_comms > 0);
+            ASSERT(client_comms != nullptr);
+
+            // One client group per extended communicator
+            for (int i = 0; i < n_client_comms; ++i) {
+                cc->addServerCommunicator("multio-client-group-" + std::to_string(i + 1), client_comms[i],
+                                          server_comm);
+            }
+
+            auto s = std::make_unique<multio_server_shared_t>();
+            s->shared = std::make_unique<multio::server::Shared>(std::move(*cc));
+            auto runnables = s->shared->createRunnables(static_cast<std::size_t>(std::max(nthreads, 0)));
+            for (auto& r : runnables) {
+                multio_server_runnable_t handle;
+                handle.kind = r->kind();
+                handle.runnable = std::move(r);
+                s->runnables.push_back(std::move(handle));
+            }
+            *n_runnables = static_cast<int>(s->runnables.size());
+            *shared = s.release();
+        },
+        cc);
+#else
+    if (shared) {
+        *shared = nullptr;
+    }
+    if (n_runnables) {
+        *n_runnables = 0;
+    }
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_get_runnable(multio_server_shared_t* shared, int index, multio_server_runnable_t** runnable) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([shared, index, runnable]() {
+        ASSERT(shared != nullptr);
+        ASSERT(runnable != nullptr);
+        ASSERT(index >= 0 && static_cast<std::size_t>(index) < shared->runnables.size());
+        *runnable = &shared->runnables[index];
+    });
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_runnable_kind(multio_server_runnable_t* runnable, const char** kind, int* length) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([runnable, kind, length]() {
+        ASSERT(runnable != nullptr);
+        ASSERT(kind != nullptr);
+        ASSERT(length != nullptr);
+        *kind = runnable->kind.c_str();
+        *length = static_cast<int>(runnable->kind.size());
+    });
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_runnable_init(multio_server_runnable_t* runnable, multio_server_shared_t* shared) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([runnable, shared]() {
+        ASSERT(runnable != nullptr && runnable->runnable);
+        ASSERT(shared != nullptr && shared->shared);
+        runnable->runnable->init(*shared->shared);
+    });
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_runnable_run(multio_server_runnable_t* runnable, multio_dr_hook_function_t hook, void* context) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([runnable, hook, context]() {
+        ASSERT(runnable != nullptr && runnable->runnable);
+        if (runnable->runnable->run(multio::util::DrHook{hook, context}) != 0) {
+            throw eckit::SeriousBug("multio server runnable " + runnable->runnable->name()
+                                        + " failed: " + runnable->runnable->error(),
+                                    Here());
+        }
+    });
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_runnable_free(multio_server_runnable_t* runnable) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([runnable]() {
+        ASSERT(runnable != nullptr && runnable->runnable);
+        runnable->runnable->free();
+    });
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_shared_free(multio_server_shared_t* shared) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([shared]() { delete shared; });
+#else
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_shared_usage_count(multio_server_shared_t* shared, int* count) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([shared, count]() {
+        ASSERT(shared != nullptr && shared->shared);
+        ASSERT(count != nullptr);
+        shared->usage = shared->shared->usage();
+        *count = static_cast<int>(shared->usage.size());
+    });
+#else
+    if (count) {
+        *count = 0;
+    }
+    return MULTIO_SUCCESS;
+#endif
+}
+
+int multio_server_shared_usage(multio_server_shared_t* shared, int index, const char** name, int* name_length,
+                               int64_t* values) {
+#if !defined(MULTIO_DUMMY_API)
+    return wrapApiFunction([shared, index, name, name_length, values]() {
+        ASSERT(shared != nullptr);
+        ASSERT(name != nullptr && name_length != nullptr && values != nullptr);
+        ASSERT(index >= 0 && static_cast<std::size_t>(index) < shared->usage.size());
+        const auto& u = shared->usage[index];
+        *name = u.name.c_str();
+        *name_length = static_cast<int>(u.name.size());
+        values[0] = static_cast<int64_t>(u.count);
+        values[1] = static_cast<int64_t>(u.bytes);
+        values[2] = static_cast<int64_t>(u.maxCount);
+        values[3] = static_cast<int64_t>(u.maxBytes);
+        values[4] = static_cast<int64_t>(u.capacityCount);
+        values[5] = static_cast<int64_t>(u.capacityBytes);
+        values[6] = static_cast<int64_t>(u.total);
+        values[7] = static_cast<int64_t>(u.producerWaitSeconds * 1.0e6);
+        values[8] = static_cast<int64_t>(u.consumerWaitSeconds * 1.0e6);
+        values[9] = 0;
+    });
 #else
     return MULTIO_SUCCESS;
 #endif

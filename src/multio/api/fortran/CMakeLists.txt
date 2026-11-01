@@ -3,11 +3,13 @@ list( APPEND multio_fapi_srcs
     multio_fapi_constants.F90
     multio_fapi_error_handling.F90
     multio_fapi_configuration.F90
+    multio_fapi_dr_hook.F90
     multio_fapi_base_handle.F90
     multio_fapi_handle.F90
     multio_fapi_data.F90
     multio_fapi_metadata.F90
     multio_fapi_utils.F90
+    multio_fapi_server.F90
     multio_fapi.F90
 )
 

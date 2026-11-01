@@ -10,3 +10,4 @@
 #include "multio_capi_data.h"
 #include "multio_capi_handle.h"
 #include "multio_capi_metadata.h"
+#include "multio_capi_server.h"

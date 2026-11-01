@@ -35,6 +35,13 @@ module multio_api
     use :: multio_api_utils_mod, only: multio_error_string
 
     ! Failure handling
+    use :: multio_api_dr_hook_mod, only: multio_dr_hook_if
+
+    use :: multio_api_server_mod, only: multio_server_shared
+    use :: multio_api_server_mod, only: multio_server_runnable
+    use :: multio_api_server_mod, only: multio_server_create_runnables
+    use :: multio_api_server_mod, only: MULTIO_SERVER_USAGE_VALUES
+
     use :: multio_api_error_handling_mod, only: failure_handler_t
     use :: multio_api_error_handling_mod, only: multio_failure_info
 
@@ -67,5 +74,12 @@ implicit none
     ! Public error handling
     public :: multio_failure_info
     public :: failure_handler_t
+
+    public :: multio_dr_hook_if
+
+    public :: multio_server_shared
+    public :: multio_server_runnable
+    public :: multio_server_create_runnables
+    public :: MULTIO_SERVER_USAGE_VALUES
 
 end module multio_api

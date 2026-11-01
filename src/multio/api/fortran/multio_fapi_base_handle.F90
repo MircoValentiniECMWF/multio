@@ -29,6 +29,9 @@ implicit none
         !! Pointer to the failure handler
         integer(c_int), pointer :: failure_id => null()
 
+        !! Tracing hook of the caller (holder passed to C, see multio_api_dr_hook_mod)
+        type(c_ptr) :: dr_hook_ctx = c_null_ptr
+
     contains
 
         ! General management
@@ -98,16 +101,21 @@ contains
     !! @see multio_base_handle_new_default
     !! @see multio_base_handle_delete
     !!
-    function multio_base_handle_new(handle, cc) result(err)
+    function multio_base_handle_new(handle, cc, dr_hook) result(err)
         ! Variable references from the fortran language standard modules
         use, intrinsic :: iso_c_binding,     only: c_int
         ! Variable references from the project
         use :: multio_api_configuration_mod, only: multio_configuration
         use :: multio_api_constants_mod,     only: MULTIO_SUCCESS
+        use :: multio_api_dr_hook_mod,       only: multio_dr_hook_if
+        use :: multio_api_dr_hook_mod,       only: multio_dr_hook_new
+        use :: multio_api_dr_hook_mod,       only: multio_dr_hook_trampoline
+        use, intrinsic :: iso_c_binding,     only: c_funloc
     implicit none
         ! Dummy arguments
         class(multio_base_handle),   intent(inout) :: handle
         class(multio_configuration), intent(inout) :: cc
+        procedure(multio_dr_hook_if), optional     :: dr_hook
         ! Function result
         integer :: err
 #if !defined(MULTIO_DUMMY_API)
@@ -115,6 +123,17 @@ contains
         integer(kind=c_int) :: c_err
         ! Private interface to the c API
         interface
+            function c_multio_handle_set_dr_hook(handle, hook, context) result(err) &
+                    bind(c, name='multio_handle_set_dr_hook')
+                use, intrinsic :: iso_c_binding, only: c_ptr
+                use, intrinsic :: iso_c_binding, only: c_funptr
+                use, intrinsic :: iso_c_binding, only: c_int
+            implicit none
+                type(c_ptr),    value, intent(in) :: handle
+                type(c_funptr), value, intent(in) :: hook
+                type(c_ptr),    value, intent(in) :: context
+                integer(c_int) :: err
+            end function c_multio_handle_set_dr_hook
             function c_multio_new_handle(handle, cc) result(err) &
                     bind(c, name='multio_new_handle')
                 use, intrinsic :: iso_c_binding, only: c_ptr
@@ -128,6 +147,13 @@ contains
         ! Implementation
         handle%failure_id => cc%move_failure_id()
         c_err = c_multio_new_handle(handle%impl, cc%c_ptr())
+
+        ! Tracing hook of the caller: stored by multio, not called yet
+        if (c_err .eq. int(MULTIO_SUCCESS, kind=c_int) .and. present(dr_hook)) then
+            handle%dr_hook_ctx = multio_dr_hook_new(dr_hook)
+            c_err = c_multio_handle_set_dr_hook(handle%impl, c_funloc(multio_dr_hook_trampoline), &
+                                                handle%dr_hook_ctx)
+        end if
         ! Setting return value
         err = int(c_err,kind(err))
 #else
@@ -203,6 +229,7 @@ contains
         ! Variable references from the project
         use :: multio_api_error_handling_mod, only: failure_info_list
         use :: multio_api_constants_mod,      only: MULTIO_SUCCESS
+        use :: multio_api_dr_hook_mod,        only: multio_dr_hook_free
     implicit none
         ! Dummy arguments
         class(multio_base_handle), intent(inout) :: handle
@@ -225,6 +252,7 @@ contains
         ! Implementation
         c_err = c_multio_delete_handle(handle%c_ptr())
         handle%impl = c_null_ptr
+        call multio_dr_hook_free(handle%dr_hook_ctx)
         ! Remove failure handler
         if(associated(handle%failure_id)) then
            call failure_info_list%remove(handle%failure_id)

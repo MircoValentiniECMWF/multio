@@ -49,6 +49,7 @@ list( APPEND multio_capi_srcs
     multio_capi_handle.h
     multio_capi_metadata.h
     multio_capi_data.h
+    multio_capi_server.h
     multio_c.h
     multio_c_cpp_utils.h
     multio_capi.cc
