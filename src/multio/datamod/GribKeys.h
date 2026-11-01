@@ -259,11 +259,6 @@ constexpr auto BitsPerValue =
         .tagOptional()
         .withAccessor([](auto&& v) { return &v.bitsPerValue; });
 
-constexpr auto LaplacianOperator =
-    EntryDef<double>{"laplacianOperator"}
-        .tagOptional()
-        .withAccessor([](auto&& v) { return &v.laplacianOperator; });
-
 
 //-----------------------------------------------------------------------------
 

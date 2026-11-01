@@ -63,7 +63,6 @@ PUBLIC :: TOUPPER
 PUBLIC :: IS_DIRECTORY
 PUBLIC :: MAKE_DIRECTORY
 PUBLIC :: FILE_SET_PERMISSION
-PUBLIC :: NEED_FIT_SPECTRUM
 PUBLIC :: GET_VERBOSE
 PUBLIC :: SET_VERBOSE
 PUBLIC :: GET_COMPUTE_FIELD_STATISTICS
@@ -720,61 +719,6 @@ END FUNCTION GET_CUSTOM_UNITS
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 
-
-#define PP_PROCEDURE_TYPE 'FUNCTION'
-#define PP_PROCEDURE_NAME 'NEED_FIT_SPECTRUM'
-PP_THREAD_SAFE FUNCTION NEED_FIT_SPECTRUM( NSMAX, LNFT, HOOKS ) RESULT(RET)
-
-  ! Symbols imported from other modules within the project.
-  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
-  USE :: HOOKS_MOD,         ONLY: HOOKS_T
-
-  ! Symbols imported by the preprocessor for debugging purposes
-  PP_DEBUG_USE_VARS
-
-  ! Symbols imported by the preprocessor for logging purposes
-  PP_LOG_USE_VARS
-
-  ! Symbols imported by the preprocessor for tracing purposes
-  PP_TRACE_USE_VARS
-
-IMPLICIT NONE
-
-  ! Dummy arguments
-  INTEGER(KIND=JPIB_K), INTENT(IN)    :: NSMAX
-  LOGICAL,              INTENT(OUT)   :: LNFT
-  TYPE(HOOKS_T),        INTENT(INOUT) :: HOOKS
-
-  !> Function result
-  INTEGER(KIND=JPIB_K) :: RET
-
-  ! Local variables declared by the preprocessor for debugging purposes
-  PP_DEBUG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for logging purposes
-  PP_LOG_DECL_VARS
-
-  ! Local variables declared by the preprocessor for tracing purposes
-  PP_TRACE_DECL_VARS
-
-  ! Trace begin of procedure
-  PP_TRACE_ENTER_PROCEDURE()
-
-  ! Initialization of good path return value
-  PP_SET_ERR_SUCCESS( RET )
-
-  ! Check if the number of spectral coefficients is greater than 10
-  LNFT = NSMAX .GT. 10
-
-  ! Trace end of procedure (on success)
-  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
-
-  ! Exit point
-  RETURN
-
-END FUNCTION NEED_FIT_SPECTRUM
-#undef PP_PROCEDURE_NAME
-#undef PP_PROCEDURE_TYPE
 
 
 

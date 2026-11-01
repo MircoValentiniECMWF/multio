@@ -401,9 +401,6 @@ dm::Geometry mapGrib1ToGrib2(KeySet& marsKeys, metkit::codes::CodesHandle& h, dm
 
     handleMissingValue(h, misc);
 
-    // TODO pgeier set it again ??
-    misc.laplacianOperator = dm::parseEntry(dm::LaplacianOperator, h);
-
     // Can not rely on "number" from mars key iterator... for reference data (with hdate) number
     // can be 0 but is not emitted although numberOfForecastsInEnsemble has a valid value
     // if (auto searchNumber = marsKeys.find("number"); searchNumber != marsKeys.end())

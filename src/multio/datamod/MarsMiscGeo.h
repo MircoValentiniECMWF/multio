@@ -341,8 +341,6 @@ constexpr auto WaveFrequencies =                      //
 
 // BitsPerValue defined in GribKeys
 
-// LaplacianOperator defined in GribKeys
-
 struct MiscRecord {
     EntryType_t<decltype(TablesVersion)> tablesVersion;
     EntryType_t<decltype(GeneratingProcessIdentifier)> generatingProcessIdentifier;
@@ -364,7 +362,6 @@ struct MiscRecord {
     EntryType_t<decltype(WaveDirections)> waveDirections;
     EntryType_t<decltype(WaveFrequencies)> waveFrequencies;
     EntryType_t<decltype(BitsPerValue)> bitsPerValue;
-    EntryType_t<decltype(LaplacianOperator)> laplacianOperator;
     EntryType_t<decltype(SubCentre)> subCentre;
 
 
@@ -374,7 +371,7 @@ struct MiscRecord {
         LengthOfTimeWindow, LengthOfTimeWindowInSeconds, BitmapPresent, MissingValue, TypeOfEnsembleForecast,
         NumberOfForecastsInEnsemble, SatelliteSeries, ScaleFactorOfCentralWaveNumber, ScaledValueOfCentralWaveNumber,
         Pv, ScaleFactorOfWaveDirections, ScaleFactorOfWaveFrequencies, WaveDirections, WaveFrequencies, BitsPerValue,
-        LaplacianOperator, SubCentre);
+        SubCentre);
 };
 
 
