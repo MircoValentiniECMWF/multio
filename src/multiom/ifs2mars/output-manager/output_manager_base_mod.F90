@@ -60,6 +60,7 @@ CONTAINS
 
   !> @brief Used to finalise the output manager
   PROCEDURE(FINALISE_IF), DEFERRED, PASS, PUBLIC :: FINALISE
+  PROCEDURE, PASS, PUBLIC :: WRITE_DOMAIN => OUTPUT_MANAGER_BASE_WRITE_DOMAIN
 END TYPE
 
 
@@ -289,6 +290,36 @@ END INTERFACE
 
 ! Whitelist of public symbols
 PUBLIC :: OUTPUT_MANAGER_BASE_A
+
+CONTAINS
+
+!>
+!> @brief Write a domain (mapping of the local values of a task onto the full field)
+!>
+!> Default implementation: the output manager does not use domains, nothing
+!> to do. Output managers that receive local data override this procedure.
+!>
+!> @param [inout] this    The output manager
+!> @param [in]    ydmsg   Domain description
+!> @param [in]    loc2glo Global (0-based) index of each local value
+!> @param [inout] hooks   Hooks to be used for logging, tracing, profiling and debugging
+!>
+!> @return The return code of the function
+!>
+PP_THREAD_SAFE FUNCTION OUTPUT_MANAGER_BASE_WRITE_DOMAIN( THIS, YDMSG, LOC2GLO, HOOKS ) RESULT(RET)
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: IFS_MSG_MOD,       ONLY: OM_DOMAIN_MSG_T
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+IMPLICIT NONE
+  CLASS(OUTPUT_MANAGER_BASE_A), TARGET, INTENT(INOUT) :: THIS
+  TYPE(OM_DOMAIN_MSG_T),                INTENT(IN)    :: YDMSG
+  INTEGER(KIND=JPIB_K), DIMENSION(:),   INTENT(IN)    :: LOC2GLO
+  TYPE(HOOKS_T),                        INTENT(INOUT) :: HOOKS
+  INTEGER(KIND=JPIB_K) :: RET
+
+  RET = 0_JPIB_K
+
+END FUNCTION OUTPUT_MANAGER_BASE_WRITE_DOMAIN
 
 END MODULE OUTUPUT_MANAGER_BASE_MOD
 #undef PP_SECTION_NAME

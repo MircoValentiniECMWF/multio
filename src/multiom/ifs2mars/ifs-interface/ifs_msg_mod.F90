@@ -100,10 +100,22 @@ TYPE, EXTENDS(OM_BASE_MSG_A) :: OM_WAM_MSG_T
   CHARACTER(LEN=14)     :: CDATE  !> @brief true if there are missing values in the message
 END TYPE
 
+!> @brief message used to describe a domain: the mapping of the values written
+!>        by a task (local) onto the full field (global)
+TYPE :: OM_DOMAIN_MSG_T
+  INTEGER(KIND=JPIB_K) :: IDOMAIN_ = 0_JPIB_K  !> @brief domain identifier
+  INTEGER(KIND=JPIB_K) :: NGLOBAL_ = 0_JPIB_K  !> @brief number of values of the full field
+  INTEGER(KIND=JPIB_K) :: NLOCAL_  = 0_JPIB_K  !> @brief number of values written by the task
+END TYPE
+
 ! White list of the public symbols (datatypes)
 PUBLIC :: OM_BASE_MSG_A
 PUBLIC :: OM_ATM_MSG_T
 PUBLIC :: OM_WAM_MSG_T
+PUBLIC :: OM_DOMAIN_MSG_T
+
+!> @brief type of the domain messages in the message file (not a field interface)
+INTEGER(KIND=JPIB_K), PARAMETER :: DOMAIN_MSG_TYPE_E = 1001_JPIB_K
 
 
 ! White list of the public symbols (procedures)
@@ -113,6 +125,9 @@ PUBLIC :: MSG_ROPEN
 PUBLIC :: MSG_CLOSE
 PUBLIC :: MSG_PRINT_ATM
 PUBLIC :: MSG_PRINT_WAM
+PUBLIC :: MSG_PRINT_DOMAIN
+PUBLIC :: MSG_WRITE_DOMAIN
+PUBLIC :: MSG_READ_DOMAIN
 PUBLIC :: MSG_WRITE_ATM
 PUBLIC :: MSG_WRITE_WAM
 PUBLIC :: MSG_READ_ATM
@@ -2413,6 +2428,401 @@ PP_ERROR_HANDLER
 END FUNCTION PRINT_WAM
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
+
+!>
+!> @brief Write a domain message (description and local to global mapping) to the message file
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'MSG_WRITE_DOMAIN'
+PP_THREAD_SAFE FUNCTION MSG_WRITE_DOMAIN( UNIT, MSG, LOC2GLO, ADDR, HOOKS ) RESULT(RET)
+
+  ! Symbolds imported from intrinsic modules
+  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: INT64
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K),               INTENT(IN)    :: UNIT
+  TYPE(OM_DOMAIN_MSG_T),              INTENT(IN)    :: MSG
+  INTEGER(KIND=JPIB_K), DIMENSION(:), INTENT(IN)    :: LOC2GLO
+  INTEGER(KIND=INT64),                INTENT(OUT)   :: ADDR
+  TYPE(HOOKS_T),                      INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: STAT
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_SIZE_MISMATCH = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_INQUIRE_POSITION = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_WRITE = 3_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Check consistency
+  PP_DEBUG_CRITICAL_COND_THROW( SIZE(LOC2GLO,KIND=JPIB_K).NE.MSG%NLOCAL_, ERRFLAG_SIZE_MISMATCH )
+
+  ! Get the address of the message in the file
+  FLUSH(UNIT)
+  INQUIRE( UNIT, POS=ADDR, IOSTAT=STAT )
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_INQUIRE_POSITION )
+
+  ! Write the message type
+  WRITE(UNIT, IOSTAT=STAT) INT( DOMAIN_MSG_TYPE_E, INT64 )
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_WRITE )
+
+  ! Write the domain description
+  WRITE(UNIT, IOSTAT=STAT) INT( MSG%IDOMAIN_, INT64 )
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_WRITE )
+  WRITE(UNIT, IOSTAT=STAT) INT( MSG%NGLOBAL_, INT64 )
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_WRITE )
+  WRITE(UNIT, IOSTAT=STAT) INT( MSG%NLOCAL_, INT64 )
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_WRITE )
+
+  ! Write the local to global mapping
+  IF ( MSG%NLOCAL_ .GT. 0_JPIB_K ) THEN
+    WRITE(UNIT, IOSTAT=STAT) INT( LOC2GLO, INT64 )
+    PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_WRITE )
+  ENDIF
+
+  FLUSH(UNIT)
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_SIZE_MISMATCH)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Size of loc2glo differs from the number of local values' )
+    CASE (ERRFLAG_UNABLE_TO_INQUIRE_POSITION)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to inquire position' )
+    CASE (ERRFLAG_UNABLE_TO_WRITE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to write domain message' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION MSG_WRITE_DOMAIN
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Read a domain message (description and local to global mapping) from the message file
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'MSG_READ_DOMAIN'
+PP_THREAD_SAFE FUNCTION MSG_READ_DOMAIN( MSGUNIT, MSG, LOC2GLO, ADDR, VERBOSE, HOOKS ) RESULT(RET)
+
+  ! Symbolds imported from intrinsic modules
+  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: INT64
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  INTEGER(KIND=JPIB_K),                            INTENT(IN)    :: MSGUNIT
+  TYPE(OM_DOMAIN_MSG_T),                           INTENT(OUT)   :: MSG
+  INTEGER(KIND=JPIB_K), DIMENSION(:), ALLOCATABLE, INTENT(OUT)   :: LOC2GLO
+  INTEGER(KIND=INT64),                             INTENT(IN)    :: ADDR
+  LOGICAL, OPTIONAL,                               INTENT(IN)    :: VERBOSE
+  TYPE(HOOKS_T),                                   INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  LOGICAL :: MSGOPENED
+  INTEGER(KIND=JPIB_K) :: STAT
+  INTEGER(KIND=INT64)  :: MSG_TYPE
+  INTEGER(KIND=INT64)  :: ITMP
+  INTEGER(KIND=INT64), DIMENSION(:), ALLOCATABLE :: ITMP_ARR
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNIT_NOT_CONNECTED_TO_MSG_FILE = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_INVALID_MSG_TYPE = 3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_INVALID_SIZE = 4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_ALLOCATE = 5_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! Check the unit
+  INQUIRE( UNIT=MSGUNIT, OPENED=MSGOPENED )
+  PP_DEBUG_CRITICAL_COND_THROW( .NOT.MSGOPENED, ERRFLAG_UNIT_NOT_CONNECTED_TO_MSG_FILE )
+
+  ! Read and check the message type
+  READ(MSGUNIT, POS=ADDR, IOSTAT=STAT) MSG_TYPE
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_READ )
+  PP_DEBUG_CRITICAL_COND_THROW( MSG_TYPE.NE.DOMAIN_MSG_TYPE_E, ERRFLAG_INVALID_MSG_TYPE )
+
+  ! Read the domain description
+  READ(MSGUNIT, IOSTAT=STAT) ITMP
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_READ )
+  MSG%IDOMAIN_ = INT( ITMP, KIND=KIND(MSG%IDOMAIN_) )
+  READ(MSGUNIT, IOSTAT=STAT) ITMP
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_READ )
+  MSG%NGLOBAL_ = INT( ITMP, KIND=KIND(MSG%NGLOBAL_) )
+  READ(MSGUNIT, IOSTAT=STAT) ITMP
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_READ )
+  MSG%NLOCAL_ = INT( ITMP, KIND=KIND(MSG%NLOCAL_) )
+  PP_DEBUG_CRITICAL_COND_THROW( MSG%NLOCAL_.LT.0_JPIB_K, ERRFLAG_INVALID_SIZE )
+
+  ! Read the local to global mapping
+  ALLOCATE( LOC2GLO(MSG%NLOCAL_), STAT=STAT )
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_ALLOCATE )
+  IF ( MSG%NLOCAL_ .GT. 0_JPIB_K ) THEN
+    ALLOCATE( ITMP_ARR(MSG%NLOCAL_), STAT=STAT )
+    PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_ALLOCATE )
+    READ(MSGUNIT, IOSTAT=STAT) ITMP_ARR
+    PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_READ )
+    LOC2GLO = INT( ITMP_ARR, KIND=JPIB_K )
+    DEALLOCATE( ITMP_ARR )
+  ENDIF
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNIT_NOT_CONNECTED_TO_MSG_FILE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Read unit not connected to a file' )
+    CASE (ERRFLAG_UNABLE_TO_READ)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to read domain message' )
+    CASE (ERRFLAG_INVALID_MSG_TYPE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Invalid message type (domain expected)' )
+    CASE (ERRFLAG_INVALID_SIZE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Invalid number of local values' )
+    CASE (ERRFLAG_UNABLE_TO_ALLOCATE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to allocate the local to global mapping' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION MSG_READ_DOMAIN
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Print a domain message
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'MSG_PRINT_DOMAIN'
+PP_THREAD_SAFE FUNCTION MSG_PRINT_DOMAIN( MSG, UNIT, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,         ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  TYPE(OM_DOMAIN_MSG_T), INTENT(IN)    :: MSG
+  INTEGER(KIND=JPIB_K),  INTENT(IN)    :: UNIT
+  TYPE(HOOKS_T),         INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: STAT
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_PRINT = 1_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  WRITE(UNIT,*,IOSTAT=STAT) ' + MSG_DOMAIN%IDOMAIN_............ :: ', MSG%IDOMAIN_
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_PRINT )
+  WRITE(UNIT,*,IOSTAT=STAT) ' + MSG_DOMAIN%NGLOBAL_............ :: ', MSG%NGLOBAL_
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_PRINT )
+  WRITE(UNIT,*,IOSTAT=STAT) ' + MSG_DOMAIN%NLOCAL_............. :: ', MSG%NLOCAL_
+  PP_DEBUG_CRITICAL_COND_THROW( STAT.NE.0, ERRFLAG_UNABLE_TO_PRINT )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNABLE_TO_PRINT)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to print domain message' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION MSG_PRINT_DOMAIN
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
 
 END MODULE IFS_MSG_MOD
 #undef PP_SECTION_NAME

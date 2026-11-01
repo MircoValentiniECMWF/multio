@@ -55,6 +55,7 @@ PUBLIC :: PRINT_HEADER
 PUBLIC :: PRINT_SIMULATION_INIT
 PUBLIC :: PRINT_ATM_MESSAGE
 PUBLIC :: PRINT_WAM_MESSAGE
+PUBLIC :: PRINT_DOMAIN_MESSAGE
 PUBLIC :: PRINT_FLUSH
 PUBLIC :: PRINT_FLUSH_AND_RESTART
 PUBLIC :: PRINT_FLUSH_LAST_STEP
@@ -66,6 +67,7 @@ PUBLIC :: ENCODE_HEADER
 PUBLIC :: ENCODE_SIMULATION_INIT
 PUBLIC :: ENCODE_ATM_MESSAGE
 PUBLIC :: ENCODE_WAM_MESSAGE
+PUBLIC :: ENCODE_DOMAIN_MESSAGE
 PUBLIC :: ENCODE_FLUSH
 PUBLIC :: ENCODE_FLUSH_AND_RESTART
 PUBLIC :: ENCODE_FLUSH_LAST_STEP
@@ -75,6 +77,7 @@ PUBLIC :: ENCODE_FOOTER
 ! Read
 PUBLIC :: READ_ATM_MESSAGE
 PUBLIC :: READ_WAM_MESSAGE
+PUBLIC :: READ_DOMAIN_MESSAGE
 PUBLIC :: READ_VAL_SP
 PUBLIC :: READ_VAL_DP
 
@@ -3259,6 +3262,380 @@ PP_ERROR_HANDLER
   RETURN
 
 END FUNCTION ENCODE_ATM_MESSAGE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+!>
+!> @brief Read a domain message from the dump
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'READ_DOMAIN_MESSAGE'
+PP_THREAD_SAFE FUNCTION READ_DOMAIN_MESSAGE( DIRECTORY, PROC_ID, MSG_ID, ADDR, YDMSG, LOC2GLO, &
+&  BIG_ENDIAN_READ, VERBOSE, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: MULTIOM_API, ONLY: JPIB_K
+  USE :: MULTIOM_API, ONLY: MSG_CREATE_NAME
+  USE :: MULTIOM_API, ONLY: MSG_ROPEN
+  USE :: MULTIOM_API, ONLY: MSG_READ_DOMAIN
+  USE :: MULTIOM_API, ONLY: MSG_CLOSE
+  USE :: MULTIOM_API, ONLY: OM_DOMAIN_MSG_T
+  USE :: MULTIOM_API, ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  CHARACTER(LEN=*),                                INTENT(IN)    :: DIRECTORY
+  INTEGER(KIND=JPIB_K),                            INTENT(IN)    :: PROC_ID
+  INTEGER(KIND=JPIB_K),                            INTENT(IN)    :: MSG_ID
+  INTEGER(KIND=JPIB_K),                            INTENT(IN)    :: ADDR
+  TYPE(OM_DOMAIN_MSG_T),                           INTENT(OUT)   :: YDMSG
+  INTEGER(KIND=JPIB_K), DIMENSION(:), ALLOCATABLE, INTENT(OUT)   :: LOC2GLO
+  LOGICAL,                                         INTENT(IN)    :: BIG_ENDIAN_READ
+  LOGICAL,                                         INTENT(IN)    :: VERBOSE
+  TYPE(HOOKS_T),                                   INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  CHARACTER(LEN=1024)  :: LOC_DIR
+  CHARACTER(LEN=1024)  :: MSGFNAME
+  INTEGER(KIND=JPIB_K) :: MSGUNIT
+  INTEGER(KIND=JPIB_K) :: WRITE_STATUS
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_WRITE_TO_STRING = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MSG_CREATE_NAME = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MSG_ROPEN = 3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MSG_READ_DOMAIN = 4_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_MSG_CLOSE = 5_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  LOC_DIR=REPEAT( ' ', 1024 )
+  WRITE(LOC_DIR,'(A,A,I6.6,A)', IOSTAT=WRITE_STATUS) TRIM(DIRECTORY), '/io_serv.', PROC_ID, '.d'
+  PP_DEBUG_CRITICAL_COND_THROW( WRITE_STATUS .NE. 0, ERRFLAG_UNABLE_TO_WRITE_TO_STRING )
+
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_MSG_CREATE_NAME) MSG_CREATE_NAME( TRIM(LOC_DIR), MSG_ID, PROC_ID, MSGFNAME, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_MSG_ROPEN) MSG_ROPEN( MSGFNAME, MSGUNIT, BIG_ENDIAN_READ, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_MSG_READ_DOMAIN) MSG_READ_DOMAIN( MSGUNIT, YDMSG, LOC2GLO, ADDR, VERBOSE, HOOKS )
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_MSG_CLOSE) MSG_CLOSE( MSGUNIT, HOOKS )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNABLE_TO_WRITE_TO_STRING)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to write to string' )
+    CASE (ERRFLAG_UNABLE_TO_MSG_CREATE_NAME)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to create message file name' )
+    CASE (ERRFLAG_UNABLE_TO_MSG_ROPEN)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to open message file' )
+    CASE (ERRFLAG_UNABLE_TO_MSG_READ_DOMAIN)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to read domain message' )
+    CASE (ERRFLAG_UNABLE_TO_MSG_CLOSE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to close message file' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION READ_DOMAIN_MESSAGE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Replay a domain message from the dump through the output manager
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'ENCODE_DOMAIN_MESSAGE'
+PP_THREAD_SAFE FUNCTION ENCODE_DOMAIN_MESSAGE( CMDARGS, OUTPUT_MANAGER, TOC_ENTRY, BIG_ENDIAN_READ, VERBOSE, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: COMMAND_ARGUMENTS_PARSER_MOD, ONLY: COMMAND_LINE_ARGS_T
+  USE :: MULTIOM_API, ONLY: OUTPUT_MANAGER_BASE_A
+  USE :: MULTIOM_API, ONLY: TOC_DOMAIN_T
+  USE :: MULTIOM_API, ONLY: JPIB_K
+  USE :: MULTIOM_API, ONLY: HOOKS_T
+  USE :: MULTIOM_API, ONLY: OM_DOMAIN_MSG_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  TYPE(COMMAND_LINE_ARGS_T),             INTENT(IN)    :: CMDARGS
+  CLASS(OUTPUT_MANAGER_BASE_A), POINTER, INTENT(INOUT) :: OUTPUT_MANAGER
+  TYPE(TOC_DOMAIN_T),                    INTENT(IN)    :: TOC_ENTRY
+  LOGICAL,                               INTENT(IN)    :: BIG_ENDIAN_READ
+  LOGICAL,                               INTENT(IN)    :: VERBOSE
+  TYPE(HOOKS_T),                         INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  TYPE(OM_DOMAIN_MSG_T) :: MESSAGE
+  INTEGER(KIND=JPIB_K), DIMENSION(:), ALLOCATABLE :: LOC2GLO
+  CHARACTER(LEN=1024)  :: DUMP_PATH
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_GET_DUMP_DIRECTORY = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_READ_DOMAIN_MESSAGE = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_WRITE_DOMAIN = 3_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  PP_TRYCALL(ERRFLAG_GET_DUMP_DIRECTORY) CMDARGS%GET_DUMP_PATH( DUMP_PATH, HOOKS )
+
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_READ_DOMAIN_MESSAGE) READ_DOMAIN_MESSAGE( TRIM(ADJUSTL(DUMP_PATH)), &
+&      TOC_ENTRY%PROC_ID_, TOC_ENTRY%MSG_ID_, TOC_ENTRY%MSG_ADDR_, &
+&      MESSAGE, LOC2GLO, BIG_ENDIAN_READ, VERBOSE, HOOKS )
+
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_WRITE_DOMAIN) OUTPUT_MANAGER%WRITE_DOMAIN( MESSAGE, LOC2GLO, HOOKS )
+
+  IF ( ALLOCATED(LOC2GLO) ) DEALLOCATE( LOC2GLO )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_GET_DUMP_DIRECTORY)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to get dump directory' )
+    CASE (ERRFLAG_UNABLE_TO_READ_DOMAIN_MESSAGE)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to read domain message' )
+    CASE (ERRFLAG_UNABLE_TO_WRITE_DOMAIN)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to write domain' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION ENCODE_DOMAIN_MESSAGE
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
+
+!>
+!> @brief Print a domain entry of the table of contents
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'PRINT_DOMAIN_MESSAGE'
+PP_THREAD_SAFE FUNCTION PRINT_DOMAIN_MESSAGE( CMDARGS, OUTPUT_UNIT, TOC_ENTRY, BIG_ENDIAN_READ, VERBOSE, HOOKS ) RESULT(RET)
+
+  ! Symbols imported from other modules within the project.
+  USE :: COMMAND_ARGUMENTS_PARSER_MOD, ONLY: COMMAND_LINE_ARGS_T
+  USE :: MULTIOM_API, ONLY: TOC_DOMAIN_T
+  USE :: MULTIOM_API, ONLY: JPIB_K
+  USE :: MULTIOM_API, ONLY: HOOKS_T
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  TYPE(COMMAND_LINE_ARGS_T), INTENT(IN)    :: CMDARGS
+  INTEGER(KIND=JPIB_K),      INTENT(IN)    :: OUTPUT_UNIT
+  TYPE(TOC_DOMAIN_T),        INTENT(IN)    :: TOC_ENTRY
+  LOGICAL,                   INTENT(IN)    :: BIG_ENDIAN_READ
+  LOGICAL,                   INTENT(IN)    :: VERBOSE
+  TYPE(HOOKS_T),             INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=JPIB_K) :: WRITE_STAT
+  CHARACTER(LEN=32) :: CDOMAIN
+  CHARACTER(LEN=32) :: CGLOBAL
+  CHARACTER(LEN=32) :: CLOCAL
+  CHARACTER(LEN=32) :: CPROC
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_WRITE_TO_STRING = 1_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  WRITE(CDOMAIN,'(I32)') TOC_ENTRY%DOMAIN_ID_
+  WRITE(CGLOBAL,'(I32)') TOC_ENTRY%NGLOBAL_
+  WRITE(CLOCAL,'(I32)')  TOC_ENTRY%NLOCAL_
+  WRITE(CPROC,'(I32)')   TOC_ENTRY%PROC_ID_
+
+  PP_TRYCALL(ERRFLAG_UNABLE_TO_WRITE_TO_STRING) PRINT_HEADER_PVT( CMDARGS, OUTPUT_UNIT, HOOKS )
+  WRITE( UNIT=OUTPUT_UNIT, FMT='(1x,A)', IOSTAT=WRITE_STAT ) 'Domain: '//TRIM(ADJUSTL(CDOMAIN))// &
+&   ', global values: '//TRIM(ADJUSTL(CGLOBAL))//', local values: '//TRIM(ADJUSTL(CLOCAL))// &
+&   ', proc: '//TRIM(ADJUSTL(CPROC))
+  PP_DEBUG_CRITICAL_COND_THROW( WRITE_STAT .NE. 0, ERRFLAG_UNABLE_TO_WRITE_TO_STRING )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNABLE_TO_WRITE_TO_STRING)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to write to string' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION PRINT_DOMAIN_MESSAGE
 #undef PP_PROCEDURE_NAME
 #undef PP_PROCEDURE_TYPE
 

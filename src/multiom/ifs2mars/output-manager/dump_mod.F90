@@ -119,6 +119,9 @@ CONTAINS
   PROCEDURE, NON_OVERRIDABLE, PASS, PUBLIC :: WRITE_WAM_DP => DUMP_WRITE_WAM_DP
   PROCEDURE, NON_OVERRIDABLE, PASS, PUBLIC :: WRITE_WAM_SP => DUMP_WRITE_WAM_SP
 
+  !> Write domains
+  PROCEDURE, NON_OVERRIDABLE, PASS, PUBLIC :: WRITE_DOMAIN => DUMP_WRITE_DOMAIN
+
   !> @brief Notify that a step is finished
   PROCEDURE, NON_OVERRIDABLE, PASS, PUBLIC :: FLUSH_STEP => DUMP_FLUSH_STEP
 
@@ -1165,6 +1168,144 @@ END FUNCTION DUMP_SETUP
 !> @param [inout] this  The object to be initialized.
 !> @param [inout] ydmsg Message to be encoded
 !>
+!>
+!> @brief Write a domain (local to global mapping of the values of a task)
+!>
+#define PP_PROCEDURE_TYPE 'FUNCTION'
+#define PP_PROCEDURE_NAME 'DUMP_WRITE_DOMAIN'
+PP_THREAD_SAFE FUNCTION DUMP_WRITE_DOMAIN( THIS, YDMSG, LOC2GLO, HOOKS ) RESULT(RET)
+
+  ! Symbolds imported from intrinsic modules
+  USE, INTRINSIC :: ISO_FORTRAN_ENV, ONLY: INT64
+
+  ! Symbols imported from other modules within the project.
+  USE :: DATAKINDS_DEF_MOD, ONLY: JPIB_K
+  USE :: HOOKS_MOD,    ONLY: HOOKS_T
+  USE :: IFS_MSG_MOD,  ONLY: OM_DOMAIN_MSG_T
+  USE :: IFS_MSG_MOD,  ONLY: MSG_PRINT_DOMAIN
+  USE :: IFS_MSG_MOD,  ONLY: MSG_WRITE_DOMAIN
+  USE :: LOG_INFO_MOD, ONLY: LOG_CURR_TIME
+  USE :: IFS_TOC_MOD,  ONLY: TOC_WRITE_DOMAIN
+
+  ! Symbols imported by the preprocessor for debugging purposes
+  PP_DEBUG_USE_VARS
+
+  ! Symbols imported by the preprocessor for logging purposes
+  PP_LOG_USE_VARS
+
+  ! Symbols imported by the preprocessor for tracing purposes
+  PP_TRACE_USE_VARS
+
+IMPLICIT NONE
+
+  ! Dummy arguments
+  CLASS(DUMP_OUTPUT_MANAGER_T), TARGET, INTENT(INOUT) :: THIS
+  TYPE(OM_DOMAIN_MSG_T),                INTENT(IN)    :: YDMSG
+  INTEGER(KIND=JPIB_K), DIMENSION(:),   INTENT(IN)    :: LOC2GLO
+  TYPE(HOOKS_T),                        INTENT(INOUT) :: HOOKS
+
+  ! Function result
+  INTEGER(KIND=JPIB_K) :: RET
+
+  ! Local variables
+  INTEGER(KIND=INT64) :: MSGADDR
+
+  ! Error flags
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_LOG_TIME = 1_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_UNABLE_TO_PRINT_MSG = 2_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_WRITE_MSG_DOMAIN = 3_JPIB_K
+  INTEGER(KIND=JPIB_K), PARAMETER :: ERRFLAG_WRITE_TOC_DOMAIN = 4_JPIB_K
+
+  ! Local variables declared by the preprocessor for debugging purposes
+  PP_DEBUG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for logging purposes
+  PP_LOG_DECL_VARS
+
+  ! Local variables declared by the preprocessor for tracing purposes
+  PP_TRACE_DECL_VARS
+
+  ! Trace begin of procedure
+  PP_TRACE_ENTER_PROCEDURE()
+
+  ! Initialization of good path return value
+  PP_SET_ERR_SUCCESS( RET )
+
+  ! If needed log message
+  IF ( THIS%VERBOSE_ ) THEN
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_LOG_TIME) LOG_CURR_TIME( THIS%LOG_UNIT_, 'WRITE DOMAIN MESSAGE', HOOKS )
+    PP_TRYCALL(ERRFLAG_UNABLE_TO_PRINT_MSG) MSG_PRINT_DOMAIN( YDMSG, THIS%LOG_UNIT_, HOOKS )
+  ENDIF
+
+  ! Write message (description and local to global mapping)
+  PP_TRYCALL(ERRFLAG_WRITE_MSG_DOMAIN) MSG_WRITE_DOMAIN( THIS%MSG_UNIT_, YDMSG, LOC2GLO, MSGADDR, HOOKS )
+
+  ! Update toc
+  PP_TRYCALL(ERRFLAG_WRITE_TOC_DOMAIN) TOC_WRITE_DOMAIN( &
+&           THIS%TOC_UNIT_,           &
+&           YDMSG%IDOMAIN_,           &
+&           YDMSG%NGLOBAL_,           &
+&           YDMSG%NLOCAL_,            &
+&           THIS%TOPOLOGY_%MYPROC_IO, &
+&           MSGADDR,                  &
+&           THIS%CNT_,                &
+&           THIS%TOC_WRITPOS_,        &
+&           THIS%TOC_COUNTER_,        &
+&           HOOKS                     &
+&  )
+
+  ! Trace end of procedure (on success)
+  PP_TRACE_EXIT_PROCEDURE_ON_SUCCESS()
+
+  ! Exit point on success
+  RETURN
+
+! Error handler
+PP_ERROR_HANDLER
+
+  ! Initialization of bad path return value
+  PP_SET_ERR_FAILURE( RET )
+
+#if defined( PP_DEBUG_ENABLE_ERROR_HANDLING )
+!$omp critical(ERROR_HANDLER)
+
+  BLOCK
+
+    ! Error handling variables
+    PP_DEBUG_PUSH_FRAME()
+
+    ! Handle different errors
+    SELECT CASE(ERRIDX)
+    CASE (ERRFLAG_UNABLE_TO_LOG_TIME)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to log the current time' )
+    CASE (ERRFLAG_UNABLE_TO_PRINT_MSG)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to print the domain message' )
+    CASE (ERRFLAG_WRITE_MSG_DOMAIN)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to write the domain message' )
+    CASE (ERRFLAG_WRITE_TOC_DOMAIN)
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unable to write the TOC' )
+    CASE DEFAULT
+      PP_DEBUG_PUSH_MSG_TO_FRAME( 'Unhandled error' )
+    END SELECT
+
+    ! Trace end of procedure (on error)
+    PP_TRACE_EXIT_PROCEDURE_ON_ERROR()
+
+    ! Write the error message and stop the program
+    PP_DEBUG_ABORT
+
+  END BLOCK
+
+!$omp end critical(ERROR_HANDLER)
+#endif
+
+  ! Exit point (on error)
+  RETURN
+
+END FUNCTION DUMP_WRITE_DOMAIN
+#undef PP_PROCEDURE_NAME
+#undef PP_PROCEDURE_TYPE
+
 #define PP_PROCEDURE_TYPE 'FUNCTION'
 #define PP_PROCEDURE_NAME 'DUMP_WRITE_ATM_DP'
 PP_THREAD_SAFE FUNCTION DUMP_WRITE_ATM_DP( THIS, YDMSG, VALUES_DP, HOOKS ) RESULT(RET)
